@@ -28,7 +28,6 @@ if(!$data) {
 }
 
 echo $data;
-
 ```
 
 Usage with callback:
@@ -48,7 +47,6 @@ $data   = $cache->load('data-from-example.com', 60 * 60 * 24 * 30 * 3 /* 3 month
 });
 
 echo $data;
-
 ```
 
 ## Contribute
