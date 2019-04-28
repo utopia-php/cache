@@ -6,6 +6,11 @@ Although this library is part of the [Utopia Framework](https://github.com/utopi
 
 ## Getting Started
 
+Install using composer:
+```bash
+composer require utopia-php/cache
+```
+
 **File System Adapter**
 
 ```php
