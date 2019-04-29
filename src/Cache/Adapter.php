@@ -7,15 +7,20 @@ interface Adapter
     /**
      * @param string $key
      * @param int $ttl time in seconds
-     * @param mixed $data
      * @return mixed
      */
-    public function load($key, $ttl, $data = []);
+    public function load($key, $ttl);
 
     /**
      * @param string $key
      * @param string $data
-     * @return bool
+     * @return mixed
      */
     public function save($key, $data);
+
+    /**
+     * @param string $key
+     * @return bool
+     */
+    public function purge($key);
 }

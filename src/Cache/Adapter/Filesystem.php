@@ -1,6 +1,8 @@
 <?php
 
-namespace Utopia\Cache;
+namespace Utopia\Cache\Adapter;
+
+use Utopia\Cache\Adapter;
 
 class Filesystem implements Adapter
 {
@@ -21,30 +23,24 @@ class Filesystem implements Adapter
     /**
      * @param string $key
      * @param int $ttl time in seconds
-     * @param mixed $data
-     * @return array
+     * @return mixed
      * @throws \Exception
      */
-    public function load($key, $ttl, $data = [])
+    public function load($key, $ttl)
     {
         $file = $this->getPath($key);
 
         if (file_exists($file) && (filemtime($file) + $ttl > time())) { // Cache is valid
-            return json_decode(file_get_contents($file), true);
+            return file_get_contents($file);
         }
 
-        if(is_callable($data)) {
-            $data = call_user_func($data);
-            $this->save($key, $data);
-        }
-
-        return $data;
+        return false;
     }
 
     /**
      * @param string $key
      * @param string $data
-     * @return string
+     * @return string|bool
      * @throws \Exception
      */
     public function save($key, $data)
@@ -63,7 +59,23 @@ class Filesystem implements Adapter
             }
         }
 
-        return file_put_contents($file, $data, LOCK_EX);
+        return (file_put_contents($file, $data, LOCK_EX)) ? $data : false;
+    }
+
+    /**
+     * @param string $key
+     * @return string|bool
+     * @throws \Exception
+     */
+    public function purge($key)
+    {
+        $file = $this->getPath($key);
+
+        if (file_exists($file)) {
+            return unlink($file);
+        }
+
+        return false;
     }
 
     /**

@@ -19,7 +19,7 @@ composer require utopia-php/cache
 require_once __DIR__ . '/../../vendor/autoload.php';
 
 use Utopia\Cache\Cache;
-use Utopia\Cache\Filesystem;
+use Utopia\Cache\Adapter\Filesystem;
 
 $cache  = new Cache(new Filesystem('/cache-dir'));
 $key    = 'data-from-example.com';
@@ -31,25 +31,6 @@ if(!$data) {
     
     $cache->save($key, $data);
 }
-
-echo $data;
-```
-
-Usage with callback:
-
-```php
-<?php
-
-require_once __DIR__ . '/../../vendor/autoload.php';
-
-use Utopia\Cache\Cache;
-use Utopia\Cache\Filesystem;
-
-$cache  = new Cache(new Filesystem('/cache-dir'));
-
-$data   = $cache->load('data-from-example.com', 60 * 60 * 24 * 30 * 3 /* 3 months */, function () {
-    return file_get_contents('https://example.com'); // If no valid cache, execute the callback
-});
 
 echo $data;
 ```

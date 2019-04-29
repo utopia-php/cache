@@ -18,20 +18,19 @@ class Cache
     }
 
     /**
-     * Load cached data. return false in no valid cache
+     * Load cached data. return false in no valid cache.
      *
      * @param string $key
      * @param int $ttl time in seconds
-     * @param mixed $data
      * @return mixed
      */
-    public function load($key, $ttl, $data = [])
+    public function load($key, $ttl)
     {
-        return $this->adapter->load($key, $ttl, $data);
+        return $this->adapter->load($key, $ttl);
     }
 
     /**
-     * Save data to cache
+     * Save data to cache. Returns data on success of false on failure.
      *
      * @param string $key
      * @param string $data
@@ -39,5 +38,15 @@ class Cache
      */
     public function save($key, $data) {
         return $this->adapter->save($key, $data);
+    }
+
+    /**
+     * Removes data from cache. Returns true on success of false on failure.
+     *
+     * @param string $key
+     * @return bool
+     */
+    public function purge($key) {
+        return $this->adapter->purge($key);
     }
 }
