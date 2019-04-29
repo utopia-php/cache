@@ -1,5 +1,9 @@
 # Utopia Cache
 
+[![Build Status](https://travis-ci.org/utopia-php/cache.svg?branch=master)](https://travis-ci.org/utopia-php/cache)
+![Total Downloads](https://img.shields.io/packagist/dt/utopia-php/cache.svg)
+![License](https://img.shields.io/github/license/utopia-php/cache.svg)
+
 Utopia framework cache library is simple and lite library for managing application cache storing, loading and purging. This library is aiming to be as simple and easy to learn and use.
 
 Although this library is part of the [Utopia Framework](https://github.com/utopia-php/framework) project it is dependency free and can be used as standalone with any other PHP project or framework.
