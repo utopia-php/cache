@@ -53,9 +53,11 @@ class Filesystem implements Adapter
 
         if (!file_exists(dirname($file))) { // Checks if directory path to file exists
             if(!@mkdir(dirname($file), 0755, true)) {
-                if (!file_exists(dirname($file))) { // Checks race condition for mkdir function
-                    throw new \Exception('Can\'t create directory ' . dirname($file));
-                }
+                throw new \Exception('Can\'t create directory ' . dirname($file));
+            }
+
+            if (!file_exists(dirname($file))) { // Checks race condition for mkdir function
+                throw new \Exception('Can\'t create directory ' . dirname($file));
             }
         }
 
