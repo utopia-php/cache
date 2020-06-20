@@ -30,8 +30,8 @@ class Filesystem implements Adapter
     {
         $file = $this->getPath($key);
 
-        if (file_exists($file) && (filemtime($file) + $ttl > time())) { // Cache is valid
-            return file_get_contents($file);
+        if (\file_exists($file) && (\filemtime($file) + $ttl > \time())) { // Cache is valid
+            return \file_get_contents($file);
         }
 
         return false;
@@ -51,17 +51,17 @@ class Filesystem implements Adapter
 
         $file = $this->getPath($key);
 
-        if (!file_exists(dirname($file))) { // Checks if directory path to file exists
-            if(!@mkdir(dirname($file), 0755, true)) {
-                throw new \Exception('Can\'t create directory ' . dirname($file));
+        if (!\file_exists(\dirname($file))) { // Checks if directory path to file exists
+            if(!@\mkdir(\dirname($file), 0755, true)) {
+                throw new \Exception('Can\'t create directory ' . \dirname($file));
             }
 
-            if (!file_exists(dirname($file))) { // Checks race condition for mkdir function
-                throw new \Exception('Can\'t create directory ' . dirname($file));
+            if (!\file_exists(\dirname($file))) { // Checks race condition for mkdir function
+                throw new \Exception('Can\'t create directory ' . \dirname($file));
             }
         }
 
-        return (file_put_contents($file, $data, LOCK_EX)) ? $data : false;
+        return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
     }
 
     /**
@@ -73,8 +73,8 @@ class Filesystem implements Adapter
     {
         $file = $this->getPath($key);
 
-        if (file_exists($file)) {
-            return unlink($file);
+        if (\file_exists($file)) {
+            return \unlink($file);
         }
 
         return false;
@@ -89,7 +89,7 @@ class Filesystem implements Adapter
         $path = '';
 
         for ($i = 0; $i < 4; $i++) {
-            $path = ($i < strlen($filename)) ? $path . DIRECTORY_SEPARATOR . $filename[$i] : $path . DIRECTORY_SEPARATOR . 'x';
+            $path = ($i < \strlen($filename)) ? $path . DIRECTORY_SEPARATOR . $filename[$i] : $path . DIRECTORY_SEPARATOR . 'x';
         }
 
         return $this->path . $path . DIRECTORY_SEPARATOR . $filename;
