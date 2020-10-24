@@ -40,19 +40,19 @@ class Filesystem implements Adapter
     /**
      * @param string $key
      * @param string $data
-     * @return string|bool
      * @throws \Exception
+     * @return bool|string
      */
     public function save($key, $data)
     {
-        if(empty($data)) {
-            return '';
+        if (empty($data)) {
+            return false;
         }
 
         $file = $this->getPath($key);
 
         if (!\file_exists(\dirname($file))) { // Checks if directory path to file exists
-            if(!@\mkdir(\dirname($file), 0755, true)) {
+            if (!@\mkdir(\dirname($file), 0755, true)) {
                 throw new \Exception('Can\'t create directory ' . \dirname($file));
             }
 
@@ -66,10 +66,10 @@ class Filesystem implements Adapter
 
     /**
      * @param string $key
-     * @return bool
      * @throws \Exception
+     * @return bool
      */
-    public function purge($key)
+    public function purge($key): bool
     {
         $file = $this->getPath($key);
 

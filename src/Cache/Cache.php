@@ -34,9 +34,10 @@ class Cache
      *
      * @param string $key
      * @param string $data
-     * @return bool
+     * @return bool|string
      */
-    public function save($key, $data) {
+    public function save($key, $data)
+    {
         return $this->adapter->save($key, $data);
     }
 
@@ -46,7 +47,8 @@ class Cache
      * @param string $key
      * @return bool
      */
-    public function purge($key) {
+    public function purge($key): bool
+    {
         return $this->adapter->purge($key);
     }
 }

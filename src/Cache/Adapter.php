@@ -14,7 +14,7 @@ interface Adapter
     /**
      * @param string $key
      * @param string $data
-     * @return mixed
+     * @return bool|string
      */
     public function save($key, $data);
 
@@ -22,5 +22,5 @@ interface Adapter
      * @param string $key
      * @return bool
      */
-    public function purge($key);
+    public function purge($key): bool;
 }
