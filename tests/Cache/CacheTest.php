@@ -34,12 +34,12 @@ class CacheTest extends TestCase
      */
     protected $data = 'test data string';
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->cache = new Cache(new Filesystem('tests/data'));
     }
 
-    public function tearDown()
+    public function tearDown(): void
     {
         $this->cache = null;
     }

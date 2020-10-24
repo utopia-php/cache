@@ -66,7 +66,7 @@ class Filesystem implements Adapter
 
     /**
      * @param string $key
-     * @return string|bool
+     * @return bool
      * @throws \Exception
      */
     public function purge($key)
