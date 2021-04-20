@@ -2,15 +2,26 @@ version: '3.1'
 
 services:
 
-  tests:
-    container_name: tests
+  php7:
+    container_name: php7
     build:
       context: .
+      dockerfile: php7.4.Dockerfile
     networks:
       - database
     volumes:
       - ./:/usr/src/code
-
+  
+  php8:
+    container_name: php8
+    build:
+      context: .
+      dockerfile: php8.0.Dockerfile
+    networks:
+      - database
+    volumes:
+      - ./:/usr/src/code
+    
   redis:
     image: redis:6.0-alpine
     container_name: redis
