@@ -8,10 +8,14 @@ use Redis as Client;
 class Redis implements Adapter
 {
     /**
-     * @var Redis
+     * @var Client 
      */
     protected $redis;
 
+    /**
+     * Redis constructor.
+     * @param Client $redis
+     */
     public function __construct(Client $redis)
     {
         $this->redis = $redis;
