@@ -1,0 +1,21 @@
+version: '3.1'
+
+services:
+
+  tests:
+    container_name: tests
+    build:
+      context: .
+    networks:
+      - database
+    volumes:
+      - ./:/usr/src/code
+
+  redis:
+    image: redis:6.0-alpine
+    container_name: redis
+    networks:
+      - database
+
+networks:
+  database:
