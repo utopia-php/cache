@@ -38,7 +38,7 @@ class Redis implements Adapter
             return false;
         }
 
-        return ($this->redis->set($key, $data, 0)) ? $data : false;
+        return ($this->redis->set($key, $data)) ? $data : false;
     }
 
     /**
@@ -47,11 +47,6 @@ class Redis implements Adapter
      */
     public function purge($key): bool
     {
-        $cached = $this->redis->get($key);
-        if (!$cached) {
-            $this->redis->unlink($key);
-        }
-
-        return false;
+        return (bool) $this->redis->del($key); // unlink() returns number of keys deleted
     }
 }
