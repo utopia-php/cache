@@ -28,7 +28,14 @@ class Redis implements Adapter
      */
     public function load($key, $ttl)
     {
-        return $this->redis->get($key);
+        /** @var array{time: int, data: string} */
+        $cache = json_decode($this->redis->get($key), true);
+        
+        if (!empty($cache) && ($cache['time'] + $ttl > time())) { // Cache is valid
+            return $cache['data'];
+        }
+
+        return false;
     }
 
     /**
@@ -42,7 +49,12 @@ class Redis implements Adapter
             return false;
         }
 
-        return ($this->redis->set($key, $data)) ? $data : false;
+        $cache = [
+            'time' => \time(),
+            'data' => $data
+        ];
+
+        return ($this->redis->set($key, json_encode($cache))) ? $data : false;
     }
 
     /**
