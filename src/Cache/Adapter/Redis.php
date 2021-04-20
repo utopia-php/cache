@@ -23,7 +23,9 @@ class Redis implements Adapter
      * @return mixed
      */
     public function load($key, $ttl)
-    {}
+    {
+        return $this->redis->get($key);
+    }
 
     /**
      * @param string $key
