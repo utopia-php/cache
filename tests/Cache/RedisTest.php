@@ -38,7 +38,7 @@ class RedisTest extends TestCase
     public function setUp(): void
     {
         $redis = new Redis();
-        $redis->connect('localhost', 6379);
+        $redis->connect('redis', 6379);
         $this->cache = new Cache(new RedisAdapter($redis));
     }
 
