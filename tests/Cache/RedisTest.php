@@ -14,8 +14,9 @@
 namespace Utopia;
 
 use PHPUnit\Framework\TestCase;
+use Redis as Redis;
 use Utopia\Cache\Cache;
-use Utopia\Cache\Adapter\Redis;
+use Utopia\Cache\Adapter\Redis as RedisAdapter;
 
 class RedisTest extends TestCase
 {
@@ -37,8 +38,8 @@ class RedisTest extends TestCase
     public function setUp(): void
     {
         $redis = new Redis();
-        $redis->pconnect('localhost', 6379);
-        $this->cache = new Cache(new Redis($redis));
+        $redis->connect('localhost', 6379);
+        $this->cache = new Cache(new RedisAdapter($redis));
     }
 
     public function tearDown(): void
