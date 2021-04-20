@@ -19,9 +19,20 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN \
   apk update \
-  && apk add --no-cache make automake autoconf gcc g++ \
-  && pecl install redis \ 
+  && apk add --no-cache make automake autoconf gcc g++ git \
   && rm -rf /var/cache/apk/*
+
+RUN \
+  # Redis Extension
+  git clone https://github.com/phpredis/phpredis.git && \
+  cd phpredis && \
+  git checkout $PHP_REDIS_VERSION && \
+  phpize && \
+  ./configure && \
+  make && make install && \
+  cd ..
+
+RUN echo extension=redis.so >> /usr/local/etc/php/conf.d/redis.ini
 
 WORKDIR /usr/src/code
 
