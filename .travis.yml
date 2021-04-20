@@ -1,16 +1,38 @@
-language: php
+dist: focal
 
-php:
-- 7.4
-- 8.0
-- nightly
+arch:
+  - amd64
+
+os: linux
+
+language: shell
 
 notifications:
   email:
   - team@appwrite.io
+  
+services:
+- docker
 
-before_script: composer install --ignore-platform-reqs
+before_install:
+- curl -fsSL https://get.docker.com | sh
+- echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
+- mkdir -p $HOME/.docker
+- echo '{"experimental":"enabled"}' | sudo tee $HOME/.docker/config.json
+- sudo service docker start
+- >
+  if [ ! -z "${DOCKERHUB_PULL_USERNAME:-}" ]; then
+    echo "${DOCKERHUB_PULL_PASSWORD}" | docker login --username "${DOCKERHUB_PULL_USERNAME}" --password-stdin
+  fi
+- docker --version
+
+install:
+- docker-compose up -d
+- sleep 5
 
 script:
-- vendor/bin/phpunit --configuration phpunit.xml --coverage-text --colors=never
-- vendor/bin/psalm --show-info=true
+- docker ps
+- docker-compose exec php7 sh -c "/usr/src/code/vendor/bin/psalm --show-info=true"
+- docker-compose exec php8 sh -c "/usr/src/code/vendor/bin/psalm --show-info=true"
+- docker-compose exec php7 sh -c "/usr/src/code/vendor/bin/phpunit --configuration phpunit.xml tests"
+- docker-compose exec php8 sh -c "/usr/src/code/vendor/bin/phpunit --configuration phpunit.xml tests"

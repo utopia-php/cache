@@ -47,6 +47,17 @@ Currently we support only a Filesystem adapter for usage as a cache storage, sen
 
 Utopia Framework requires PHP 7.4 or later. We recommend using the latest PHP version whenever possible.
 
+## Tests
+
+To run all unit tests, use the following Docker command:
+
+`docker-compose exec tests vendor/bin/phpunit --configuration phpunit.xml tests`
+
+To run static code analysis, use the following Psalm command:
+
+`docker-compose exec tests vendor/bin/psalm --show-info=true`
+
+
 ## Authors
 
 **Eldad Fux**
