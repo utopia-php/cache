@@ -5,21 +5,24 @@
  * @package Framework
  * @subpackage Tests
  *
- * @link https://github.com/utopia-php/cache
+ * @link https://github.com/utopia-php/framework
  * @author Eldad Fux <eldad@appwrite.io>
  * @version 1.0 RC4
  * @license The MIT License (MIT) <http://www.opensource.org/licenses/mit-license.php>
  */
 
-namespace Utopia;
+namespace Utopia\Tests;
 
 use PHPUnit\Framework\TestCase;
-use Redis as Redis;
 use Utopia\Cache\Cache;
-use Utopia\Cache\Adapter\Redis as RedisAdapter;
 
-class RedisTest extends TestCase
+abstract class Base extends TestCase
 {
+    /**
+     * @return Cache
+     */
+    abstract static protected function getCache(): Cache;
+
     /**
      * @var Cache
      */
@@ -37,9 +40,7 @@ class RedisTest extends TestCase
 
     public function setUp(): void
     {
-        $redis = new Redis();
-        $redis->connect('redis', 6379);
-        $this->cache = new Cache(new RedisAdapter($redis));
+        $this->cache = static::getCache();
     }
 
     public function tearDown(): void
