@@ -17,7 +17,7 @@ use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Cache;
 use Utopia\Cache\Adapter\Filesystem;
 
-class CacheTest extends TestCase
+class FilesystemTest extends TestCase
 {
     /**
      * @var Cache
