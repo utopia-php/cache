@@ -9,7 +9,7 @@ class Memory implements Adapter
     /**
      * @var array
      */
-    protected $cache = [];
+    protected $store = [];
 
     /**
      * Memory constructor.
@@ -26,9 +26,9 @@ class Memory implements Adapter
      */
     public function load($key, $ttl)
     {
-        if (!empty($key) && isset($this->cache[$key])) {
+        if (!empty($key) && isset($this->store[$key])) {
             /** @var array{time: int, data: string} */
-            $saved = $this->cache[$key];
+            $saved = $this->store[$key];
 
             return ($saved['time'] + $ttl > time()) ? $saved['data'] : false; // return data if cache is valid
         }
@@ -52,7 +52,7 @@ class Memory implements Adapter
             'data' => $data
         ];
 
-        $this->cache[] = $saved;
+        $this->store[] = [$key => $saved];
 
         return $data;
     }
@@ -63,8 +63,8 @@ class Memory implements Adapter
      */
     public function purge($key): bool
     {
-        if (!empty($key) && isset($this->cache[$key])) { // if a key is passed and it exists in cache
-            unset($this->cache[$key]);
+        if (!empty($key) && isset($this->store[$key])) { // if a key is passed and it exists in cache
+            unset($this->store[$key]);
             return true;
         }
 
