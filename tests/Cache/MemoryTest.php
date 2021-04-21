@@ -25,6 +25,11 @@ class MemoryTest extends TestCase
     protected $cache = null;
 
     /**
+     * @var array
+     */
+    protected $store = [];
+
+    /**
      * @var string
      */
     protected $key = 'test-key-for-cache';
@@ -36,7 +41,7 @@ class MemoryTest extends TestCase
 
     public function setUp(): void
     {
-        $this->cache = new Cache(new Memory());
+        $this->cache = new Cache(new Memory($store));
     }
 
     public function tearDown(): void

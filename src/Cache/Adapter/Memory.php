@@ -9,14 +9,14 @@ class Memory implements Adapter
     /**
      * @var array
      */
-    protected $store = [];
+    public $store = [];
 
     /**
      * Memory constructor.
      */
-    public function __construct()
+    public function __construct(&$store)
     {
-        return;
+        $this->store = $store; 
     }
 
     /**
