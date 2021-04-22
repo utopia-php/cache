@@ -15,14 +15,19 @@ namespace Utopia;
 
 use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Cache;
-use Utopia\Cache\Adapter\Filesystem;
+use Utopia\Cache\Adapter\Memory;
 
-class CacheTest extends TestCase
+class MemoryTest extends TestCase
 {
     /**
      * @var Cache
      */
     protected $cache = null;
+
+    /**
+     * @var array
+     */
+    protected $store = [];
 
     /**
      * @var string
@@ -36,7 +41,7 @@ class CacheTest extends TestCase
 
     public function setUp(): void
     {
-        $this->cache = new Cache(new Filesystem('tests/data'));
+        $this->cache = new Cache(new Memory($store));
     }
 
     public function tearDown(): void
