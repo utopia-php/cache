@@ -15,9 +15,9 @@ namespace Utopia;
 
 use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Cache;
-use Utopia\Cache\Adapter\Filesystem;
+use Utopia\Cache\Adapter\Memory;
 
-class CacheTest extends TestCase
+class MemoryTest extends TestCase
 {
     /**
      * @var Cache
@@ -36,7 +36,7 @@ class CacheTest extends TestCase
 
     public function setUp(): void
     {
-        $this->cache = new Cache(new Filesystem('tests/data'));
+        $this->cache = new Cache(new Memory());
     }
 
     public function tearDown(): void
@@ -62,6 +62,8 @@ class CacheTest extends TestCase
 
     public function testNotEmptyCacheKey()
     {
+        $this->cache->save($this->key, $this->data);
+
         $data = $this->cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals($this->data, $data);
@@ -69,6 +71,8 @@ class CacheTest extends TestCase
 
     public function testCachePurge()
     {
+        $this->cache->save($this->key, $this->data);
+
         $data = $this->cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals($this->data, $data);

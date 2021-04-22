@@ -15,11 +15,11 @@ services:
 - docker
 
 before_install:
-- curl -fsSL https://get.docker.com | sh
-- echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
-- mkdir -p $HOME/.docker
-- echo '{"experimental":"enabled"}' | sudo tee $HOME/.docker/config.json
-- sudo service docker start
+# - curl -fsSL https://get.docker.com | sh
+# - echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
+# - mkdir -p $HOME/.docker
+# - echo '{"experimental":"enabled"}' | sudo tee $HOME/.docker/config.json
+# - sudo service docker start
 - >
   if [ ! -z "${DOCKERHUB_PULL_USERNAME:-}" ]; then
     echo "${DOCKERHUB_PULL_PASSWORD}" | docker login --username "${DOCKERHUB_PULL_USERNAME}" --password-stdin
@@ -32,7 +32,7 @@ install:
 
 script:
 - docker ps
-- docker-compose exec php7 sh -c "/usr/src/code/vendor/bin/psalm --show-info=true"
-- docker-compose exec php8 sh -c "/usr/src/code/vendor/bin/psalm --show-info=true"
-- docker-compose exec php7 sh -c "/usr/src/code/vendor/bin/phpunit --configuration phpunit.xml tests"
-- docker-compose exec php8 sh -c "/usr/src/code/vendor/bin/phpunit --configuration phpunit.xml tests"
+- docker-compose exec php7 vendor/bin/psalm --show-info=true
+- docker-compose exec php8 vendor/bin/psalm --show-info=true
+- docker-compose exec php7 vendor/bin/phpunit --configuration phpunit.xml tests
+- docker-compose exec php8 vendor/bin/phpunit --configuration phpunit.xml tests
