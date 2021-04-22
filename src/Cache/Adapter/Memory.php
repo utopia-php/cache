@@ -14,9 +14,8 @@ class Memory implements Adapter
     /**
      * Memory constructor.
      */
-    public function __construct(&$store)
+    public function __construct()
     {
-        $this->store = $store; 
     }
 
     /**
@@ -52,7 +51,7 @@ class Memory implements Adapter
             'data' => $data
         ];
 
-        $this->store[] = [$key => $saved];
+        $this->store[$key] = $saved;
 
         return $data;
     }
