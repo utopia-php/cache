@@ -32,7 +32,7 @@ install:
 
 script:
 - docker ps
-- docker-compose exec php7 sh -c "/usr/src/code/vendor/bin/psalm --show-info=true"
-- docker-compose exec php8 sh -c "/usr/src/code/vendor/bin/psalm --show-info=true"
-- docker-compose exec php7 sh -c "/usr/src/code/vendor/bin/phpunit --configuration phpunit.xml tests"
-- docker-compose exec php8 sh -c "/usr/src/code/vendor/bin/phpunit --configuration phpunit.xml tests"
+- docker-compose exec php7 vendor/bin/psalm --show-info=true
+- docker-compose exec php8 vendor/bin/psalm --show-info=true"
+- docker-compose exec php7 vendor/bin/phpunit --configuration phpunit.xml tests"
+- docker-compose exec php8 vendor/bin/phpunit --configuration phpunit.xml tests"
