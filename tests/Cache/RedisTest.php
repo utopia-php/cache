@@ -35,6 +35,11 @@ class RedisTest extends TestCase
      */
     protected $data = 'test data string';
 
+    /**
+     * @var array
+     */
+    protected $dataArray = ['test', 'data', 'string'];
+
     public function setUp(): void
     {
         $redis = new Redis();
@@ -58,6 +63,12 @@ class RedisTest extends TestCase
 
     public function testCacheSave()
     {
+        // test $data array
+        $result = $this->cache->save($this->key, $this->dataArray);
+
+        $this->assertEquals($this->dataArray, $result);
+
+        // test $data string
         $result = $this->cache->save($this->key, $this->data);
 
         $this->assertEquals($this->data, $result);
