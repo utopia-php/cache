@@ -13,8 +13,8 @@ interface Adapter
 
     /**
      * @param string $key
-     * @param string $data
-     * @return bool|string
+     * @param string|array $data
+     * @return bool|string|array
      */
     public function save($key, $data);
 
