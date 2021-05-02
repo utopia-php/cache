@@ -34,12 +34,12 @@ class MemoryTest extends TestCase
      */
     protected $data = 'test data string';
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         $this->cache = new Cache(new Memory());
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->cache = null;
     }

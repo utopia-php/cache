@@ -40,14 +40,14 @@ class RedisTest extends TestCase
      */
     protected $dataArray = ['test', 'data', 'string'];
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         $redis = new Redis();
         $redis->connect('redis', 6379);
         $this->cache = new Cache(new RedisAdapter($redis));
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->cache = null;
     }
