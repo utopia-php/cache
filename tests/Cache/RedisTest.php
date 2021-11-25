@@ -111,5 +111,12 @@ class RedisTest extends TestCase
         $this->assertEquals(false, $data);
         $data = $this->cache->load('test:file2', 60 * 60 * 24 * 30 * 3 /* 3 months */);
         $this->assertEquals(false, $data);
+
+        /**
+         * Test for failure
+         * Try to glob keys that do not exist
+         */
+        $result = $this->cache->purge('test:*');
+        $this->assertEquals(false, $result);
     }
 }
