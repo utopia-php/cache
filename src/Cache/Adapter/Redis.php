@@ -63,6 +63,10 @@ class Redis implements Adapter
      */
     public function purge($key): bool
     {
+        if (\str_ends_with($key, ':*')) {
+            return (bool) $this->redis->del($this->redis->keys($key));
+        }
+
         return (bool) $this->redis->del($key); // unlink() returns number of keys deleted
     }
 }

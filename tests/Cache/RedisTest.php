@@ -95,4 +95,28 @@ class RedisTest extends TestCase
 
         $this->assertEquals(false, $data);
     }
+
+    public function testCachePurgeWildcard()
+    {
+        $data1 = $this->cache->save('test:file1', 'file1');
+        $data2 = $this->cache->save('test:file2', 'file2');
+
+        $this->assertEquals('file1', $data1);
+        $this->assertEquals('file2', $data2);
+
+        $result = $this->cache->purge('test:*');
+        $this->assertEquals(true, $result);
+
+        $data = $this->cache->load('test:file1', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $this->assertEquals(false, $data);
+        $data = $this->cache->load('test:file2', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $this->assertEquals(false, $data);
+
+        /**
+         * Test for failure
+         * Try to glob keys that do not exist
+         */
+        $result = $this->cache->purge('test:*');
+        $this->assertEquals(false, $result);
+    }
 }
