@@ -4,7 +4,7 @@ namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
 
-class None extends Adapter
+class None implements Adapter
 {
     /**
      * None constructor.
@@ -19,7 +19,7 @@ class None extends Adapter
      * @param int $ttl time in seconds
      * @return mixed
      */
-    public function internalLoad($key, $ttl)
+    public function load($key, $ttl)
     {
         return false;
     }
@@ -29,7 +29,7 @@ class None extends Adapter
      * @param string|array $data
      * @return bool|string|array
      */
-    public function internalSave($key, $data)
+    public function save($key, $data)
     {
         return false;
     }
@@ -38,7 +38,7 @@ class None extends Adapter
      * @param string $key
      * @return bool
      */
-    public function internalPurge($key): bool
+    public function purge($key): bool
     {
         return true;
     }

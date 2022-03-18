@@ -4,7 +4,7 @@ namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
 
-class Filesystem extends Adapter
+class Filesystem implements Adapter
 {
     /**
      * @var string
@@ -26,7 +26,7 @@ class Filesystem extends Adapter
      * @return mixed
      * @throws \Exception
      */
-    public function internalLoad($key, $ttl)
+    public function load($key, $ttl)
     {
         $file = $this->getPath($key);
 
@@ -43,7 +43,7 @@ class Filesystem extends Adapter
      * @throws \Exception
      * @return bool|string|array
      */
-    public function internalSave($key, $data)
+    public function save($key, $data)
     {
         if (empty($data)) {
             return false;
@@ -69,7 +69,7 @@ class Filesystem extends Adapter
      * @throws \Exception
      * @return bool
      */
-    public function internalPurge($key): bool
+    public function purge($key): bool
     {
         $file = $this->getPath($key);
 

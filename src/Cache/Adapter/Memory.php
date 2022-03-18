@@ -4,7 +4,7 @@ namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
 
-class Memory extends Adapter
+class Memory implements Adapter
 {
     /**
      * @var array
@@ -23,7 +23,7 @@ class Memory extends Adapter
      * @param int $ttl time in seconds
      * @return mixed
      */
-    public function internalLoad($key, $ttl)
+    public function load($key, $ttl)
     {
         if (!empty($key) && isset($this->store[$key])) {
             /** @var array{time: int, data: string} */
@@ -40,7 +40,7 @@ class Memory extends Adapter
      * @param string|array $data
      * @return bool|string|array
      */
-    public function internalSave($key, $data)
+    public function save($key, $data)
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -60,7 +60,7 @@ class Memory extends Adapter
      * @param string $key
      * @return bool
      */
-    public function internalPurge($key): bool
+    public function purge($key): bool
     {
         if (!empty($key) && isset($this->store[$key])) { // if a key is passed and it exists in cache
             unset($this->store[$key]);
