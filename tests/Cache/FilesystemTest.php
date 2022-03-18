@@ -93,7 +93,7 @@ class FilesystemTest extends TestCase
 
 
         // Test case insensitivity
-        $this->cache->setCaseSensitivity(false);
+        $this->cache::setCaseSensitivity(false);
 
         $data = $this->cache->save('planet', 'Earth');
         $this->assertEquals('Earth', $data);

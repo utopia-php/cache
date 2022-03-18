@@ -31,7 +31,7 @@ class Cache
      */
     public static function setCaseSensitivity(bool $value)
     {
-        return $this->caseSensitive = $value;
+        return Cache::$caseSensitive = $value;
     }
 
     /**
@@ -43,7 +43,7 @@ class Cache
      */
     public function load($key, $ttl)
     {
-        $key = $this->caseSensitive ? $key : \strtolower($key);
+        $key = Cache::$caseSensitive ? $key : \strtolower($key);
         return $this->adapter->load($key, $ttl);
     }
 
@@ -56,7 +56,7 @@ class Cache
      */
     public function save($key, $data)
     {
-        $key = $this->caseSensitive ? $key : \strtolower($key);
+        $key = Cache::$caseSensitive ? $key : \strtolower($key);
         return $this->adapter->save($key, $data);
     }
 
@@ -68,7 +68,7 @@ class Cache
      */
     public function purge($key): bool
     {
-        $key = $this->caseSensitive ? $key : \strtolower($key);
+        $key = Cache::$caseSensitive ? $key : \strtolower($key);
         return $this->adapter->purge($key);
     }
 }
