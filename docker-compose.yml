@@ -1,17 +1,6 @@
 version: '3.1'
 
-services:
-
-  php7:
-    container_name: php7
-    build:
-      context: .
-      dockerfile: php7.4.Dockerfile
-    networks:
-      - database
-    # volumes:
-    #   - ./:/usr/src/code
-  
+services:  
   php8:
     container_name: php8
     build:
