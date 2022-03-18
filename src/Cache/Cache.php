@@ -12,7 +12,7 @@ class Cache
     /**
      * @var boolean If cache keys are case sensitive
      */
-    private bool $caseSensitive = true;
+    public static bool $caseSensitive = true;
 
     /**
      * @param Adapter $adapter
@@ -29,7 +29,7 @@ class Cache
      * @param boolean $value if true, cache keys will be case sensitive
      * @return mixed
      */
-    public function setCaseSensitivity(bool $value)
+    public static function setCaseSensitivity(bool $value)
     {
         return $this->caseSensitive = $value;
     }
