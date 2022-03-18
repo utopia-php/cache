@@ -87,6 +87,18 @@ class MemoryTest extends TestCase
     }
 
     public function testCaseInsensitivity() {
+        // Ensure case sensitivity first
+        $data = $this->cache->save('color', 'pink');
+        $this->assertEquals('pink', $data);
+        $data = $this->cache->load('color', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $this->assertEquals('pink', $data);
+        $data = $this->cache->load('COLOR', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $this->assertEquals(false, $data);
+
+
+        // Test case insensitivity
+        $this->cache->setCaseSensitivity(false);
+
         $data = $this->cache->save('planet', 'Earth');
         $this->assertEquals('Earth', $data);
 
