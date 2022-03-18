@@ -5,7 +5,7 @@ namespace Utopia\Cache\Adapter;
 use Utopia\Cache\Adapter;
 use Redis as Client;
 
-class Redis implements Adapter
+class Redis extends Adapter
 {
     /**
      * @var Client 
@@ -26,7 +26,7 @@ class Redis implements Adapter
      * @param int $ttl time in seconds
      * @return mixed
      */
-    public function load($key, $ttl)
+    public function internalLoad($key, $ttl)
     {
         /** @var array{time: int, data: string} */
         $cache = json_decode($this->redis->get($key), true);
@@ -43,7 +43,7 @@ class Redis implements Adapter
      * @param string|array $data
      * @return bool|string|array
      */
-    public function save($key, $data)
+    public function internalSave($key, $data)
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -61,7 +61,7 @@ class Redis implements Adapter
      * @param string $key
      * @return bool
      */
-    public function purge($key): bool
+    public function internalPurge($key): bool
     {
         if (\str_ends_with($key, ':*')) {
             return (bool) $this->redis->del($this->redis->keys($key));
