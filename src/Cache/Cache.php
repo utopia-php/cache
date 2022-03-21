@@ -31,7 +31,7 @@ class Cache
      */
     public static function setCaseSensitivity(bool $value)
     {
-        return Cache::$caseSensitive = $value;
+        return self::$caseSensitive = $value;
     }
 
     /**
