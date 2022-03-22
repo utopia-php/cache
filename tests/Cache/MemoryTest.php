@@ -19,14 +19,14 @@ use Utopia\Tests\Base;
 
 class MemoryTest extends Base
 {
-    protected function setUp(): void
+    public static function setUpBeforeClass(): void
     {
-        $this->cache = new Cache(new Memory());
-        $this->cache::setCaseSensitivity(true);
+        self::$cache = new Cache(new Memory());
+        self::$cache::setCaseSensitivity(true);
     }
 
-    protected function tearDown(): void
+    public static function tearDownAfterClass(): void
     {
-        $this->cache = null;
+        self::$cache = null;
     }
 }

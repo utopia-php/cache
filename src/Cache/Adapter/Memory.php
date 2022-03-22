@@ -25,7 +25,6 @@ class Memory implements Adapter
      */
     public function load($key, $ttl)
     {
-        \var_dump("Loading " . $key);
         if (!empty($key) && isset($this->store[$key])) {
             /** @var array{time: int, data: string} */
             $saved = $this->store[$key];
@@ -43,7 +42,6 @@ class Memory implements Adapter
      */
     public function save($key, $data)
     {
-        \var_dump("Saving " . $key);
         if (empty($key) || empty($data)) {
             return false;
         }

@@ -19,78 +19,58 @@ use Utopia\Tests\Base;
 
 class NoneTest extends Base
 {
-    protected function setUp(): void
+    public static function setUpBeforeClass(): void
     {
-        $this->cache = new Cache(new None());
-        $this->cache::setCaseSensitivity(true);
+        self::$cache = new Cache(new None());
+        self::$cache::setCaseSensitivity(true);
     }
 
-    protected function tearDown(): void
+    public static function tearDownAfterClass(): void
     {
-        $this->cache = null;
+        self::$cache = null;
     }
 
     public function testEmptyCacheKey()
     {
-        $this->cache->purge($this->key);
+        self::$cache->purge($this->key);
 
-        $data  = $this->cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data  = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals(false, $data);
     }
 
     public function testCacheSave()
     {
-        $result = $this->cache->save($this->key, $this->data);
+        $result = self::$cache->save($this->key, $this->data);
 
         $this->assertEquals(false, $result);
     }
+
     /**
      * @depends testCacheSave
      */
     public function testCacheLoad()
     {
-        $data  = $this->cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data  = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals(false, $data);
     }
 
+    /**
+     * @depends testCacheLoad
+     */
     public function testNotEmptyCacheKey()
     {
-        $data = $this->cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals(false, $data);
     }
 
     public function testCachePurge()
     {
-        $result = $this->cache->purge($this->key);
+        $result = self::$cache->purge($this->key);
 
         $this->assertEquals(true, $result);
-    }
-
-    public function testCachePurgeWildcard()
-    {
-        $data1 = $this->cache->save('test:file1', 'file1');
-        $data2 = $this->cache->save('test:file2', 'file2');
-
-        $this->assertEquals(false, $data1);
-        $this->assertEquals(false, $data2);
-
-        $result = $this->cache->purge('test:*');
-        $this->assertEquals(true, $result);
-
-        $data = $this->cache->load('test:file1', 60 * 60 * 24 * 30 * 3 /* 3 months */);
-        $this->assertEquals(false, $data);
-        $data = $this->cache->load('test:file2', 60 * 60 * 24 * 30 * 3 /* 3 months */);
-        $this->assertEquals(false, $data);
-
-        /**
-         * Test for failure
-         * Try to glob keys that do not exist
-         */
-        $result = $this->cache->purge('test:*');
-        $this->assertEquals(false, $result);
     }
 
     public function testCaseInsensitivity() {
