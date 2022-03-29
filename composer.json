@@ -14,8 +14,11 @@
     "autoload": {
         "psr-4": {"Utopia\\Cache\\": "src/Cache"}
     },
+    "autoload-dev": {
+        "psr-4": {"Utopia\\Tests\\": "tests/Cache"}
+    },
     "require": {
-        "php": ">=7.4",
+        "php": ">=8.0",
         "ext-json": "*",
         "ext-redis": "*"
     },

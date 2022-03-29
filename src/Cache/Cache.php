@@ -10,11 +10,28 @@ class Cache
     private $adapter;
 
     /**
+     * @var boolean If cache keys are case sensitive
+     */
+    public static bool $caseSensitive = true;
+
+    /**
      * @param Adapter $adapter
      */
     public function __construct(Adapter $adapter)
     {
         $this->adapter = $adapter;
+    }
+
+    /**
+     * Toggle case sensitivity of keys inside cache
+     *
+     * @param string $key
+     * @param boolean $value if true, cache keys will be case sensitive
+     * @return mixed
+     */
+    public static function setCaseSensitivity(bool $value)
+    {
+        return self::$caseSensitive = $value;
     }
 
     /**
@@ -26,6 +43,7 @@ class Cache
      */
     public function load($key, $ttl)
     {
+        $key = self::$caseSensitive ? $key : \strtolower($key);
         return $this->adapter->load($key, $ttl);
     }
 
@@ -38,6 +56,7 @@ class Cache
      */
     public function save($key, $data)
     {
+        $key = self::$caseSensitive ? $key : \strtolower($key);
         return $this->adapter->save($key, $data);
     }
 
@@ -49,6 +68,7 @@ class Cache
      */
     public function purge($key): bool
     {
+        $key = self::$caseSensitive ? $key : \strtolower($key);
         return $this->adapter->purge($key);
     }
 }

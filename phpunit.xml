@@ -10,7 +10,10 @@
         >
     <testsuites>
         <testsuite name="Application Test Suite">
-            <directory>./tests/</directory>
+            <file>./tests/Cache/FilesystemTest.php</file>
+            <file>./tests/Cache/MemoryTest.php</file>
+            <file>./tests/Cache/NoneTest.php</file>
+            <file>./tests/Cache/RedisTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>

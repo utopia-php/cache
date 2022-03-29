@@ -11,57 +11,70 @@
  * @license The MIT License (MIT) <http://www.opensource.org/licenses/mit-license.php>
  */
 
-namespace Utopia;
+namespace Utopia\Tests;
 
-use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Cache;
 use Utopia\Cache\Adapter\None;
+use Utopia\Tests\Base;
 
-class NoneTest extends TestCase
+class NoneTest extends Base
 {
-    /**
-     * @var Cache
-     */
-    protected $cache = null;
-
-    /**
-     * @var string
-     */
-    protected $key = 'test-key-for-cache';
-
-    /**
-     * @var string
-     */
-    protected $data = 'test data string';
-
-    protected function setUp(): void
+    public static function setUpBeforeClass(): void
     {
-        $this->cache = new Cache(new None());
+        self::$cache = new Cache(new None());
+        self::$cache::setCaseSensitivity(true);
     }
 
-    protected function tearDown(): void
+    public static function tearDownAfterClass(): void
     {
-        $this->cache = null;
+        self::$cache = null;
     }
 
-    public function testCacheLoad()
+    public function testEmptyCacheKey()
     {
-        $data  = $this->cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        self::$cache->purge($this->key);
+
+        $data  = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals(false, $data);
     }
 
     public function testCacheSave()
     {
-        $result = $this->cache->save($this->key, $this->data);
+        $result = self::$cache->save($this->key, $this->data);
 
         $this->assertEquals(false, $result);
     }
 
+    /**
+     * @depends testCacheSave
+     */
+    public function testCacheLoad()
+    {
+        $data  = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+
+        $this->assertEquals(false, $data);
+    }
+
+    /**
+     * @depends testCacheLoad
+     */
+    public function testNotEmptyCacheKey()
+    {
+        $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+
+        $this->assertEquals(false, $data);
+    }
+
     public function testCachePurge()
     {
-        $result = $this->cache->purge($this->key);
+        $result = self::$cache->purge($this->key);
 
         $this->assertEquals(true, $result);
+    }
+
+    public function testCaseInsensitivity() {
+        // None adapter does not expect case sensitivity/insensitivy
+        $this->assertEquals(true, true);
     }
 }
