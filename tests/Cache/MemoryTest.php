@@ -22,11 +22,11 @@ class MemoryTest extends Base
     public static function setUpBeforeClass(): void
     {
         self::$cache = new Cache(new Memory());
-        self::$cache::setCaseSensitivity(true);
     }
 
     public static function tearDownAfterClass(): void
     {
+        self::$cache::setCaseSensitivity(false);
         self::$cache = null;
     }
 }

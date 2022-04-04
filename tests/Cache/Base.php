@@ -67,17 +67,7 @@ abstract class Base extends TestCase
     }
 
     public function testCaseInsensitivity() {
-        // Ensure case sensitivity first (configured in adapter's setUp)
-        $data = self::$cache->save('color', 'pink');
-        $this->assertEquals('pink', $data);
-        $data = self::$cache->load('color', 60 * 60 * 24 * 30 * 3 /* 3 months */);
-        $this->assertEquals('pink', $data);
-        $data = self::$cache->load('COLOR', 60 * 60 * 24 * 30 * 3 /* 3 months */);
-        $this->assertEquals(false, $data);
-
-        // Test case insensitivity
-        self::$cache::setCaseSensitivity(false);
-
+        // Ensure case in-sensitivity first (configured in adapter's setUp)
         $data = self::$cache->save('planet', 'Earth');
         $this->assertEquals('Earth', $data);
 
@@ -94,6 +84,16 @@ abstract class Base extends TestCase
         $data = self::$cache->load('planet', 60 * 60 * 24 * 30 * 3 /* 3 months */);
         $this->assertEquals(false, $data);
         $data = self::$cache->load('PLANET', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $this->assertEquals(false, $data);
+
+        // Test case sensitivity
+        self::$cache::setCaseSensitivity(true);
+
+        $data = self::$cache->save('color', 'pink');
+        $this->assertEquals('pink', $data);
+        $data = self::$cache->load('color', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $this->assertEquals('pink', $data);
+        $data = self::$cache->load('COLOR', 60 * 60 * 24 * 30 * 3 /* 3 months */);
         $this->assertEquals(false, $data);
     }
 }
