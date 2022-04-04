@@ -12,7 +12,7 @@ class Cache
     /**
      * @var boolean If cache keys are case sensitive
      */
-    public static bool $caseSensitive = true;
+    public static bool $caseSensitive = false;
 
     /**
      * @param Adapter $adapter

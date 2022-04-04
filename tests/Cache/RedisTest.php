@@ -25,11 +25,11 @@ class RedisTest extends Base
         $redis = new Redis();
         $redis->connect('redis', 6379);
         self::$cache = new Cache(new RedisAdapter($redis));
-        self::$cache::setCaseSensitivity(true);
     }
 
     public static function tearDownAfterClass(): void
     {
+        self::$cache::setCaseSensitivity(false);
         self::$cache = null;
     }
 
