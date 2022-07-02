@@ -86,12 +86,6 @@ class Filesystem implements Adapter
      */
     public function getPath($filename)
     {
-        $path = '';
-
-        for ($i = 0; $i < 4; $i++) {
-            $path = ($i < \strlen($filename)) ? $path . DIRECTORY_SEPARATOR . $filename[$i] : $path . DIRECTORY_SEPARATOR . 'x';
-        }
-
-        return $this->path . $path . DIRECTORY_SEPARATOR . $filename;
+        return $this->path . DIRECTORY_SEPARATOR . $filename;
     }
 }
