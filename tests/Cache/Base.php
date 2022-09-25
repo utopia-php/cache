@@ -2,6 +2,7 @@
 
 namespace Utopia\Tests;
 
+use Utopia\Cache\Cache;
 use PHPUnit\Framework\TestCase;
 
 abstract class Base extends TestCase
