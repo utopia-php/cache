@@ -54,7 +54,7 @@ class Sharding implements Adapter
      */
     public function purge($key): bool
     {
-        return (bool) $this->getAdapter($key);
+        return (bool) $this->getAdapter($key)->purge($key);
     }
 
     /**
@@ -65,8 +65,6 @@ class Sharding implements Adapter
     {
         $hash = \crc32($key);
         $index = $hash % \count($this->adapters);
-        var_dump($key, $index);
-        var_dump('-------------');
         return $this->adapters[$index];
     }
 }
