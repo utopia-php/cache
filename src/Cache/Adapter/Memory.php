@@ -23,7 +23,7 @@ class Memory implements Adapter
      * @param int $ttl time in seconds
      * @return mixed
      */
-    public function load($key, $ttl)
+    public function load(string $key, int $ttl): mixed
     {
         if (!empty($key) && isset($this->store[$key])) {
             /** @var array{time: int, data: string} */
@@ -40,7 +40,7 @@ class Memory implements Adapter
      * @param string|array $data
      * @return bool|string|array
      */
-    public function save($key, $data)
+    public function save(string $key, $data): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -60,7 +60,7 @@ class Memory implements Adapter
      * @param string $key
      * @return bool
      */
-    public function purge($key): bool
+    public function purge(string $key): bool
     {
         if (!empty($key) && isset($this->store[$key])) { // if a key is passed and it exists in cache
             unset($this->store[$key]);

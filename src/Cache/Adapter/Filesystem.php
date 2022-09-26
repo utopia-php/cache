@@ -15,7 +15,7 @@ class Filesystem implements Adapter
      * Filesystem constructor.
      * @param string $path
      */
-    public function __construct($path)
+    public function __construct(string $path)
     {
         $this->path = $path;
     }
@@ -26,7 +26,7 @@ class Filesystem implements Adapter
      * @return mixed
      * @throws \Exception
      */
-    public function load($key, $ttl)
+    public function load(string $key, int $ttl): mixed
     {
         $file = $this->getPath($key);
 
@@ -43,7 +43,7 @@ class Filesystem implements Adapter
      * @throws \Exception
      * @return bool|string|array
      */
-    public function save($key, $data)
+    public function save(string $key, mixed $data): bool|string|array
     {
         if (empty($data)) {
             return false;
@@ -69,7 +69,7 @@ class Filesystem implements Adapter
      * @throws \Exception
      * @return bool
      */
-    public function purge($key): bool
+    public function purge(string $key): bool
     {
         $file = $this->getPath($key);
 
@@ -84,7 +84,7 @@ class Filesystem implements Adapter
      * @param string $filename
      * @return string
      */
-    public function getPath($filename)
+    public function getPath(string $filename): string 
     {
         return $this->path . DIRECTORY_SEPARATOR . $filename;
     }
