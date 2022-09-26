@@ -9,18 +9,18 @@ interface Adapter
      * @param int $ttl time in seconds
      * @return mixed
      */
-    public function load($key, $ttl);
+    public function load(string $key, int $ttl): mixed;
 
     /**
      * @param string $key
      * @param string|array $data
      * @return bool|string|array
      */
-    public function save($key, $data);
+    public function save(string $key, $data): bool|string|array;
 
     /**
      * @param string $key
      * @return bool
      */
-    public function purge($key): bool;
+    public function purge(string $key): bool;
 }

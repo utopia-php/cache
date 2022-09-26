@@ -9,22 +9,38 @@ class Sharding implements Adapter
     /**
      * @var Adapter[] 
      */
-    protected $adapters;
+    protected array $adapters;
+    
+    /**
+     * @var int
+     */
+    protected int $count = 0;
 
     /**
-     * Sharding constructor.
+     * Sharding Adapter.
      * 
      * Allows to shard cache across multiple adapters in a consistent way.
+     * Using sharding we can increase cache size and balance the read
+     * and write load between multiple adapters.
      * 
-     * Please Note:
-     *  When adding a new adapter to the pool, cached will gradually
-     *  get re-distributed to fill the new adapter, this might casue a siegnificant drop
-     *  in hit-rate for a short period of time.
+     * Each cache key will be hashed and the hash will be used to determine
+     * which adapter to use for fetching or storing this key. Only one
+     * adapter will always match a specific key unless a new adapter is
+     * added to the pool.
+     * 
+     * When adding a new adapter to the pool, cached will gradually
+     * get re-distributed to fill the new adapter, this might cause a
+     * significant drop in hit-rate for a short period of time.
      * 
      * @param Adapter[] $adapters
      */
     public function __construct(array $adapters)
     {
+        if(empty($adapters)) {
+            throw new \Exception('No adapters provided');
+        };
+
+        $this->count = \count($adapters);
         $this->adapters = $adapters;
     }
 
@@ -33,7 +49,7 @@ class Sharding implements Adapter
      * @param int $ttl time in seconds
      * @return mixed
      */
-    public function load($key, $ttl)
+    public function load(string $key, int $ttl): mixed
     {
         return $this->getAdapter($key)->load($key, $ttl);
     }
@@ -43,7 +59,7 @@ class Sharding implements Adapter
      * @param string|array $data
      * @return bool|string|array
      */
-    public function save($key, $data)
+    public function save(string $key, $data): bool|string|array
     {
         return $this->getAdapter($key)->save($key, $data);
     }
@@ -52,7 +68,7 @@ class Sharding implements Adapter
      * @param string $key
      * @return bool
      */
-    public function purge($key): bool
+    public function purge(string $key): bool
     {
         return (bool) $this->getAdapter($key)->purge($key);
     }
@@ -64,7 +80,7 @@ class Sharding implements Adapter
     protected function getAdapter(string $key): Adapter
     {
         $hash = \crc32($key);
-        $index = $hash % \count($this->adapters);
+        $index = $hash % $this->count;
         return $this->adapters[$index];
     }
 }

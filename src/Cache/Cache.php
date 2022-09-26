@@ -27,9 +27,9 @@ class Cache
      *
      * @param string $key
      * @param boolean $value if true, cache keys will be case sensitive
-     * @return mixed
+     * @return bool
      */
-    public static function setCaseSensitivity(bool $value)
+    public static function setCaseSensitivity(bool $value): bool
     {
         return self::$caseSensitive = $value;
     }
@@ -41,7 +41,7 @@ class Cache
      * @param int $ttl time in seconds
      * @return mixed
      */
-    public function load($key, $ttl)
+    public function load(string $key, int $ttl): mixed
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         return $this->adapter->load($key, $ttl);
@@ -54,7 +54,7 @@ class Cache
      * @param string|array $data
      * @return bool|string|array
      */
-    public function save($key, $data)
+    public function save(string $key, mixed $data): bool|string|array
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         return $this->adapter->save($key, $data);
@@ -66,7 +66,7 @@ class Cache
      * @param string $key
      * @return bool
      */
-    public function purge($key): bool
+    public function purge(string $key): bool
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         return $this->adapter->purge($key);

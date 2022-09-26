@@ -10,7 +10,7 @@ class Redis implements Adapter
     /**
      * @var Client 
      */
-    protected $redis;
+    protected Client $redis;
 
     /**
      * Redis constructor.
@@ -26,7 +26,7 @@ class Redis implements Adapter
      * @param int $ttl time in seconds
      * @return mixed
      */
-    public function load($key, $ttl)
+    public function load(string $key, int $ttl): mixed
     {
         /** @var array{time: int, data: string} */
         $cache = json_decode($this->redis->get($key), true);
@@ -43,7 +43,7 @@ class Redis implements Adapter
      * @param string|array $data
      * @return bool|string|array
      */
-    public function save($key, $data)
+    public function save(string $key, $data): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -61,7 +61,7 @@ class Redis implements Adapter
      * @param string $key
      * @return bool
      */
-    public function purge($key): bool
+    public function purge(string $key): bool
     {
         if (\str_ends_with($key, ':*')) {
             return (bool) $this->redis->del($this->redis->keys($key));
