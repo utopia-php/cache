@@ -7,6 +7,13 @@ use Redis as Client;
 
 class Redis implements Adapter
 {
+    const EVENT_SAVE  = 'save';
+    const EVENT_PURGE = 'purge';
+    /**
+     * @var callable
+     */
+    private static $purgeCallback;
+
     /**
      * @var Client 
      */
@@ -68,5 +75,14 @@ class Redis implements Adapter
         }
 
         return (bool) $this->redis->del($key); // unlink() returns number of keys deleted
+    }
+
+
+    public static function on(string $event, callable $callback) {
+        switch($event) {
+            case self::EVENT_SAVE:
+            case self::EVENT_PURGE:
+                self::$purgeCallback = $callback;
+        }
     }
 }
