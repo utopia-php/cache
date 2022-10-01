@@ -15,7 +15,7 @@
             <file>./tests/Cache/NoneTest.php</file>
             <file>./tests/Cache/RedisTest.php</file>
             <file>./tests/Cache/ShardingTest.php</file>
-            <file>./tests/Cache/Memcached.php</file>
+            <file>./tests/Cache/MemcachedTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>
