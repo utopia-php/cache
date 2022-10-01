@@ -19,8 +19,8 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN \
   apk update \
-  && apk add --no-cache make automake autoconf gcc g++ git \
-  && rm -rf /var/cache/apk/*
+  && apk add --no-cache make automake autoconf gcc g++ git zlib-dev libmemcached-dev \
+  && rm -rf /var/cache/apk/* 
 
 RUN \
   # Redis Extension
@@ -34,6 +34,14 @@ RUN \
 
 RUN echo extension=redis.so >> /usr/local/etc/php/conf.d/redis.ini
 
+
+RUN \
+  # Memcached Extension
+  git clone https://github.com/php-memcached-dev/php-memcached /usr/src/php/ext/memcached \
+  && cd /usr/src/php/ext/memcached && git checkout tags/v3.2.0 \
+  && docker-php-ext-configure memcached \
+  && docker-php-ext-install memcached 
+  
 WORKDIR /usr/src/code
 
 # Add Source Code

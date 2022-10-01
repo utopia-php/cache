@@ -20,7 +20,8 @@
     "require": {
         "php": ">=8.0",
         "ext-json": "*",
-        "ext-redis": "*"
+        "ext-redis": "*",
+        "ext-memcached": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.3",
