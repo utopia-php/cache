@@ -5,9 +5,30 @@ namespace Utopia\Cache;
 class Cache
 {
     /**
+     * @var string
+     */
+    const EVENT_LOAD  = 'load';
+
+    /**
+     * @var string
+     */
+    const EVENT_SAVE  = 'save';
+
+    /**
+     * @var string
+     */
+    const EVENT_PURGE = 'purge';
+
+    /**
      * @var Adapter
      */
     private $adapter;
+
+    /**
+     * @var array
+     */
+    protected static $listeners = [];
+
 
     /**
      * @var boolean If cache keys are case sensitive
@@ -23,13 +44,24 @@ class Cache
     }
 
     /**
-     * Toggle case sensitivity of keys inside cache
+     * Add events listener.
      *
-     * @param string $key
-     * @param boolean $value if true, cache keys will be case sensitive
+     * @param string $event
+     * @param callable $callback
      * @return bool
      */
-    public static function setCaseSensitivity(bool $value): bool
+    public static function on(string $event, callable $callback)
+    {
+        self::$listeners[$event][] = $callback;
+    }
+
+    /**
+     * Toggle case sensitivity of keys inside cache
+     *
+     * @param boolean $value if true, cache keys will be case sensitive
+     * @return mixed
+     */
+    public static function setCaseSensitivity(bool $value)
     {
         return self::$caseSensitive = $value;
     }
@@ -41,10 +73,18 @@ class Cache
      * @param int $ttl time in seconds
      * @return mixed
      */
-    public function load(string $key, int $ttl): mixed
+    public function load($key, $ttl): mixed
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
-        return $this->adapter->load($key, $ttl);
+        $loaded = $this->adapter->load($key, $ttl);
+
+        foreach (self::$listeners[self::EVENT_LOAD] ?? [] && !empty($loaded) as $listener) {
+            if (is_callable($listener)) {
+                call_user_func($listener, $key);
+            }
+        }
+
+        return $loaded;
     }
 
     /**
@@ -54,10 +94,18 @@ class Cache
      * @param string|array $data
      * @return bool|string|array
      */
-    public function save(string $key, mixed $data): bool|string|array
+    public function save($key, $data)
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
-        return $this->adapter->save($key, $data);
+        $saved = $this->adapter->save($key, $data);
+
+        foreach (self::$listeners[self::EVENT_SAVE] ?? [] && $saved as $listener) {
+            if (is_callable($listener)) {
+                call_user_func($listener, $key);
+            }
+        }
+
+        return $saved;
     }
 
     /**
@@ -66,9 +114,18 @@ class Cache
      * @param string $key
      * @return bool
      */
-    public function purge(string $key): bool
+    public function purge($key): bool
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
-        return $this->adapter->purge($key);
+        $purged = $this->adapter->purge($key);
+
+        foreach (self::$listeners[self::EVENT_PURGE] ?? [] && $purged as $listener) {
+            if (is_callable($listener)) {
+                call_user_func($listener, $key);
+            }
+        }
+
+        return $purged;
     }
+
 }
