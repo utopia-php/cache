@@ -17,10 +17,18 @@ LABEL maintainer="team@appwrite.io"
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+
 RUN \
   apk update \
   && apk add --no-cache make automake autoconf gcc g++ git \
   && rm -rf /var/cache/apk/*
+
+RUN \
+    apk update \
+    && apk add --no-cache autoconf g++ make libmemcached-dev \
+    && apk add --no-cache zip libzip-dev \
+    && pecl install memcached \
+    && docker-php-ext-enable memcached
 
 RUN \
   # Redis Extension
