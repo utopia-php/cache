@@ -66,7 +66,7 @@ class Hazelcast implements Adapter
             return (bool) $this->memcached->deleteMulti($this->searchKeyByPrefix($key));
         }
 
-        return (bool) $this->memcached->del($key);
+        return (bool) $this->memcached->delete($key);
     }
 
     /**
