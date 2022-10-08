@@ -16,6 +16,12 @@ services:
     container_name: redis
     networks:
       - database
+
+  memcached:
+    image: memcached:1.6.17-alpine
+    container_name: memcached
+    networks:
+      - database       
   
   shardA:
     image: redis:6.0-alpine
