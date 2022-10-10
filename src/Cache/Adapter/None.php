@@ -26,8 +26,8 @@ class None implements Adapter
 
     /**
      * @param string $key
-     * @param string|array $data
-     * @return bool|string|array
+     * @param string|array<int|string, mixed> $data
+     * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, $data): bool|string|array
     {

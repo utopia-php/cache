@@ -19,12 +19,15 @@ class RedisTest extends Base
     public static function tearDownAfterClass(): void
     {
         self::$cache::setCaseSensitivity(false);
+        // @phpstan-ignore-next-line
         self::$cache = null;
     }
 
-    // Wildcard is only supported by Redis at the moment.
-    // If global support is introduced, move test to Base.php
-    public function testCachePurgeWildcard()
+    /** 
+     * Wildcard is only supported by Redis at the moment.
+     * If global support is introduced, move test to Base.php
+     */
+    public function testCachePurgeWildcard(): void
     {
         $data1 = self::$cache->save('test:file1', 'file1');
         $data2 = self::$cache->save('test:file2', 'file2');

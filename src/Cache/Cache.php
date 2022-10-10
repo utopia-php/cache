@@ -25,7 +25,6 @@ class Cache
     /**
      * Toggle case sensitivity of keys inside cache
      *
-     * @param string $key
      * @param boolean $value if true, cache keys will be case sensitive
      * @return bool
      */
@@ -49,10 +48,10 @@ class Cache
 
     /**
      * Save data to cache. Returns data on success of false on failure.
-     *
+     * 
      * @param string $key
-     * @param string|array $data
-     * @return bool|string|array
+     * @param string|array<int|string, mixed> $data
+     * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, mixed $data): bool|string|array
     {

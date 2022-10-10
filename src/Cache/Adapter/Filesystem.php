@@ -39,9 +39,9 @@ class Filesystem implements Adapter
 
     /**
      * @param string $key
-     * @param string|array $data
+     * @param string|array<int|string, mixed> $data
      * @throws \Exception
-     * @return bool|string|array
+     * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, mixed $data): bool|string|array
     {
