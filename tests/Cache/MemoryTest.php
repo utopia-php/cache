@@ -2,9 +2,8 @@
 
 namespace Utopia\Tests;
 
-use Utopia\Cache\Cache;
 use Utopia\Cache\Adapter\Memory;
-use Utopia\Tests\Base;
+use Utopia\Cache\Cache;
 
 class MemoryTest extends Base
 {

@@ -2,9 +2,8 @@
 
 namespace Utopia\Tests;
 
-use Utopia\Cache\Cache;
 use Utopia\Cache\Adapter\None;
-use Utopia\Tests\Base;
+use Utopia\Cache\Cache;
 
 class NoneTest extends Base
 {
@@ -23,7 +22,7 @@ class NoneTest extends Base
     {
         self::$cache->purge($this->key);
 
-        $data  = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals(false, $data);
     }
@@ -40,7 +39,7 @@ class NoneTest extends Base
      */
     public function testCacheLoad()
     {
-        $data  = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals(false, $data);
     }
@@ -62,7 +61,8 @@ class NoneTest extends Base
         $this->assertEquals(true, $result);
     }
 
-    public function testCaseInsensitivity() {
+    public function testCaseInsensitivity()
+    {
         // None adapter does not expect case sensitivity/insensitivy
         $this->assertEquals(true, true);
     }

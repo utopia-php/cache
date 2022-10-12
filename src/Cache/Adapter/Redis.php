@@ -2,19 +2,20 @@
 
 namespace Utopia\Cache\Adapter;
 
-use Utopia\Cache\Adapter;
 use Redis as Client;
+use Utopia\Cache\Adapter;
 
 class Redis implements Adapter
 {
     /**
-     * @var Client 
+     * @var Client
      */
     protected Client $redis;
 
     /**
      * Redis constructor.
-     * @param Client $redis
+     *
+     * @param  Client  $redis
      */
     public function __construct(Client $redis)
     {
@@ -22,16 +23,16 @@ class Redis implements Adapter
     }
 
     /**
-     * @param string $key
-     * @param int $ttl time in seconds
+     * @param  string  $key
+     * @param  int  $ttl time in seconds
      * @return mixed
      */
     public function load(string $key, int $ttl): mixed
     {
         /** @var array{time: int, data: string} */
         $cache = json_decode($this->redis->get($key), true);
-        
-        if (!empty($cache) && ($cache['time'] + $ttl > time())) { // Cache is valid
+
+        if (! empty($cache) && ($cache['time'] + $ttl > time())) { // Cache is valid
             return $cache['data'];
         }
 
@@ -39,8 +40,8 @@ class Redis implements Adapter
     }
 
     /**
-     * @param string $key
-     * @param string|array $data
+     * @param  string  $key
+     * @param  string|array  $data
      * @return bool|string|array
      */
     public function save(string $key, $data): bool|string|array
@@ -51,14 +52,14 @@ class Redis implements Adapter
 
         $cache = [
             'time' => \time(),
-            'data' => $data
+            'data' => $data,
         ];
 
         return ($this->redis->set($key, json_encode($cache))) ? $data : false;
     }
 
     /**
-     * @param string $key
+     * @param  string  $key
      * @return bool
      */
     public function purge(string $key): bool
