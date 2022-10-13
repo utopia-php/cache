@@ -11,7 +11,6 @@ class None implements Adapter
      */
     public function __construct()
     {
-
     }
 
     /**
