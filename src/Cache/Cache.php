@@ -27,7 +27,7 @@ class Cache
     /**
      * @var array
      */
-    protected static $listeners = [];
+    private  $listeners = [];
 
 
     /**
@@ -44,15 +44,16 @@ class Cache
     }
 
     /**
-     * Add events listener.
+     * Add event listener.
      *
      * @param string $key
-     * @return bool
+     * @param callable $callback
      */
-    public static function on(string $event, callable $callback)
+    public function attach(string $event, callable $callback)
     {
-        self::$listeners[$event][] = $callback;
+        $this->listeners[$event][] = $callback;
     }
+
 
     /**
      * Toggle case sensitivity of keys inside cache
@@ -77,7 +78,8 @@ class Cache
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $loaded = $this->adapter->load($key, $ttl);
-        foreach (self::$listeners[self::EVENT_LOAD] ?? [] as $listener) {
+
+        foreach ($this->listeners[self::EVENT_LOAD] ?? [] as $listener) {
             if (is_callable($listener)) {
                 call_user_func($listener, $key);
             }
@@ -98,7 +100,7 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $saved = $this->adapter->save($key, $data);
 
-        foreach (self::$listeners[self::EVENT_SAVE] ?? [] as $listener) {
+        foreach ($this->listeners[self::EVENT_SAVE] ?? [] as $listener) {
             if (is_callable($listener)) {
                 call_user_func($listener, $key);
             }
@@ -118,7 +120,7 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $purged = $this->adapter->purge($key);
 
-        foreach (self::$listeners[self::EVENT_PURGE] ?? [] as $listener) {
+        foreach ($this->listeners[self::EVENT_PURGE] ?? [] as $listener) {
             if (is_callable($listener)) {
                 call_user_func($listener, $key);
             }
