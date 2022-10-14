@@ -3,9 +3,8 @@
 namespace Utopia\Tests;
 
 use Redis as Redis;
-use Utopia\Cache\Cache;
 use Utopia\Cache\Adapter\Redis as RedisAdapter;
-use Utopia\Tests\Base;
+use Utopia\Cache\Cache;
 
 class RedisTest extends Base
 {
