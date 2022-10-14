@@ -35,7 +35,7 @@ class Memcached implements Adapter
             return false;
         }
 
-        if (($cache['time'] + $ttl > time())) { // Cache is valid
+        if ($cache['time'] + $ttl > time()) { // Cache is valid
             return $cache['data'];
         }
 
