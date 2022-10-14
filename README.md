@@ -58,13 +58,6 @@ To run static code analysis, use the following Psalm command:
 `docker-compose exec tests vendor/bin/psalm --show-info=true`
 
 
-## Authors
-
-**Eldad Fux**
-
-+ [https://twitter.com/eldadfux](https://twitter.com/eldadfux)
-+ [https://github.com/eldadfux](https://github.com/eldadfux)
-
 ## Copyright and license
 
 The MIT License (MIT) [http://www.opensource.org/licenses/mit-license.php](http://www.opensource.org/licenses/mit-license.php)
