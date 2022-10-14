@@ -5,21 +5,21 @@ namespace Utopia\Cache;
 interface Adapter
 {
     /**
-     * @param string $key
-     * @param int $ttl time in seconds
+     * @param  string  $key
+     * @param  int  $ttl time in seconds
      * @return mixed
      */
     public function load(string $key, int $ttl): mixed;
 
     /**
-     * @param string $key
-     * @param string|array<int|string, mixed> $data
+     * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, $data): bool|string|array;
 
     /**
-     * @param string $key
+     * @param  string  $key
      * @return bool
      */
     public function purge(string $key): bool;

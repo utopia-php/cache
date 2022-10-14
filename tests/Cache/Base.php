@@ -2,15 +2,15 @@
 
 namespace Utopia\Tests;
 
-use Utopia\Cache\Cache;
 use PHPUnit\Framework\TestCase;
+use Utopia\Cache\Cache;
 
 abstract class Base extends TestCase
 {
     /**
      * @var Cache
      */
-    static protected $cache = null;
+    protected static $cache = null;
 
     /**
      * @var string
@@ -31,7 +31,6 @@ abstract class Base extends TestCase
      * General tests
      * Can be overwritten in specific adapter if required, such as None Cache
      */
-    
     public function testCacheSave(): void
     {
         // test $data array
@@ -67,7 +66,8 @@ abstract class Base extends TestCase
         $this->assertEquals(false, $data);
     }
 
-    public function testCaseInsensitivity(): void {
+    public function testCaseInsensitivity(): void
+    {
         // Ensure case in-sensitivity first (configured in adapter's setUp)
         $data = self::$cache->save('planet', 'Earth');
         $this->assertEquals('Earth', $data);
@@ -79,7 +79,7 @@ abstract class Base extends TestCase
         $data = self::$cache->load('PlAnEt', 60 * 60 * 24 * 30 * 3 /* 3 months */);
         $this->assertEquals('Earth', $data);
 
-        $result = self::$cache->purge("PLaNEt");
+        $result = self::$cache->purge('PLaNEt');
         $this->assertEquals(true, $result);
 
         $data = self::$cache->load('planet', 60 * 60 * 24 * 30 * 3 /* 3 months */);

@@ -4,10 +4,9 @@ namespace Utopia\Tests;
 
 use Redis as Redis;
 use Throwable;
-use Utopia\Cache\Cache;
 use Utopia\Cache\Adapter\Redis as RedisAdapter;
 use Utopia\Cache\Adapter\Sharding;
-use Utopia\Tests\Base;
+use Utopia\Cache\Cache;
 
 class ShardingTest extends Base
 {
@@ -25,7 +24,7 @@ class ShardingTest extends Base
         self::$cache = new Cache(new Sharding([
             new RedisAdapter($shardA),
             new RedisAdapter($shardB),
-            new RedisAdapter($shardC)
+            new RedisAdapter($shardC),
         ]));
     }
 
