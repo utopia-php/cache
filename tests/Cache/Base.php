@@ -97,4 +97,27 @@ abstract class Base extends TestCase
         $data = self::$cache->load('COLOR', 60 * 60 * 24 * 30 * 3 /* 3 months */);
         $this->assertEquals(false, $data);
     }
+
+
+    /**
+     * General tests
+     * Can be overwritten in specific adapter if required, such as None Cache
+     */
+    public function testFlush()
+    {
+        // test $data array
+        $result1 = self::$cache->save('x', 'x');
+        $result2 = self::$cache->save('y', 'y');
+
+        $this->assertEquals($result1, self::$cache->load('x', 100));
+        $this->assertEquals($result2, self::$cache->load('y', 100));
+
+        // test $data string
+        $result = self::$cache->flush();
+
+        $this->assertEquals(true, $result);
+
+        $this->assertEquals(false, self::$cache->load('x', 100));
+        $this->assertEquals(false, self::$cache->load('y', 100));
+    }
 }

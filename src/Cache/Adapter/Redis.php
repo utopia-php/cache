@@ -70,4 +70,12 @@ class Redis implements Adapter
 
         return (bool) $this->redis->del($key); // unlink() returns number of keys deleted
     }
+
+    /**
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        return (bool) $this->redis->flushAll();
+    }
 }

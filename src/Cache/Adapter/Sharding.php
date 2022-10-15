@@ -74,6 +74,18 @@ class Sharding implements Adapter
     }
 
     /**
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        $result = true;
+        foreach ($this->adapters as $value) {
+            $result = ($value->flush()) ? $result : false;
+        }
+        return $result;
+    }
+
+    /**
      * @param  string  $key
      * @return Adapter
      */
