@@ -108,7 +108,7 @@ class Filesystem implements Adapter
      */
     protected function deleteDirectory(string $path): bool
     {
-        if (! is_dir($path)) {
+        if (!is_dir($path)) {
             throw new Exception("$path must be a directory");
         }
 
@@ -116,7 +116,7 @@ class Filesystem implements Adapter
             $path .= '/';
         }
 
-        $files = glob($path . '*', GLOB_MARK);
+        $files = glob($path.'*', GLOB_MARK);
 
         foreach ($files as $file) {
             if (is_dir($file)){
