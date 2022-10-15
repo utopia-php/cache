@@ -82,6 +82,7 @@ class Sharding implements Adapter
         foreach ($this->adapters as $value) {
             $result = ($value->flush()) ? $result : false;
         }
+
         return $result;
     }
 

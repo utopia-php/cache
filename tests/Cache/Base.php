@@ -98,7 +98,6 @@ abstract class Base extends TestCase
         $this->assertEquals(false, $data);
     }
 
-
     /**
      * General tests
      * Can be overwritten in specific adapter if required, such as None Cache
