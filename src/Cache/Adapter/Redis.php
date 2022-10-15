@@ -32,7 +32,7 @@ class Redis implements Adapter
         /** @var array{time: int, data: string} */
         $cache = json_decode($this->redis->get($key), true);
 
-        if (! empty($cache) && ($cache['time'] + $ttl > time())) { // Cache is valid
+        if (!$cache['data'] && ($cache['time'] + $ttl > time())) { // Cache is valid
             return $cache['data'];
         }
 
@@ -76,6 +76,6 @@ class Redis implements Adapter
      */
     public function flush(): bool
     {
-        return (bool) $this->redis->flushAll();
+        return $this->redis->flushAll();
     }
 }

@@ -103,9 +103,10 @@ class Filesystem implements Adapter
     }
 
     /**
+     * @param string $path
      * @return bool
      */
-    protected function deleteDirectory($path): bool
+    protected function deleteDirectory(string $path): bool
     {
         if (! is_dir($path)) {
             throw new Exception("$path must be a directory");
