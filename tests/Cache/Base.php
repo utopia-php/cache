@@ -103,10 +103,6 @@ abstract class Base extends TestCase
         $this->assertEquals(true, self::$cache->ping());
     }
 
-    /**
-     * General tests
-     * Can be overwritten in specific adapter if required, such as None Cache
-     */
     public function testFlush(): void
     {
         // test $data array
