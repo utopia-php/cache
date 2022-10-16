@@ -94,6 +94,15 @@ class Filesystem implements Adapter
     }
 
     /**
+     * @return bool
+     */
+    public function ping(): bool
+    {
+        $this->save('ping', 'pong');
+        return ($this->load('ping', 1) === 'pong');
+    }
+
+    /**
      * @param  string  $filename
      * @return string
      */

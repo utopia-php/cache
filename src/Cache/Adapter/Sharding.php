@@ -87,6 +87,19 @@ class Sharding implements Adapter
     }
 
     /**
+     * @return bool
+     */
+    public function ping(): bool
+    {
+        $result = true;
+        foreach ($this->adapters as $value) {
+            $result = ($value->ping()) ? $result : false;
+        }
+
+        return $result;
+    }
+
+    /**
      * @param  string  $key
      * @return Adapter
      */

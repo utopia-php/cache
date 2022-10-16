@@ -119,4 +119,13 @@ abstract class Base extends TestCase
         $this->assertEquals(false, self::$cache->load('x', 100));
         $this->assertEquals(false, self::$cache->load('y', 100));
     }
+
+    /**
+     * General tests
+     * Can be overwritten in specific adapter if required, such as None Cache
+     */
+    public function testPing()
+    {
+        $this->assertEquals(true, self::$cache->ping());
+    }
 }

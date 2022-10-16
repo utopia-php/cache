@@ -74,4 +74,13 @@ class Memcached implements Adapter
     {
         return $this->memcached->flush();
     }
+
+    /**
+     * @return bool
+     */
+    public function ping(): bool
+    {
+        $this->save('utopia-ping', 'pong');
+        return $this->memcached->touch('utopia-ping', 1);
+    }
 }
