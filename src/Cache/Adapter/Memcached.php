@@ -32,7 +32,7 @@ class Memcached implements Adapter
         /** @var array{time: int, data: string} */
         $cache = json_decode($this->memcached->get($key), true);
 
-        if (! empty($cache) && ($cache['time'] + $ttl > time())) { // Cache is valid
+        if (! empty($cache['data']) && ($cache['time'] + $ttl > time())) { // Cache is valid
             return $cache['data'];
         }
 
@@ -65,5 +65,13 @@ class Memcached implements Adapter
     public function purge(string $key): bool
     {
         return $this->memcached->delete($key);
+    }
+
+    /**
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        return $this->memcached->flush();
     }
 }

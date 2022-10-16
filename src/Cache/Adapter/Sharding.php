@@ -70,7 +70,20 @@ class Sharding implements Adapter
      */
     public function purge(string $key): bool
     {
-        return (bool) $this->getAdapter($key)->purge($key);
+        return $this->getAdapter($key)->purge($key);
+    }
+
+    /**
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        $result = true;
+        foreach ($this->adapters as $value) {
+            $result = ($value->flush()) ? $result : false;
+        }
+
+        return $result;
     }
 
     /**

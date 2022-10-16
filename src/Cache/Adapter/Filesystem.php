@@ -2,6 +2,7 @@
 
 namespace Utopia\Cache\Adapter;
 
+use Exception;
 use Utopia\Cache\Adapter;
 
 class Filesystem implements Adapter
@@ -85,11 +86,46 @@ class Filesystem implements Adapter
     }
 
     /**
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        return $this->deleteDirectory($this->path);
+    }
+
+    /**
      * @param  string  $filename
      * @return string
      */
     public function getPath(string $filename): string
     {
         return $this->path.DIRECTORY_SEPARATOR.$filename;
+    }
+
+    /**
+     * @param  string  $path
+     * @return bool
+     */
+    protected function deleteDirectory(string $path): bool
+    {
+        if (! is_dir($path)) {
+            throw new Exception("$path must be a directory");
+        }
+
+        if (substr($path, strlen($path) - 1, 1) != '/') {
+            $path .= '/';
+        }
+
+        $files = glob($path.'*', GLOB_MARK);
+
+        foreach ($files as $file) {
+            if (is_dir($file)) {
+                self::deleteDirectory($file);
+            } else {
+                unlink($file);
+            }
+        }
+
+        return rmdir($path);
     }
 }

@@ -74,4 +74,14 @@ class Cache
 
         return $this->adapter->purge($key);
     }
+
+    /**
+     * Removes all data from cache. Returns true on success of false on failure.
+     *
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        return $this->adapter->flush();
+    }
 }
