@@ -91,12 +91,13 @@ class Sharding implements Adapter
      */
     public function ping(): bool
     {
-        $result = true;
         foreach ($this->adapters as $value) {
-            $result = ($value->ping()) ? $result : false;
+            if (!($value->ping())) {
+                return false;
+            }
         }
 
-        return $result;
+        return true;
     }
 
     /**
