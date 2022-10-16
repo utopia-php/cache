@@ -98,9 +98,7 @@ class Filesystem implements Adapter
      */
     public function ping(): bool
     {
-        $this->save('ping', 'pong');
-
-        return $this->load('ping', 1) === 'pong';
+        return (file_exists($this->path) && is_writable($this->path) && is_readable($this->path));
     }
 
     /**
