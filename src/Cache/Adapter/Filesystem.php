@@ -2,6 +2,7 @@
 
 namespace Utopia\Cache\Adapter;
 
+use Exception;
 use Utopia\Cache\Adapter;
 
 class Filesystem implements Adapter
@@ -25,8 +26,6 @@ class Filesystem implements Adapter
      * @param  string  $key
      * @param  int  $ttl time in seconds
      * @return mixed
-     *
-     * @throws \Exception
      */
     public function load(string $key, int $ttl): mixed
     {
@@ -56,11 +55,11 @@ class Filesystem implements Adapter
 
         if (! \file_exists(\dirname($file))) { // Checks if directory path to file exists
             if (! @\mkdir(\dirname($file), 0755, true)) {
-                throw new \Exception('Can\'t create directory '.\dirname($file));
+                throw new Exception('Can\'t create directory '.\dirname($file));
             }
 
             if (! \file_exists(\dirname($file))) { // Checks race condition for mkdir function
-                throw new \Exception('Can\'t create directory '.\dirname($file));
+                throw new Exception('Can\'t create directory '.\dirname($file));
             }
         }
 
@@ -71,7 +70,7 @@ class Filesystem implements Adapter
      * @param  string  $key
      * @return bool
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function purge(string $key): bool
     {
@@ -85,11 +84,52 @@ class Filesystem implements Adapter
     }
 
     /**
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        return $this->deleteDirectory($this->path);
+    }
+
+    /**
      * @param  string  $filename
      * @return string
      */
     public function getPath(string $filename): string
     {
         return $this->path.DIRECTORY_SEPARATOR.$filename;
+    }
+
+    /**
+     * @param  string  $path
+     * @return bool
+     *
+     * @throws Exception
+     */
+    protected function deleteDirectory(string $path): bool
+    {
+        if (! is_dir($path)) {
+            throw new Exception("$path must be a directory");
+        }
+
+        if (substr($path, strlen($path) - 1, 1) != '/') {
+            $path .= '/';
+        }
+
+        $files = glob($path.'*', GLOB_MARK);
+
+        if (! $files) {
+            throw new Exception('Error happened during glob');
+        }
+
+        foreach ($files as $file) {
+            if (is_dir($file)) {
+                self::deleteDirectory($file);
+            } else {
+                unlink($file);
+            }
+        }
+
+        return rmdir($path);
     }
 }

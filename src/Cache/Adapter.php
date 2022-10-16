@@ -23,4 +23,9 @@ interface Adapter
      * @return bool
      */
     public function purge(string $key): bool;
+
+    /**
+     * @return bool
+     */
+    public function flush(): bool;
 }

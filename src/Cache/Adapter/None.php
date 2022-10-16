@@ -41,4 +41,12 @@ class None implements Adapter
     {
         return true;
     }
+
+    /**
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        return true;
+    }
 }

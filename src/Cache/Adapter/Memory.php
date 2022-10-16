@@ -70,4 +70,14 @@ class Memory implements Adapter
 
         return false;
     }
+
+    /**
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        $this->store = [];
+
+        return true;
+    }
 }

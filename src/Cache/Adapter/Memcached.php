@@ -69,4 +69,12 @@ class Memcached implements Adapter
     {
         return $this->memcached->delete($key);
     }
+
+    /**
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        return $this->memcached->flush();
+    }
 }
