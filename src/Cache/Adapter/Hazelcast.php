@@ -30,7 +30,7 @@ class Hazelcast implements Adapter
         /** @var array{time: int, data: string} */
         $cache = json_decode($this->memcached->get($key), true);
         
-        if (!empty($cache) && ($cache['time'] + $ttl > time())) { // Cache is valid
+        if (($cache['time'] + $ttl > time())) { // Cache is valid
             return $cache['data'];
         }
 
@@ -66,7 +66,7 @@ class Hazelcast implements Adapter
             return (bool) $this->memcached->deleteMulti($this->searchKeyByPrefix($key));
         }
 
-        return (bool) $this->memcached->delete($key);
+        return $this->memcached->delete($key);
     }
 
     /**
