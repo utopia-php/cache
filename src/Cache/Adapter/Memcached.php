@@ -81,6 +81,7 @@ class Memcached implements Adapter
     public function ping(): bool
     {
         $statuses = $this->memcached->getStats();
-        return !empty($statuses);
+
+        return ! empty($statuses);
     }
 }

@@ -10,7 +10,7 @@ class FilesystemTest extends Base
     public static function setUpBeforeClass(): void
     {
         $path = __DIR__.'/tests/data';
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             mkdir($path, 0777, true);
         }
 

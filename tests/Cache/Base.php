@@ -102,7 +102,7 @@ abstract class Base extends TestCase
     {
         $this->assertEquals(true, self::$cache->ping());
     }
-    
+
     public function testFlush()
     {
         // test $data array
