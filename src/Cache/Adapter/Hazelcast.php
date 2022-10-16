@@ -85,4 +85,12 @@ class Hazelcast implements Adapter
         }
         return $keysToDelete;
     }
+
+    /**
+     * @return bool
+    */
+    public function flush(): bool
+    {
+        return $this->memcached->flush();
+    }
 }
