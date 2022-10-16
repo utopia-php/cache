@@ -99,7 +99,8 @@ class Filesystem implements Adapter
     public function ping(): bool
     {
         $this->save('ping', 'pong');
-        return ($this->load('ping', 1) === 'pong');
+
+        return $this->load('ping', 1) === 'pong';
     }
 
     /**

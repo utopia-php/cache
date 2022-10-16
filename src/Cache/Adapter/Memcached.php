@@ -81,6 +81,7 @@ class Memcached implements Adapter
     public function ping(): bool
     {
         $this->save('utopia-ping', 'pong');
+
         return $this->memcached->touch('utopia-ping', 1);
     }
 }

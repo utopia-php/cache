@@ -87,6 +87,7 @@ class Redis implements Adapter
     {
         try {
             $this->redis->ping();
+
             return true;
         } catch (Exception $e) {
             return false;
