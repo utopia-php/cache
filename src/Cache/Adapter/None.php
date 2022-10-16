@@ -49,4 +49,12 @@ class None implements Adapter
     {
         return true;
     }
+
+    /**
+     * @return bool
+     */
+    public function ping(): bool
+    {
+        return true;
+    }
 }

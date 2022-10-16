@@ -2,6 +2,7 @@
 
 namespace Utopia\Cache\Adapter;
 
+use Exception;
 use Redis as Client;
 use Utopia\Cache\Adapter;
 
@@ -82,5 +83,19 @@ class Redis implements Adapter
     public function flush(): bool
     {
         return $this->redis->flushAll();
+    }
+
+    /**
+     * @return bool
+     */
+    public function ping(): bool
+    {
+        try {
+            $this->redis->ping();
+
+            return true;
+        } catch (Exception $e) {
+            return false;
+        }
     }
 }
