@@ -2,20 +2,24 @@
 
 namespace Utopia\Cache\Adapter;
 
+use Memcached as Client;
 use Utopia\Cache\Adapter;
 
-class Memory implements Adapter
+class Memcached implements Adapter
 {
     /**
-     * @var array
+     * @var Client
      */
-    public $store = [];
+    protected Client $memcached;
 
     /**
-     * Memory constructor.
+     * Memcached constructor.
+     *
+     * @param  Client  $memcached
      */
-    public function __construct()
+    public function __construct(Client $memcached)
     {
+        $this->memcached = $memcached;
     }
 
     /**
@@ -25,11 +29,11 @@ class Memory implements Adapter
      */
     public function load(string $key, int $ttl): mixed
     {
-        if (! empty($key) && isset($this->store[$key])) {
-            /** @var array{time: int, data: string} */
-            $saved = $this->store[$key];
+        /** @var array{time: int, data: string} */
+        $cache = json_decode($this->memcached->get($key), true);
 
-            return ($saved['time'] + $ttl > time()) ? $saved['data'] : false; // return data if cache is valid
+        if (! empty($cache['data']) && ($cache['time'] + $ttl > time())) { // Cache is valid
+            return $cache['data'];
         }
 
         return false;
@@ -46,14 +50,12 @@ class Memory implements Adapter
             return false;
         }
 
-        $saved = [
+        $cache = [
             'time' => \time(),
             'data' => $data,
         ];
 
-        $this->store[$key] = $saved;
-
-        return $data;
+        return ($this->memcached->set($key, json_encode($cache))) ? $data : false;
     }
 
     /**
@@ -62,13 +64,7 @@ class Memory implements Adapter
      */
     public function purge(string $key): bool
     {
-        if (! empty($key) && isset($this->store[$key])) { // if a key is passed and it exists in cache
-            unset($this->store[$key]);
-
-            return true;
-        }
-
-        return false;
+        return $this->memcached->delete($key);
     }
 
     /**
@@ -76,8 +72,6 @@ class Memory implements Adapter
      */
     public function flush(): bool
     {
-        $this->store = [];
-
-        return true;
+        return $this->memcached->flush();
     }
 }

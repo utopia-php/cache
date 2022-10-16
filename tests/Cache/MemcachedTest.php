@@ -2,14 +2,18 @@
 
 namespace Utopia\Tests;
 
-use Utopia\Cache\Adapter\Memory;
+use Memcached as Memcached;
+use Utopia\Cache\Adapter\Memcached as MemcachedAdapter;
 use Utopia\Cache\Cache;
 
-class MemoryTest extends Base
+class MemcachedTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
-        self::$cache = new Cache(new Memory());
+        $mc = new Memcached();
+        $mc->addServer('memcached', 11211);
+
+        self::$cache = new Cache(new MemcachedAdapter($mc));
     }
 
     public static function tearDownAfterClass(): void

@@ -17,13 +17,18 @@ services:
     networks:
       - database
 
-
   hazelcast:
     image: hazelcast/hazelcast:5.1.3
     container_name: hazelcast
     networks:
       - database  
 
+  memcached:
+    image: memcached:1.6.17-alpine
+    container_name: memcached
+    networks:
+      - database
+  
   shardA:
     image: redis:6.0-alpine
     container_name: shardA
