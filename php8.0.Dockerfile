@@ -25,12 +25,6 @@ RUN \
   && apk add --no-cache make automake autoconf gcc g++ git zlib-dev libmemcached-dev \
   && rm -rf /var/cache/apk/*
 
-RUN \
-    apk update \
-    && apk add --no-cache autoconf g++ make libmemcached-dev \
-    && apk add --no-cache zip libzip-dev \
-    && pecl install memcached \
-    && docker-php-ext-enable memcached
 
 RUN \
   # Redis Extension
