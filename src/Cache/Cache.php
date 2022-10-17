@@ -84,4 +84,14 @@ class Cache
     {
         return $this->adapter->flush();
     }
+
+    /**
+     * Check Cache Connecitivity
+     *
+     * @return bool
+     */
+    public function ping(): bool
+    {
+        return $this->adapter->ping();
+    }
 }

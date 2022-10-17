@@ -28,4 +28,9 @@ interface Adapter
      * @return bool
      */
     public function flush(): bool;
+
+    /**
+     * @return bool
+     */
+    public function ping(): bool;
 }
