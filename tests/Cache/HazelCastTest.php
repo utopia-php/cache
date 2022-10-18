@@ -12,7 +12,7 @@ class HazelCastTest extends Base
     public static function setUpBeforeClass(): void
     {
         $memcached = new Memcached();
-        $memcached->addServer('127.0.0.1', 5701);
+        $memcached->addServer('hazelcast', 5701);
         self::$cache = new Cache(new HazelCastAdapter($memcached));
     }
 
