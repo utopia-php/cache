@@ -19,12 +19,10 @@ LABEL maintainer="team@appwrite.io"
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-
 RUN \
   apk update \
   && apk add --no-cache make automake autoconf gcc g++ git zlib-dev libmemcached-dev \
   && rm -rf /var/cache/apk/*
-
 
 RUN \
   # Redis Extension
