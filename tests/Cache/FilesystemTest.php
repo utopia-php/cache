@@ -2,15 +2,19 @@
 
 namespace Utopia\Tests;
 
-use Utopia\Cache\Cache;
 use Utopia\Cache\Adapter\Filesystem;
-use Utopia\Tests\Base;
+use Utopia\Cache\Cache;
 
 class FilesystemTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
-        self::$cache = new Cache(new Filesystem('tests/data'));
+        $path = __DIR__.'/tests/data';
+        if (! file_exists($path)) {
+            mkdir($path, 0777, true);
+        }
+
+        self::$cache = new Cache(new Filesystem($path));
     }
 
     public static function tearDownAfterClass(): void

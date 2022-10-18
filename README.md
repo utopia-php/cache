@@ -51,19 +51,12 @@ Utopia Framework requires PHP 8.0 or later. We recommend using the latest PHP ve
 
 To run all unit tests, use the following Docker command:
 
-`docker-compose exec tests vendor/bin/phpunit --configuration phpunit.xml tests`
+`docker-compose exec php8 vendor/bin/phpunit --configuration phpunit.xml tests`
 
 To run static code analysis, use the following Psalm command:
 
-`docker-compose exec tests vendor/bin/psalm --show-info=true`
+`docker-compose exec php8 vendor/bin/psalm --show-info=true`
 
-
-## Authors
-
-**Eldad Fux**
-
-+ [https://twitter.com/eldadfux](https://twitter.com/eldadfux)
-+ [https://github.com/eldadfux](https://github.com/eldadfux)
 
 ## Copyright and license
 

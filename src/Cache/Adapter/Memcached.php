@@ -2,25 +2,24 @@
 
 namespace Utopia\Cache\Adapter;
 
-use Exception;
-use Redis as Client;
+use Memcached as Client;
 use Utopia\Cache\Adapter;
 
-class Redis implements Adapter
+class Memcached implements Adapter
 {
     /**
      * @var Client
      */
-    protected Client $redis;
+    protected Client $memcached;
 
     /**
-     * Redis constructor.
+     * Memcached constructor.
      *
-     * @param  Client  $redis
+     * @param  Client  $memcached
      */
-    public function __construct(Client $redis)
+    public function __construct(Client $memcached)
     {
-        $this->redis = $redis;
+        $this->memcached = $memcached;
     }
 
     /**
@@ -31,7 +30,7 @@ class Redis implements Adapter
     public function load(string $key, int $ttl): mixed
     {
         /** @var array{time: int, data: string} */
-        $cache = json_decode($this->redis->get($key), true);
+        $cache = json_decode($this->memcached->get($key), true);
 
         if (! empty($cache['data']) && ($cache['time'] + $ttl > time())) { // Cache is valid
             return $cache['data'];
@@ -56,7 +55,7 @@ class Redis implements Adapter
             'data' => $data,
         ];
 
-        return ($this->redis->set($key, json_encode($cache))) ? $data : false;
+        return ($this->memcached->set($key, json_encode($cache))) ? $data : false;
     }
 
     /**
@@ -65,11 +64,7 @@ class Redis implements Adapter
      */
     public function purge(string $key): bool
     {
-        if (\str_ends_with($key, ':*')) {
-            return (bool) $this->redis->del($this->redis->keys($key));
-        }
-
-        return (bool) $this->redis->del($key); // unlink() returns number of keys deleted
+        return $this->memcached->delete($key);
     }
 
     /**
@@ -77,7 +72,7 @@ class Redis implements Adapter
      */
     public function flush(): bool
     {
-        return $this->redis->flushAll();
+        return $this->memcached->flush();
     }
 
     /**
@@ -85,12 +80,8 @@ class Redis implements Adapter
      */
     public function ping(): bool
     {
-        try {
-            $this->redis->ping();
+        $statuses = $this->memcached->getStats();
 
-            return true;
-        } catch (Exception $e) {
-            return false;
-        }
+        return ! empty($statuses);
     }
 }

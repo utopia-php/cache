@@ -49,7 +49,7 @@ class Cache
      * @param string $key
      * @param callable $callback
      */
-    public function attach(string $event, callable $callback)
+    public function on(string $event, callable $callback)
     {
         $this->listeners[$event][] = $callback;
     }
@@ -60,7 +60,7 @@ class Cache
      *
      * @param string $key
      * @param boolean $value if true, cache keys will be case sensitive
-     * @return mixed
+     * @return bool
      */
     public static function setCaseSensitivity(bool $value)
     {
@@ -129,5 +129,23 @@ class Cache
         return $purged;
     }
 
+    /**
+     * Removes all data from cache. Returns true on success of false on failure.
+     *
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        return $this->adapter->flush();
+    }
 
+    /**
+     * Check Cache Connecitivity
+     *
+     * @return bool
+     */
+    public function ping(): bool
+    {
+        return $this->adapter->ping();
+    }
 }

@@ -19,25 +19,25 @@ class Memory implements Adapter
     }
 
     /**
-     * @param string $key
-     * @param int $ttl time in seconds
+     * @param  string  $key
+     * @param  int  $ttl time in seconds
      * @return mixed
      */
     public function load(string $key, int $ttl): mixed
     {
-        if (!empty($key) && isset($this->store[$key])) {
+        if (! empty($key) && isset($this->store[$key])) {
             /** @var array{time: int, data: string} */
             $saved = $this->store[$key];
 
             return ($saved['time'] + $ttl > time()) ? $saved['data'] : false; // return data if cache is valid
         }
-        
+
         return false;
     }
 
     /**
-     * @param string $key
-     * @param string|array $data
+     * @param  string  $key
+     * @param  string|array  $data
      * @return bool|string|array
      */
     public function save(string $key, $data): bool|string|array
@@ -48,7 +48,7 @@ class Memory implements Adapter
 
         $saved = [
             'time' => \time(),
-            'data' => $data
+            'data' => $data,
         ];
 
         $this->store[$key] = $saved;
@@ -57,16 +57,35 @@ class Memory implements Adapter
     }
 
     /**
-     * @param string $key
+     * @param  string  $key
      * @return bool
      */
     public function purge(string $key): bool
     {
-        if (!empty($key) && isset($this->store[$key])) { // if a key is passed and it exists in cache
+        if (! empty($key) && isset($this->store[$key])) { // if a key is passed and it exists in cache
             unset($this->store[$key]);
+
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * @return bool
+     */
+    public function flush(): bool
+    {
+        $this->store = [];
+
+        return true;
+    }
+
+    /**
+     * @return bool
+     */
+    public function ping(): bool
+    {
+        return true;
     }
 }
