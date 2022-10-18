@@ -30,7 +30,7 @@ class Hazelcast implements Adapter
         /** @var array{time: int, data: string} */
         $cache = json_decode($this->memcached->get($key), true);
         
-        if (($cache['time'] + $ttl > time())) { // Cache is valid
+        if (! empty($cache['data']) && ($cache['time'] + $ttl > time())) { // Cache is valid
             return $cache['data'];
         }
 
@@ -62,36 +62,16 @@ class Hazelcast implements Adapter
      */
     public function purge(string $key): bool
     {
-        if (\str_ends_with($key, ':*')) {
-            return (bool) $this->memcached->deleteMulti($this->searchKeyByPrefix($key));
-        }
-
         return $this->memcached->delete($key);
     }
 
     /**
-     * utility method to search among all keys with prefix
-     * @param string $prefix
-     * @return array
-     */
-    private function searchKeyByPrefix(string $prefix): array{
-
-        $allKeys = $this->memcached->getAllKeys();
-        $keysToDelete = array();
-        foreach ($allKeys as $index => $key) {
-            if (strpos($key, $prefix) === 0) {
-                array_push($keysToDelete, $key);
-            }
-        }
-        return $keysToDelete;
-    }
-
-    /**
      * @return bool
+     * currently hazelcast doesn't support flush functionality, so returning false in that case
     */
     public function flush(): bool
     {
-        return $this->memcached->flush();
+        return false;
     }
 
     /**
@@ -99,7 +79,7 @@ class Hazelcast implements Adapter
     */
     public function ping(): bool
     {
-        $statuses = $this->memcached->getStats();
+        $statuses = $this->memcached->getServerList();
 
         return ! empty($statuses);
     }

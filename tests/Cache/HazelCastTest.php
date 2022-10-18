@@ -12,7 +12,7 @@ class HazelCastTest extends Base
     public static function setUpBeforeClass(): void
     {
         $memcached = new Memcached();
-        $memcached->addServer('hazelcast', 5701);
+        $memcached->addServer('127.0.0.1', 5701);
         self::$cache = new Cache(new HazelCastAdapter($memcached));
     }
 
@@ -22,28 +22,12 @@ class HazelCastTest extends Base
         self::$cache = null;
     }
 
-    // Wildcard is supported with search of all prefix keys in HAzelcast
-    public function testCachePurgeWildcard()
+    public function testFlush()
     {
-        $data1 = self::$cache->save('test:file1', 'file1');
-        $data2 = self::$cache->save('test:file2', 'file2');
+        
+        //not implemented as Hazelcast doesn't support flush functionality
+        $result = self::$cache->flush();
 
-        $this->assertEquals('file1', $data1);
-        $this->assertEquals('file2', $data2);
-
-        $result = self::$cache->purge('test:*');
-        $this->assertEquals(true, $result);
-
-        $data = self::$cache->load('test:file1', 60 * 60 * 24 * 30 * 3 /* 3 months */);
-        $this->assertEquals(false, $data);
-        $data = self::$cache->load('test:file2', 60 * 60 * 24 * 30 * 3 /* 3 months */);
-        $this->assertEquals(false, $data);
-
-        /**
-         * Test for failure
-         * Try to glob keys that do not exist
-         */
-        $result = self::$cache->purge('test:*');
         $this->assertEquals(false, $result);
     }
 }
