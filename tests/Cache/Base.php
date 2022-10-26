@@ -4,6 +4,12 @@ namespace Utopia\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Cache;
+use Utopia\Database\Database;
+use Utopia\Database\Document;
+use Utopia\Database\ID;
+use Utopia\Database\Permission;
+use Utopia\Database\Role;
+use Utopia\Database\Validator\Authorization;
 
 abstract class Base extends TestCase
 {
@@ -120,4 +126,26 @@ abstract class Base extends TestCase
         $this->assertEquals(false, self::$cache->load('x', 100));
         $this->assertEquals(false, self::$cache->load('y', 100));
     }
+
+    public function testListeners()
+    {
+
+       self::$cache->on( Cache::EVENT_SAVE, function($key) {
+           $this->assertEquals('x', $key);
+       });
+
+        self::$cache->on( Cache::EVENT_LOAD, function($key) {
+            $this->assertEquals('y', $key);
+        });
+
+        self::$cache->on( Cache::EVENT_PURGE, function($key) {
+            $this->assertEquals('z', $key);
+        });
+
+        self::$cache->save('x', 10);
+        self::$cache->load('y', 10);
+        self::$cache->purge('z');
+
+    }
+
 }

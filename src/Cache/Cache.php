@@ -46,12 +46,14 @@ class Cache
     /**
      * Add event listener.
      *
-     * @param string $key
+     * @param string $event
      * @param callable $callback
+     * @return Cache
      */
-    public function on(string $event, callable $callback)
+    public function on(string $event, callable $callback) :self
     {
         $this->listeners[$event][] = $callback;
+        return $this;
     }
 
 
