@@ -29,6 +29,10 @@ class Cache
      */
     private  $listeners = [];
 
+    /**
+     * @var boolean
+     */
+    private  $disableListeners = false;
 
     /**
      * @var boolean If cache keys are case sensitive
@@ -53,6 +57,18 @@ class Cache
     public function on(string $event, callable $callback) :self
     {
         $this->listeners[$event][] = $callback;
+        return $this;
+    }
+
+    /**
+     * Set disableListeners
+     *
+     * @param boolean $disableListeners
+     * @return self
+     */
+    public function setDisableListeners(bool $disableListeners) :self
+    {
+        $this->disableListeners = $disableListeners;
         return $this;
     }
 
@@ -81,6 +97,10 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $loaded = $this->adapter->load($key, $ttl);
 
+        if($this->disableListeners){
+            return $loaded;
+        }
+
         foreach ($this->listeners[self::EVENT_LOAD] ?? [] as $listener) {
             if (is_callable($listener)) {
                 call_user_func($listener, $key);
@@ -102,6 +122,10 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $saved = $this->adapter->save($key, $data);
 
+        if($this->disableListeners){
+            return $saved;
+        }
+
         foreach ($this->listeners[self::EVENT_SAVE] ?? [] as $listener) {
             if (is_callable($listener)) {
                 call_user_func($listener, $key);
@@ -121,6 +145,10 @@ class Cache
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $purged = $this->adapter->purge($key);
+
+        if($this->disableListeners){
+            return $purged;
+        }
 
         foreach ($this->listeners[self::EVENT_PURGE] ?? [] as $listener) {
             if (is_callable($listener)) {
