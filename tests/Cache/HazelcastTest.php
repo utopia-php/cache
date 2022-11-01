@@ -3,9 +3,8 @@
 namespace Utopia\Tests;
 
 use Memcached as Memcached;
-use Utopia\Cache\Cache;
 use Utopia\Cache\Adapter\Hazelcast as HazelcastAdapter;
-use Utopia\Tests\Base;
+use Utopia\Cache\Cache;
 
 class HazelcastTest extends Base
 {
@@ -24,7 +23,6 @@ class HazelcastTest extends Base
 
     public function testFlush()
     {
-        
         //not implemented as Hazelcast doesn't support flush functionality
         $result = self::$cache->flush();
 
