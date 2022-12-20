@@ -29,10 +29,13 @@ class Memcached implements Adapter
      */
     public function load(string $key, int $ttl): mixed
     {
-        /** @var array{time: int, data: string} */
-        $cache = json_decode($this->memcached->get($key), true);
+        /** @var array{time: int, data: string}|false */
+        $cache = $this->memcached->get($key);
+        if ($cache === false) {
+            return false;
+        }
 
-        if (! empty($cache['data']) && ($cache['time'] + $ttl > time())) { // Cache is valid
+        if ($cache['time'] + $ttl > time()) { // Cache is valid
             return $cache['data'];
         }
 
@@ -41,8 +44,8 @@ class Memcached implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array  $data
-     * @return bool|string|array
+     * @param  string|array<int|string, mixed>  $data
+     * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, $data): bool|string|array
     {
@@ -55,7 +58,7 @@ class Memcached implements Adapter
             'data' => $data,
         ];
 
-        return ($this->memcached->set($key, json_encode($cache))) ? $data : false;
+        return ($this->memcached->set($key, $cache)) ? $data : false;
     }
 
     /**

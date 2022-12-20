@@ -15,10 +15,11 @@ class NoneTest extends Base
     public static function tearDownAfterClass(): void
     {
         self::$cache::setCaseSensitivity(false);
+        // @phpstan-ignore-next-line
         self::$cache = null;
     }
 
-    public function testEmptyCacheKey()
+    public function testEmptyCacheKey(): void
     {
         self::$cache->purge($this->key);
 
@@ -27,7 +28,7 @@ class NoneTest extends Base
         $this->assertEquals(false, $data);
     }
 
-    public function testCacheSave()
+    public function testCacheSave(): void
     {
         $result = self::$cache->save($this->key, $this->data);
 
@@ -37,7 +38,7 @@ class NoneTest extends Base
     /**
      * @depends testCacheSave
      */
-    public function testCacheLoad()
+    public function testCacheLoad(): void
     {
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
@@ -47,21 +48,21 @@ class NoneTest extends Base
     /**
      * @depends testCacheLoad
      */
-    public function testNotEmptyCacheKey()
+    public function testNotEmptyCacheKey(): void
     {
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals(false, $data);
     }
 
-    public function testCachePurge()
+    public function testCachePurge(): void
     {
         $result = self::$cache->purge($this->key);
 
         $this->assertEquals(true, $result);
     }
 
-    public function testCaseInsensitivity()
+    public function testCaseInsensitivity(): void
     {
         // None adapter does not expect case sensitivity/insensitivy
         $this->assertEquals(true, true);

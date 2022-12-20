@@ -23,7 +23,7 @@ abstract class Base extends TestCase
     protected $data = 'test data string';
 
     /**
-     * @var array
+     * @var string[]
      */
     protected $dataArray = ['test', 'data', 'string'];
 
@@ -31,7 +31,7 @@ abstract class Base extends TestCase
      * General tests
      * Can be overwritten in specific adapter if required, such as None Cache
      */
-    public function testCacheSave()
+    public function testCacheSave(): void
     {
         // test $data array
         $result = self::$cache->save($this->key, $this->dataArray);
@@ -44,14 +44,14 @@ abstract class Base extends TestCase
         $this->assertEquals($this->data, $result);
     }
 
-    public function testNotEmptyCacheKey()
+    public function testNotEmptyCacheKey(): void
     {
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals($this->data, $data);
     }
 
-    public function testCachePurge()
+    public function testCachePurge(): void
     {
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
@@ -66,7 +66,7 @@ abstract class Base extends TestCase
         $this->assertEquals(false, $data);
     }
 
-    public function testCaseInsensitivity()
+    public function testCaseInsensitivity(): void
     {
         // Ensure case in-sensitivity first (configured in adapter's setUp)
         $data = self::$cache->save('planet', 'Earth');
@@ -98,12 +98,12 @@ abstract class Base extends TestCase
         $this->assertEquals(false, $data);
     }
 
-    public function testPing()
+    public function testPing(): void
     {
         $this->assertEquals(true, self::$cache->ping());
     }
 
-    public function testFlush()
+    public function testFlush(): void
     {
         // test $data array
         $result1 = self::$cache->save('x', 'x');
