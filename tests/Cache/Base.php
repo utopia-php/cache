@@ -21,17 +21,17 @@ abstract class Base extends TestCase
     /**
      * @var string
      */
-    protected $key = 'test-key-for-cache';
+    protected string $key = 'test-key-for-cache';
 
     /**
      * @var string
      */
-    protected $data = 'test data string';
+    protected string $data = 'test data string';
 
     /**
      * @var string[]
      */
-    protected $dataArray = ['test', 'data', 'string'];
+    protected array $dataArray = ['test', 'data', 'string'];
 
     /**
      * General tests
@@ -95,7 +95,6 @@ abstract class Base extends TestCase
 
         // Test case sensitivity
         self::$cache::setCaseSensitivity(true);
-
         $data = self::$cache->save('color', 'pink');
         $this->assertEquals('pink', $data);
         $data = self::$cache->load('color', 60 * 60 * 24 * 30 * 3 /* 3 months */);
@@ -145,7 +144,11 @@ abstract class Base extends TestCase
         self::$cache->save('x', 10);
         self::$cache->load('y', 10);
         self::$cache->purge('z');
-
+        self::$cache->setListenersStatus(false);
+        self::$cache->load('x', 10);
+        self::$cache->purge('x');
+        self::$cache->setListenersStatus(true);
+        self::$cache->load('y', 10);
     }
 
 }

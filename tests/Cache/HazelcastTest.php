@@ -21,7 +21,7 @@ class HazelcastTest extends Base
         self::$cache = null;
     }
 
-    public function testFlush()
+    public function testFlush(): void
     {
         //not implemented as Hazelcast doesn't support flush functionality
         $result = self::$cache->flush();

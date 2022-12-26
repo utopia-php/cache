@@ -22,17 +22,17 @@ class Cache
     /**
      * @var Adapter
      */
-    private $adapter;
+    private Adapter $adapter;
 
     /**
      * @var array
      */
-    private  $listeners = [];
+    private array $listeners = [];
 
     /**
      * @var boolean
      */
-    private  $listenersStatus = false;
+    private bool $listenersStatus = false;
 
     /**
      * @var boolean If cache keys are case sensitive
@@ -96,7 +96,7 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $loaded = $this->adapter->load($key, $ttl);
 
-        if($this->listenersStatus){
+        if(!$this->listenersStatus){
             return $loaded;
         }
 
@@ -112,19 +112,16 @@ class Cache
     /**
      * Save data to cache. Returns data on success of false on failure.
      *
-     * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
-     * @return bool|string|array<int|string, mixed>
      * @param string $key
      * @param array|string $data
-     * @return bool|string|array
+     * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data)
+    public function save(string $key, array|string $data): array|bool|string
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $saved = $this->adapter->save($key, $data);
 
-        if($this->listenersStatus){
+        if(!$this->listenersStatus){
             return $saved;
         }
 
@@ -148,7 +145,7 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $purged = $this->adapter->purge($key);
 
-        if($this->listenersStatus){
+        if(!$this->listenersStatus){
             return $purged;
         }
 
