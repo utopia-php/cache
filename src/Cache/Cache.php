@@ -32,7 +32,7 @@ class Cache
     /**
      * @var boolean
      */
-    private bool $listenersStatus = false;
+    private bool $listenersStatus = true;
 
     /**
      * @var boolean If cache keys are case sensitive

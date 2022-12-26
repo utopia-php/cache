@@ -14,17 +14,17 @@ abstract class Base extends TestCase
     /**
      * @var string
      */
-    protected $key = 'test-key-for-cache';
+    protected string $key = 'test-key-for-cache';
 
     /**
      * @var string
      */
-    protected $data = 'test data string';
+    protected string $data = 'test data string';
 
     /**
      * @var array
      */
-    protected $dataArray = ['test', 'data', 'string'];
+    protected array $dataArray = ['test', 'data', 'string'];
 
     /**
      * General tests

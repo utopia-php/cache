@@ -5,11 +5,12 @@
     "keywords": ["php","framework", "upf", "utopia", "cache"],
     "license": "MIT",
     "minimum-stability": "stable",
-    "scripts": {
-        "check": "./vendor/bin/phpstan analyse --level max src tests",
-        "lint": "./vendor/bin/pint --test",
-        "format": "./vendor/bin/pint"
-    },
+    "authors": [
+        {
+            "name": "Eldad Fux",
+            "email": "eldad@appwrite.io"
+        }
+    ],
     "autoload": {
         "psr-4": {"Utopia\\Cache\\": "src/Cache"}
     },
