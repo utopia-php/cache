@@ -5,18 +5,13 @@ namespace Utopia\Cache\Adapter;
 use Memcached as Client;
 use Utopia\Cache\Adapter;
 
-class Memcached implements Adapter
+class Hazelcast implements Adapter
 {
     /**
      * @var Client
      */
     protected Client $memcached;
 
-    /**
-     * Memcached constructor.
-     *
-     * @param  Client  $memcached
-     */
     public function __construct(Client $memcached)
     {
         $this->memcached = $memcached;
@@ -29,13 +24,10 @@ class Memcached implements Adapter
      */
     public function load(string $key, int $ttl): mixed
     {
-        /** @var array{time: int, data: string}|false */
-        $cache = $this->memcached->get($key);
-        if ($cache === false) {
-            return false;
-        }
+        /** @var array{time: int, data: string} */
+        $cache = json_decode($this->memcached->get($key), true);
 
-        if ($cache['time'] + $ttl > time()) { // Cache is valid
+        if (! empty($cache['data']) && ($cache['time'] + $ttl > time())) { // Cache is valid
             return $cache['data'];
         }
 
@@ -44,8 +36,8 @@ class Memcached implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
-     * @return bool|string|array<int|string, mixed>
+     * @param  string|array  $data
+     * @return bool|string|array
      */
     public function save(string $key, $data): bool|string|array
     {
@@ -54,11 +46,11 @@ class Memcached implements Adapter
         }
 
         $cache = [
-            'time' => \time(),
+            'time' => time(),
             'data' => $data,
         ];
 
-        return ($this->memcached->set($key, $cache)) ? $data : false;
+        return ($this->memcached->set($key, json_encode($cache))) ? $data : false;
     }
 
     /**
@@ -72,10 +64,11 @@ class Memcached implements Adapter
 
     /**
      * @return bool
+     * currently hazelcast doesn't support flush functionality, so returning false in that case
      */
     public function flush(): bool
     {
-        return $this->memcached->flush();
+        return false;
     }
 
     /**
@@ -83,7 +76,7 @@ class Memcached implements Adapter
      */
     public function ping(): bool
     {
-        $statuses = $this->memcached->getStats();
+        $statuses = $this->memcached->getServerList();
 
         return ! empty($statuses);
     }

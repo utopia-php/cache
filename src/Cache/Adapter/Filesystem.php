@@ -26,8 +26,6 @@ class Filesystem implements Adapter
      * @param  string  $key
      * @param  int  $ttl time in seconds
      * @return mixed
-     *
-     * @throws \Exception
      */
     public function load(string $key, int $ttl): mixed
     {
@@ -42,8 +40,8 @@ class Filesystem implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array  $data
-     * @return bool|string|array
+     * @param  string|array<int|string, mixed>  $data
+     * @return bool|string|array<int|string, mixed>
      *
      * @throws \Exception
      */
@@ -57,11 +55,11 @@ class Filesystem implements Adapter
 
         if (! \file_exists(\dirname($file))) { // Checks if directory path to file exists
             if (! @\mkdir(\dirname($file), 0755, true)) {
-                throw new \Exception('Can\'t create directory '.\dirname($file));
+                throw new Exception('Can\'t create directory '.\dirname($file));
             }
 
             if (! \file_exists(\dirname($file))) { // Checks race condition for mkdir function
-                throw new \Exception('Can\'t create directory '.\dirname($file));
+                throw new Exception('Can\'t create directory '.\dirname($file));
             }
         }
 
@@ -72,7 +70,7 @@ class Filesystem implements Adapter
      * @param  string  $key
      * @return bool
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function purge(string $key): bool
     {
@@ -113,6 +111,8 @@ class Filesystem implements Adapter
     /**
      * @param  string  $path
      * @return bool
+     *
+     * @throws Exception
      */
     protected function deleteDirectory(string $path): bool
     {
@@ -125,6 +125,10 @@ class Filesystem implements Adapter
         }
 
         $files = glob($path.'*', GLOB_MARK);
+
+        if (! $files) {
+            throw new Exception('Error happened during glob');
+        }
 
         foreach ($files as $file) {
             if (is_dir($file)) {

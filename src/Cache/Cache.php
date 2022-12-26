@@ -76,7 +76,7 @@ class Cache
     /**
      * Toggle case sensitivity of keys inside cache
      *
-     * @param boolean $value if true, cache keys will be case-sensitive
+     * @param  bool  $value if true, cache keys will be case sensitive
      * @return bool
      */
     public static function setCaseSensitivity(bool $value): bool
@@ -87,8 +87,8 @@ class Cache
     /**
      * Load cached data. return false in no valid cache.
      *
-     * @param string $key
-     * @param int $ttl time in seconds
+     * @param  string  $key
+     * @param  int  $ttl time in seconds
      * @return mixed
      */
     public function load(string $key, int $ttl): mixed
@@ -112,6 +112,9 @@ class Cache
     /**
      * Save data to cache. Returns data on success of false on failure.
      *
+     * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
+     * @return bool|string|array<int|string, mixed>
      * @param string $key
      * @param array|string $data
      * @return bool|string|array

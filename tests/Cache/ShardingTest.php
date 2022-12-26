@@ -31,10 +31,11 @@ class ShardingTest extends Base
     public static function tearDownAfterClass(): void
     {
         self::$cache::setCaseSensitivity(false);
+        // @phpstan-ignore-next-line
         self::$cache = null;
     }
 
-    public function testEmptyAdapters()
+    public function testEmptyAdapters(): void
     {
         $this->expectException(Throwable::class);
 

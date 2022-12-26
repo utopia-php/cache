@@ -7,7 +7,7 @@ use Utopia\Cache\Adapter;
 class Memory implements Adapter
 {
     /**
-     * @var array
+     * @var array<string, mixed>
      */
     public $store = [];
 
@@ -37,8 +37,8 @@ class Memory implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array  $data
-     * @return bool|string|array
+     * @param  string|array<int|string, mixed>  $data
+     * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, $data): bool|string|array
     {
