@@ -32,7 +32,7 @@ class Cache
     /**
      * @var boolean
      */
-    private  $disableListeners = false;
+    private  $listenersStatus = false;
 
     /**
      * @var boolean If cache keys are case sensitive
@@ -63,12 +63,12 @@ class Cache
     /**
      * Set disableListeners
      *
-     * @param boolean $disableListeners
+     * @param boolean $status
      * @return self
      */
-    public function setDisableListeners(bool $disableListeners) :self
+    public function setListenersStatus(bool $status) :self
     {
-        $this->disableListeners = $disableListeners;
+        $this->listenersStatus = $status;
         return $this;
     }
 
@@ -76,11 +76,10 @@ class Cache
     /**
      * Toggle case sensitivity of keys inside cache
      *
-     * @param string $key
-     * @param boolean $value if true, cache keys will be case sensitive
+     * @param boolean $value if true, cache keys will be case-sensitive
      * @return bool
      */
-    public static function setCaseSensitivity(bool $value)
+    public static function setCaseSensitivity(bool $value): bool
     {
         return self::$caseSensitive = $value;
     }
@@ -92,12 +91,12 @@ class Cache
      * @param int $ttl time in seconds
      * @return mixed
      */
-    public function load($key, $ttl): mixed
+    public function load(string $key, int $ttl): mixed
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $loaded = $this->adapter->load($key, $ttl);
 
-        if($this->disableListeners){
+        if($this->listenersStatus){
             return $loaded;
         }
 
@@ -114,15 +113,15 @@ class Cache
      * Save data to cache. Returns data on success of false on failure.
      *
      * @param string $key
-     * @param string|array $data
+     * @param array|string $data
      * @return bool|string|array
      */
-    public function save($key, $data)
+    public function save(string $key, array|string $data)
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $saved = $this->adapter->save($key, $data);
 
-        if($this->disableListeners){
+        if($this->listenersStatus){
             return $saved;
         }
 
@@ -141,12 +140,12 @@ class Cache
      * @param string $key
      * @return bool
      */
-    public function purge($key): bool
+    public function purge(string $key): bool
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $purged = $this->adapter->purge($key);
 
-        if($this->disableListeners){
+        if($this->listenersStatus){
             return $purged;
         }
 
