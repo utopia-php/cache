@@ -13,15 +13,13 @@ RUN composer update --ignore-platform-reqs --optimize-autoloader \
     
 FROM php:8.0-cli-alpine as final
 
-ENV PHP_MEMCACHED_VERSION=v3.2.0
-
 LABEL maintainer="team@appwrite.io"
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN \
   apk update \
-  && apk add --no-cache make automake autoconf gcc g++ git zlib-dev libmemcached-dev \
+  && apk add --no-cache make automake autoconf gcc g++ git \
   && rm -rf /var/cache/apk/*
 
 RUN \
@@ -35,18 +33,6 @@ RUN \
   cd ..
 
 RUN echo extension=redis.so >> /usr/local/etc/php/conf.d/redis.ini
-
-
-RUN \
-  # Memcached Extension
-  git clone --branch $PHP_MEMCACHED_VERSION https://github.com/php-memcached-dev/php-memcached.git && \
-  cd php-memcached && \
-  phpize && \
-  ./configure && \
-  make && make install && \
-  cd ..
-
-RUN echo extension=memcached.so >> /usr/local/etc/php/conf.d/memcached.ini
 
 WORKDIR /usr/src/code
 
