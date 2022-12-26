@@ -87,8 +87,8 @@ class Cache
     /**
      * Load cached data. return false in no valid cache.
      *
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
+     * @param string $key
+     * @param int $ttl time in seconds
      * @return mixed
      */
     public function load(string $key, int $ttl): mixed
@@ -113,10 +113,10 @@ class Cache
      * Save data to cache. Returns data on success of false on failure.
      *
      * @param string $key
-     * @param array|string $data
-     * @return bool|string|array<int|string, mixed>
+     * @param string|array $data
+     * @return bool|string|array
      */
-    public function save(string $key, array|string $data): array|bool|string
+    public function save($key, $data)
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $saved = $this->adapter->save($key, $data);
@@ -140,7 +140,7 @@ class Cache
      * @param string $key
      * @return bool
      */
-    public function purge(string $key): bool
+    public function purge($key): bool
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $purged = $this->adapter->purge($key);
