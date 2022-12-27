@@ -5,12 +5,11 @@
     "keywords": ["php","framework", "upf", "utopia", "cache"],
     "license": "MIT",
     "minimum-stability": "stable",
-    "authors": [
-        {
-            "name": "Eldad Fux",
-            "email": "eldad@appwrite.io"
-        }
-    ],
+    "scripts": {
+        "check": "./vendor/bin/phpstan analyse --level max src tests",
+        "lint": "./vendor/bin/pint --test",
+        "format": "./vendor/bin/pint"
+    },
     "autoload": {
         "psr-4": {"Utopia\\Cache\\": "src/Cache"}
     },
@@ -20,10 +19,13 @@
     "require": {
         "php": ">=8.0",
         "ext-json": "*",
-        "ext-redis": "*"
+        "ext-redis": "*",
+        "ext-memcached": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.3",
-        "vimeo/psalm": "4.13.1"
+        "vimeo/psalm": "4.13.1",
+        "phpstan/phpstan": "1.9.x-dev",
+        "laravel/pint": "1.2.*"
     }
 }
