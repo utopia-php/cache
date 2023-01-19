@@ -5,9 +5,35 @@ namespace Utopia\Cache;
 class Cache
 {
     /**
+     * @var string
+     */
+    const EVENT_LOAD = 'load';
+
+    /**
+     * @var string
+     */
+    const EVENT_SAVE = 'save';
+
+    /**
+     * @var string
+     */
+    const EVENT_PURGE = 'purge';
+
+    /**
      * @var Adapter
      */
-    private $adapter;
+    private Adapter $adapter;
+
+    /**
+     * @var array
+     */
+    // @phpstan-ignore-next-line
+    private array $listeners = [];
+
+    /**
+     * @var bool
+     */
+    private bool $listenersStatus = true;
 
     /**
      * @var bool If cache keys are case sensitive
@@ -20,6 +46,33 @@ class Cache
     public function __construct(Adapter $adapter)
     {
         $this->adapter = $adapter;
+    }
+
+    /**
+     * Add event listener.
+     *
+     * @param  string  $event
+     * @param  callable  $callback
+     * @return Cache
+     */
+    public function on(string $event, callable $callback): self
+    {
+        $this->listeners[$event][] = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Set disableListeners
+     *
+     * @param  bool  $status
+     * @return self
+     */
+    public function setListenersStatus(bool $status): self
+    {
+        $this->listenersStatus = $status;
+
+        return $this;
     }
 
     /**
@@ -43,22 +96,45 @@ class Cache
     public function load(string $key, int $ttl): mixed
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
+        $loaded = $this->adapter->load($key, $ttl);
 
-        return $this->adapter->load($key, $ttl);
+        if (! $this->listenersStatus) {
+            return $loaded;
+        }
+
+        foreach ($this->listeners[self::EVENT_LOAD] ?? [] as $listener) {
+            if (is_callable($listener)) {
+                call_user_func($listener, $key);
+            }
+        }
+
+        return $loaded;
     }
 
     /**
      * Save data to cache. Returns data on success of false on failure.
      *
      * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
-     * @return bool|string|array<int|string, mixed>
+     * @param  string|array  $data
+     * @return bool|string|array
      */
-    public function save(string $key, mixed $data): bool|string|array
+    // @phpstan-ignore-next-line
+    public function save($key, $data)
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
+        $saved = $this->adapter->save($key, $data);
 
-        return $this->adapter->save($key, $data);
+        if (! $this->listenersStatus) {
+            return $saved;
+        }
+
+        foreach ($this->listeners[self::EVENT_SAVE] ?? [] as $listener) {
+            if (is_callable($listener)) {
+                call_user_func($listener, $key);
+            }
+        }
+
+        return $saved;
     }
 
     /**
@@ -67,11 +143,22 @@ class Cache
      * @param  string  $key
      * @return bool
      */
-    public function purge(string $key): bool
+    public function purge($key): bool
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
+        $purged = $this->adapter->purge($key);
 
-        return $this->adapter->purge($key);
+        if (! $this->listenersStatus) {
+            return $purged;
+        }
+
+        foreach ($this->listeners[self::EVENT_PURGE] ?? [] as $listener) {
+            if (is_callable($listener)) {
+                call_user_func($listener, $key);
+            }
+        }
+
+        return $purged;
     }
 
     /**
