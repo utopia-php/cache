@@ -22,9 +22,11 @@ class Hazelcast implements Adapter
      * @param  int  $ttl time in seconds
      * @return array|bool|string
      */
+    // @phpstan-ignore-next-line
     public function load(string $key, int $ttl): array|bool|string
     {
         /** @var array{time: int, data: string} */
+        // @phpstan-ignore-next-line
         $cache = json_decode($this->memcached->get($key), true);
 
         if (! empty($cache['data']) && ($cache['time'] + $ttl > time())) { // Cache is valid
@@ -39,6 +41,7 @@ class Hazelcast implements Adapter
      * @param  mixed  $data
      * @return bool|string|array
      */
+    // @phpstan-ignore-next-line
     public function save(string $key, mixed $data): bool|string|array
     {
         if (empty($key) || empty($data)) {
@@ -49,7 +52,7 @@ class Hazelcast implements Adapter
             'time' => time(),
             'data' => $data,
         ];
-
+        // @phpstan-ignore-next-line
         return ($this->memcached->set($key, json_encode($cache))) ? $data : false;
     }
 

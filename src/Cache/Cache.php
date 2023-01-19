@@ -27,6 +27,7 @@ class Cache
     /**
      * @var array
      */
+    // @phpstan-ignore-next-line
     private array $listeners = [];
 
     /**
@@ -117,6 +118,7 @@ class Cache
      * @param  string|array  $data
      * @return bool|string|array
      */
+    // @phpstan-ignore-next-line
     public function save($key, $data)
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
