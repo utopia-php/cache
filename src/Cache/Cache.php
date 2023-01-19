@@ -7,12 +7,12 @@ class Cache
     /**
      * @var string
      */
-    const EVENT_LOAD  = 'load';
+    const EVENT_LOAD = 'load';
 
     /**
      * @var string
      */
-    const EVENT_SAVE  = 'save';
+    const EVENT_SAVE = 'save';
 
     /**
      * @var string
@@ -30,17 +30,17 @@ class Cache
     private array $listeners = [];
 
     /**
-     * @var boolean
+     * @var bool
      */
     private bool $listenersStatus = true;
 
     /**
-     * @var boolean If cache keys are case sensitive
+     * @var bool If cache keys are case sensitive
      */
     public static bool $caseSensitive = false;
 
     /**
-     * @param Adapter $adapter
+     * @param  Adapter  $adapter
      */
     public function __construct(Adapter $adapter)
     {
@@ -50,28 +50,29 @@ class Cache
     /**
      * Add event listener.
      *
-     * @param string $event
-     * @param callable $callback
+     * @param  string  $event
+     * @param  callable  $callback
      * @return Cache
      */
-    public function on(string $event, callable $callback) :self
+    public function on(string $event, callable $callback): self
     {
         $this->listeners[$event][] = $callback;
+
         return $this;
     }
 
     /**
      * Set disableListeners
      *
-     * @param boolean $status
+     * @param  bool  $status
      * @return self
      */
-    public function setListenersStatus(bool $status) :self
+    public function setListenersStatus(bool $status): self
     {
         $this->listenersStatus = $status;
+
         return $this;
     }
-
 
     /**
      * Toggle case sensitivity of keys inside cache
@@ -87,8 +88,8 @@ class Cache
     /**
      * Load cached data. return false in no valid cache.
      *
-     * @param string $key
-     * @param int $ttl time in seconds
+     * @param  string  $key
+     * @param  int  $ttl time in seconds
      * @return mixed
      */
     public function load(string $key, int $ttl): mixed
@@ -96,7 +97,7 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $loaded = $this->adapter->load($key, $ttl);
 
-        if(!$this->listenersStatus){
+        if (! $this->listenersStatus) {
             return $loaded;
         }
 
@@ -112,8 +113,8 @@ class Cache
     /**
      * Save data to cache. Returns data on success of false on failure.
      *
-     * @param string $key
-     * @param string|array $data
+     * @param  string  $key
+     * @param  string|array  $data
      * @return bool|string|array
      */
     public function save($key, $data)
@@ -121,7 +122,7 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $saved = $this->adapter->save($key, $data);
 
-        if(!$this->listenersStatus){
+        if (! $this->listenersStatus) {
             return $saved;
         }
 
@@ -137,7 +138,7 @@ class Cache
     /**
      * Removes data from cache. Returns true on success of false on failure.
      *
-     * @param string $key
+     * @param  string  $key
      * @return bool
      */
     public function purge($key): bool
@@ -145,7 +146,7 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $purged = $this->adapter->purge($key);
 
-        if(!$this->listenersStatus){
+        if (! $this->listenersStatus) {
             return $purged;
         }
 

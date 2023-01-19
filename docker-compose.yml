@@ -8,12 +8,44 @@ services:
       dockerfile: php8.0.Dockerfile
     networks:
       - database
-    # volumes:
-    #   - ./:/usr/src/code
+    volumes:
+      - ./:/usr/src/code
     
   redis:
     image: redis:6.0-alpine
     container_name: redis
+    networks:
+      - database
+
+  hazelcast:
+    image: hazelcast/hazelcast:5.1.3
+    environment:
+      HZ_NETWORK_MEMCACHEPROTOCOL_ENABLED: "true"
+    container_name: hazelcast
+    networks:
+      - database
+
+  memcached:
+    image: memcached:1.6.17-alpine
+    container_name: memcached
+    networks:
+      - database
+
+  shardA:
+    image: redis:6.0-alpine
+    container_name: shardA
+    networks:
+      - database
+
+  shardB:
+    image: redis:6.0-alpine
+    container_name: shardB
+    networks:
+      - database
+
+  shardC:
+    image: redis:6.0-alpine
+    container_name: shardC
     networks:
       - database
 

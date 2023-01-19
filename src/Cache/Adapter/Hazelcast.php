@@ -20,9 +20,9 @@ class Hazelcast implements Adapter
     /**
      * @param  string  $key
      * @param  int  $ttl time in seconds
-     * @return mixed
+     * @return array|bool|string
      */
-    public function load(string $key, int $ttl): mixed
+    public function load(string $key, int $ttl): array|bool|string
     {
         /** @var array{time: int, data: string} */
         $cache = json_decode($this->memcached->get($key), true);
@@ -36,10 +36,10 @@ class Hazelcast implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array  $data
+     * @param  mixed  $data
      * @return bool|string|array
      */
-    public function save(string $key, $data): bool|string|array
+    public function save(string $key, mixed $data): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
