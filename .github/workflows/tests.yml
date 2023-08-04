@@ -13,10 +13,9 @@ jobs:
 
       - name: Enable Experimental Features
         run: |
-            sudo bash -c 'echo "{ "cgroup-parent": "/actions_job","experimental":true}" > /etc/docker/daemon.json'
-            sudo systemctl restart docker.service
+            echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
+            sudo service docker restart
             cat /etc/docker/daemon.json
-
 
       - name: Setup Docker Container
         run: |
