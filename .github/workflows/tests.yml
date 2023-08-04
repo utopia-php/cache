@@ -14,10 +14,13 @@ jobs:
       - name: Setup Docker Container
         run: |
             docker-compose up -d
-            sleep 5
-            docker run --rm --interactive --tty --volume "$(pwd)":/app composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
+            sleep 30
 
-      - name: Run Tests
+      - name: Docker Run
+        run: |
+            docker run --rm --interactive --tty --volume "$(pwd)":/app composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
+      
+            - name: Run Tests
         run: |                
             docker ps
             docker-compose exec php8 vendor/bin/psalm --show-info=true
