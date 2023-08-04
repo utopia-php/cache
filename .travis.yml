@@ -11,7 +11,7 @@ notifications:
   email:
   - team@appwrite.io
   
-before_script: docker run --rm --interactive --tty --volume "$(pwd)":/app composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
+before_script: docker run --rm -t --volume "$(pwd)":/app composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
 
 before_install:
 - curl -fsSL https://get.docker.com | sh
@@ -31,5 +31,5 @@ install:
 
 script:
 - docker ps
-- docker-compose exec php8 vendor/bin/psalm --show-info=true
+- docker-compose exec -t php8 vendor/bin/psalm --show-info=true
 - docker-compose exec php8 vendor/bin/phpunit --configuration phpunit.xml

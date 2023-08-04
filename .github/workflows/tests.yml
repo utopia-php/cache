@@ -1,6 +1,6 @@
 name: Tests
 
-on: [pull_request]
+on: [push]
 
 jobs:
   tests: 
@@ -11,6 +11,11 @@ jobs:
       - name: Clone Repository
         uses: actions/checkout@v3
 
+      - name: Enable Experimental Features
+        run: |
+            cat /etc/docker/daemon.json
+            cat $HOME/.docker/config.json
+
       - name: Setup Docker Container
         run: |
             docker-compose up -d
@@ -18,7 +23,7 @@ jobs:
 
       - name: Composer Install
         run: |
-            docker run --rm --volume "$(pwd)":/app composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
+            docker run -t --rm --volume "$(pwd)":/app composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
       
       - name: Run Tests
         run: |                
