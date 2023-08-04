@@ -13,9 +13,7 @@ jobs:
 
       - name: Enable Experimental Features
         run: |
-            echo '{"experimental":"enabled"}' | sudo tee /etc/docker/daemon.json
-            sudo service docker restart
-            cat /etc/docker/daemon.json
+            export DOCKER_CLI_EXPERIMENTAL=enabled
 
       - name: Setup Docker Container
         run: |
