@@ -16,9 +16,9 @@ jobs:
             docker-compose up -d
             sleep 30
 
-      - name: Docker Run
+      - name: Composer Install
         run: |
-            docker run --rm --volume "$(pwd)":/app my-php-composer:latest composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
+            docker run --rm --volume "$(pwd)":/app composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
       
       - name: Run Tests
         run: |                
