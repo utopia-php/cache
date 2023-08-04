@@ -1,0 +1,24 @@
+name: Tests
+
+on: [pull_request]
+
+jobs:
+  tests: 
+    name: Tests
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Clone Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Docker Container
+        run: |
+            docker-compose up -d
+            sleep 5
+            docker run --rm --interactive --tty --volume "$(pwd)":/app composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
+
+      - name: Run Tests
+        run: |                
+            docker ps
+            docker-compose exec php8 vendor/bin/psalm --show-info=true
+            docker-compose exec php8 vendor/bin/phpunit --configuration phpunit.xml
