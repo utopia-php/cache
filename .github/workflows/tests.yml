@@ -13,13 +13,16 @@ jobs:
 
       - name: Enable Experimental Features
         run: |
+            sudo bash -c 'echo "{ "cgroup-parent": "/actions_job","experimental":true}" > /etc/docker/daemon.json'
+            sudo bash -c 'echo "{ "experimental":true }" > $HOME/.docker/config.json'
+            sudo systemctl restart docker.service
             cat /etc/docker/daemon.json
             cat $HOME/.docker/config.json
 
       - name: Setup Docker Container
         run: |
             docker-compose up -d
-            sleep 30
+            sleep 5
 
       - name: Composer Install
         run: |
