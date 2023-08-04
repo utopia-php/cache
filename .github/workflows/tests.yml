@@ -11,10 +11,6 @@ jobs:
       - name: Clone Repository
         uses: actions/checkout@v3
 
-      - name: Enable Experimental Features
-        run: |
-            export DOCKER_CLI_EXPERIMENTAL=enabled
-
       - name: Setup Docker Container
         run: |
             docker-compose up -d
