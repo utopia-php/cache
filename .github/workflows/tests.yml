@@ -20,7 +20,7 @@ jobs:
         run: |
             docker run --rm --interactive --tty --volume "$(pwd)":/app composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
       
-            - name: Run Tests
+      - name: Run Tests
         run: |                
             docker ps
             docker-compose exec php8 vendor/bin/psalm --show-info=true
