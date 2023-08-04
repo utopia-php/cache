@@ -8,7 +8,9 @@
     "scripts": {
         "check": "./vendor/bin/phpstan analyse --level max src tests",
         "lint": "./vendor/bin/pint --test",
-        "format": "./vendor/bin/pint"
+        "format": "./vendor/bin/pint",
+        "test": "docker-compose exec -T php8 vendor/bin/psalm --show-info=true",
+        "analyze": "docker-compose exec -T php8 vendor/bin/phpunit --configuration phpunit.xml"
     },
     "autoload": {
         "psr-4": {"Utopia\\Cache\\": "src/Cache"}

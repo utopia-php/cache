@@ -23,5 +23,6 @@ jobs:
       - name: Run Tests
         run: |                
             docker ps
-            docker-compose exec -T php8 vendor/bin/psalm --show-info=true
-            docker-compose exec -T php8 vendor/bin/phpunit --configuration phpunit.xml
+            composer test
+            composer analyze
+            
