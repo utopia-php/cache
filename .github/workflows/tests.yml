@@ -18,7 +18,7 @@ jobs:
 
       - name: Docker Run
         run: |
-            docker run --rm --interactive --tty --volume "$(pwd)":/app composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
+            docker run --rm --volume "$(pwd)":/app my-php-composer:latest composer install --ignore-platform-reqs --optimize-autoloader --no-plugins --no-scripts --prefer-dist
       
       - name: Run Tests
         run: |                
