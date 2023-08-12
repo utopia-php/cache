@@ -24,6 +24,11 @@ class Hazelcast implements Adapter
      */
     public function load(string $key, int $ttl): mixed
     {
+        // Fix PHPStan error regarding $this->memcached->get($key)) being a string  
+        if (gettype($this->memcached->get($key)) !== 'string') {
+            throw new \Exception("Expected string, got " . gettype($this->memcached->get($key)) . " instead");
+        }
+
         /** @var array{time: int, data: string} */
         $cache = json_decode($this->memcached->get($key), true);
 
@@ -36,10 +41,10 @@ class Hazelcast implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array  $data
-     * @return bool|string|array
+     * @param  string|array<int|string, mixed>  $data
+     * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, $data): bool|string|array
+    public function save(string $key, string|array $data): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
