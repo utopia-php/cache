@@ -24,9 +24,9 @@ class Hazelcast implements Adapter
      */
     public function load(string $key, int $ttl): mixed
     {
-        // Fix PHPStan error regarding $this->memcached->get($key)) being a string  
+        // Fix PHPStan error regarding $this->memcached->get($key)) being a string
         if (gettype($this->memcached->get($key)) !== 'string') {
-            throw new \Exception("Expected string, got " . gettype($this->memcached->get($key)) . " instead");
+            throw new \Exception('Expected string, got '.gettype($this->memcached->get($key)).' instead');
         }
 
         /** @var array{time: int, data: string} */
