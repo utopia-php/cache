@@ -16,7 +16,7 @@ interface Adapter
      * @param  string|array<int|string, mixed>  $data
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, $data): bool|string|array;
+    public function save(string $key, string|array $data): bool|string|array;
 
     /**
      * @param  string  $key
