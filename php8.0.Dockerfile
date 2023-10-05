@@ -48,6 +48,19 @@ RUN \
 
 RUN echo extension=memcached.so >> /usr/local/etc/php/conf.d/memcached.ini
 
+# Install Mcrouter Extension
+RUN \
+  # Mcrouter Extension
+  git clone https://github.com/facebook/mcrouter.git && \
+  cd mcrouter/mcrouter && \
+  phpize && \
+  ./configure && \
+  make && make install && \
+  cd ..
+
+# Add the Mcrouter extension to the PHP configuration
+RUN echo extension=mcrouter.so >> /usr/local/etc/php/conf.d/mcrouter.ini
+
 WORKDIR /usr/src/code
 
 # Add Source Code
