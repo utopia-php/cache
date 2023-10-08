@@ -14,6 +14,7 @@ RUN composer update --ignore-platform-reqs --optimize-autoloader \
 FROM php:8.0-cli-alpine as final
 
 ENV PHP_MEMCACHED_VERSION=v3.2.0
+ENV PHP_VARNISH_CACHE_VERSION=1.2.6
 
 LABEL maintainer="team@appwrite.io"
 

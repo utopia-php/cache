@@ -17,6 +17,7 @@
             <file>./tests/Cache/ShardingTest.php</file>
             <file>./tests/Cache/HazelcastTest.php</file>
             <file>./tests/Cache/MemcachedTest.php</file>
+            <file>./tests/Cache/VarnishTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>
