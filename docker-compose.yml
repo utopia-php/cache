@@ -10,7 +10,12 @@ services:
       - database
     volumes:
       - ./:/usr/src/code
-    
+  
+  varnish:
+    image: varnish:stable
+    container_name: varnish
+    networks:
+      - database
   redis:
     image: redis:6.0-alpine
     container_name: redis
