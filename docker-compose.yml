@@ -54,5 +54,6 @@ services:
     container_name: mcrouter
     networks:
       - database
+
 networks:
   database:

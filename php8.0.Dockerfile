@@ -14,6 +14,7 @@ RUN composer update --ignore-platform-reqs --optimize-autoloader \
 FROM php:8.0-cli-alpine as final
 
 ENV PHP_MEMCACHED_VERSION=v3.2.0
+ENV PHP_MCROUTER_VERSION=v2023.10.09.00
 
 LABEL maintainer="team@appwrite.io"
 
@@ -51,7 +52,7 @@ RUN echo extension=memcached.so >> /usr/local/etc/php/conf.d/memcached.ini
 # Install Mcrouter Extension
 RUN \
   # Mcrouter Extension
-  git clone https://github.com/facebook/mcrouter.git && \
+  git clone --branch $PHP_MCROUTER_VERSION https://github.com/facebook/mcrouter.git && \
   cd mcrouter/mcrouter && \
   phpize && \
   ./configure && \

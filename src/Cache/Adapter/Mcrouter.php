@@ -5,7 +5,7 @@ namespace Utopia\Cache\Adapter;
 use Utopia\Cache\Adapter;
 use Mcrouter\Mcrouter;
 
-class Mcrouter implements Adapter
+class McrouterAdapter implements Adapter
 {
     /**
      * @var Mcrouter
@@ -31,12 +31,13 @@ class Mcrouter implements Adapter
     {
         $result = $this->mcrouter->get($key);
 
-        if ($result->getResult() !== null) {
-            $cache = json_decode($result->getResult(), true);
+        if ($result->getResult() === null) {
+          return false;
+        }
+        $cache = json_decode($result->getResult(), true);
 
-            if ($cache['time'] + $ttl > time()) { // Cache is valid
-                return $cache['data'];
-            }
+        if ($cache['time'] + $ttl > time()) { // Cache is valid
+            return $cache['data'];
         }
 
         return false;
@@ -60,7 +61,7 @@ class Mcrouter implements Adapter
 
         $result = $this->mcrouter->set($key, json_encode($cache));
 
-        return $result->getResult() === 'STORED';
+        return $result->getResult() ? $data : false;
     }
 
     /**
