@@ -66,6 +66,38 @@ class Redis implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
+     * @return int
+     */
+    public function push(string $key, $data): int|bool
+    {
+        if (empty($key) || empty($data)) {
+            return false;
+        }
+
+        $cache = [
+            'time' => \time(),
+            'data' => $data,
+        ];
+
+        return $this->redis->lPush($key, json_encode($cache));
+    }
+
+    /**
+     * @param string $key
+     * @return mixed
+     */
+    public function pop(string $key): string
+    {
+        if (empty($key)) {
+            return '';
+        }
+
+        return json_decode($this->redis->rPop($key), true);
+    }
+
+    /**
+     * @param  string  $key
      * @return bool
      */
     public function purge(string $key): bool

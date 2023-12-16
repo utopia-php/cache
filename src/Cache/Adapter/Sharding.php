@@ -66,6 +66,26 @@ class Sharding implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
+     * @return int
+     */
+    public function push(string $key, $data): int|bool
+    {
+        return $this->getAdapter($key)->push($key, $data);
+    }
+
+    /**
+     * @param string $key
+     * @param bool $associative
+     * @return mixed
+     */
+    public function pop(string $key): string
+    {
+        return $this->getAdapter($key)->pop($key);
+    }
+
+    /**
+     * @param  string  $key
      * @return bool
      */
     public function purge(string $key): bool

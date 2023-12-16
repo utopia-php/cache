@@ -58,6 +58,45 @@ class Memory implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
+     * @return int
+     */
+    public function push(string $key, $data): int|bool
+    {
+        if (empty($key) || empty($data)) {
+            return false;
+        }
+
+        $saved = [
+            'time' => \time(),
+            'data' => $data,
+        ];
+
+        $this->store[$key] = $saved;
+
+        return \count($this->store);
+    }
+
+    /**
+     * @param string $key
+     * @return mixed
+     */
+    public function pop(string $key): string
+    {
+        if (! empty($key) && isset($this->store[$key])) {
+            /** @var array{time: int, data: string} */
+            $saved = $this->store[$key];
+
+            unset($this->store[$key]);
+
+            return $saved['data'];
+        }
+
+        return '';
+    }
+
+    /**
+     * @param  string  $key
      * @return bool
      */
     public function purge(string $key): bool

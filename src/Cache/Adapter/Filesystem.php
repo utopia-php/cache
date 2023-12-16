@@ -68,6 +68,34 @@ class Filesystem implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
+     * @return int
+     */
+    public function push(string $key, $data): int|bool
+    {
+        return $this->save($key, $data);
+    }
+
+    /**
+     * @param string $key
+     * @return mixed
+     */
+    public function pop(string $key): string
+    {
+        $file = $this->getPath($key);
+
+        if (\file_exists($file)) {
+            $data = \file_get_contents($file);
+            \unlink($file);
+
+            return $data;
+        }
+
+        return '';
+    }
+
+    /**
+     * @param  string  $key
      * @return bool
      *
      * @throws Exception

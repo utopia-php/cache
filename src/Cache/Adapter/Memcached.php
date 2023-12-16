@@ -63,6 +63,42 @@ class Memcached implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
+     * @return int
+     */
+    public function push(string $key, $data): int|bool
+    {
+        if (empty($key) || empty($data)) {
+            return false;
+        }
+
+        $cache = [
+            'time' => \time(),
+            'data' => $data,
+        ];
+
+        return ($this->memcached->append($key, json_encode($cache))) ? \strlen($data) : false;
+    }
+
+    /**
+     * @param string $key
+     * @return mixed
+     */
+    public function pop(string $key): string
+    {
+        /** @var array{time: int, data: string}|false */
+        $cache = $this->memcached->get($key);
+        if ($cache === false) {
+            return '';
+        }
+
+        $this->memcached->delete($key);
+
+        return json_decode($cache['data'], true);
+    }
+
+    /**
+     * @param  string  $key
      * @return bool
      */
     public function purge(string $key): bool
