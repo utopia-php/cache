@@ -105,7 +105,6 @@ abstract class Base extends TestCase
 
     public function testFlush(): void
     {
-
         $result1 = self::$cache->save('x', 'x');
         $result2 = self::$cache->save('y', 'y');
 
