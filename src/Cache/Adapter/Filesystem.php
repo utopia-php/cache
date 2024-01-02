@@ -100,13 +100,15 @@ class Filesystem implements Adapter
     }
 
     /**
+     * Returning root directory size in bytes
+     *
      * @return int
      */
     public function getSize(): int
     {
         try {
             return $this->getDirectorySize(dirname($this->path));
-        } catch (Exception $e) {
+        } catch (Exception) {
             return 0;
         }
     }
@@ -115,7 +117,7 @@ class Filesystem implements Adapter
      * @param string $dir
      * @return int
      */
-    public function getDirectorySize($dir): int
+    private function getDirectorySize($dir): int
     {
         $size = 0;
         foreach (glob(rtrim($dir, '/').'/*', GLOB_NOSORT) as $each) {
