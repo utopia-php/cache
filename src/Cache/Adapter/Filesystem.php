@@ -121,7 +121,7 @@ class Filesystem implements Adapter
     {
         $size = 0;
         $files = glob(rtrim($dir, '/').'/*', GLOB_NOSORT);
-        foreach ( $files as $file) {
+        foreach ($files as $file) {
             $size += is_file($file) ? filesize($file) : $this->getDirectorySize($file);
         }
 
