@@ -10,7 +10,7 @@ abstract class Base extends TestCase
     /**
      * @var Cache
      */
-    protected static ?Cache $cache = null;
+    protected static $cache = null;
 
     /**
      * @var string
