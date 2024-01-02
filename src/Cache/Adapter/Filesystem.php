@@ -120,8 +120,9 @@ class Filesystem implements Adapter
     private function getDirectorySize($dir): int
     {
         $size = 0;
-        foreach (glob(rtrim($dir, '/').'/*', GLOB_NOSORT) as $each) {
-            $size += is_file($each) ? filesize($each) : $this->getDirectorySize($each);
+        $files = glob(rtrim($dir, '/').'/*', GLOB_NOSORT);
+        foreach ( $files as $file) {
+            $size += is_file($file) ? filesize($file) : $this->getDirectorySize($file);
         }
 
         return $size;

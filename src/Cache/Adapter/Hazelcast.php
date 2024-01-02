@@ -24,8 +24,8 @@ class Hazelcast implements Adapter
      */
     public function load(string $key, int $ttl): mixed
     {
-        /** @var array{time: int, data: string} */
-        $cache = json_decode($this->memcached->get($key), true);
+        /*** @var array{time: int, data: string} */
+        $cache = json_decode((string)$this->memcached->get($key), true);
 
         if (! empty($cache['data']) && ($cache['time'] + $ttl > time())) { // Cache is valid
             return $cache['data'];
@@ -36,8 +36,8 @@ class Hazelcast implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array  $data
-     * @return bool|string|array
+     * @param  string|array<int|string, mixed>  $data
+     * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, $data): bool|string|array
     {
