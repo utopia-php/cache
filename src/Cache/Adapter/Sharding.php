@@ -101,6 +101,8 @@ class Sharding implements Adapter
     }
 
     /**
+     * Returning total number of keys of all adapters
+     *
      * @return int
      */
     public function getSize(): int

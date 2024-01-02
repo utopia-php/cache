@@ -100,7 +100,7 @@ class Redis implements Adapter
     }
 
     /**
-     * Get db size.
+     * Returning total number of keys
      *
      * @return int
      */

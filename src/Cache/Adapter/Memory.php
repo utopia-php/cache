@@ -90,6 +90,8 @@ class Memory implements Adapter
     }
 
     /**
+     * Returning total number of keys
+     *
      * @return int
      */
     public function getSize(): int
