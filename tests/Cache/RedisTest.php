@@ -22,7 +22,6 @@ class RedisTest extends Base
         self::$cache = null;
     }
 
-
     public function testGetSize(): void
     {
         self::$cache->save('test:file33', 'file33');

@@ -107,7 +107,7 @@ class Sharding implements Adapter
     {
         $size = 0;
         foreach ($this->adapters as $value) {
-                $size += $value->getSize();
+            $size += $value->getSize();
         }
 
         return $size;
@@ -124,5 +124,4 @@ class Sharding implements Adapter
 
         return $this->adapters[$index];
     }
-
 }

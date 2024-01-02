@@ -88,11 +88,11 @@ class Hazelcast implements Adapter
     {
         $size = 0;
         $servers = $this->memcached->getServerList();
-        if (!empty($servers)) {
+        if (! empty($servers)) {
             $stats = $this->memcached->getStats();
-            $key = $servers[0]['host'] . ":" . $servers[0]['port'];
+            $key = $servers[0]['host'].':'.$servers[0]['port'];
             if (isset($stats[$key])) {
-                $size = $stats[$key]["total_items"] ?? 0;
+                $size = $stats[$key]['total_items'] ?? 0;
             }
         }
 

@@ -19,8 +19,8 @@ class FilesystemTest extends Base
 
     public function testGetSize(): void
     {
-       self::$cache->save('test', 'test');
-       $this->assertEquals(4, self::$cache->getSize());
+        self::$cache->save('test', 'test');
+        $this->assertEquals(4, self::$cache->getSize());
     }
 
     public static function tearDownAfterClass(): void

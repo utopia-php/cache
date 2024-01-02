@@ -109,10 +109,9 @@ class Filesystem implements Adapter
         } catch (Exception $e) {
             return 0;
         }
-
     }
 
-    function getDirectorySize ($dir): int
+    public function getDirectorySize($dir): int
     {
         $size = 0;
         foreach (glob(rtrim($dir, '/').'/*', GLOB_NOSORT) as $each) {
@@ -121,7 +120,6 @@ class Filesystem implements Adapter
 
         return $size;
     }
-
 
     /**
      * @param  string  $filename
