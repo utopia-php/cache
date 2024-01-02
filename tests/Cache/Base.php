@@ -27,6 +27,7 @@ abstract class Base extends TestCase
      */
     protected $dataArray = ['test', 'data', 'string'];
 
+
     /**
      * General tests
      * Can be overwritten in specific adapter if required, such as None Cache
