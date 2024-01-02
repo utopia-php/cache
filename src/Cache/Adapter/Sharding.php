@@ -101,6 +101,19 @@ class Sharding implements Adapter
     }
 
     /**
+     * @return int
+     */
+    public function getSize(): int
+    {
+        $size = 0;
+        foreach ($this->adapters as $value) {
+                $size += $value->getSize();
+        }
+
+        return $size;
+    }
+
+    /**
      * @param  string  $key
      * @return Adapter
      */
@@ -111,4 +124,5 @@ class Sharding implements Adapter
 
         return $this->adapters[$index];
     }
+
 }

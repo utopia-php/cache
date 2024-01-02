@@ -15,7 +15,7 @@ class Memcached implements Adapter
     /**
      * Memcached constructor.
      *
-     * @param  Client  $memcached
+     * @param Client $memcached
      */
     public function __construct(Client $memcached)
     {
@@ -23,8 +23,8 @@ class Memcached implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
+     * @param string $key
+     * @param int $ttl time in seconds
      * @return mixed
      */
     public function load(string $key, int $ttl): mixed
@@ -43,8 +43,8 @@ class Memcached implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
+     * @param string $key
+     * @param string|array<int|string, mixed> $data
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, $data): bool|string|array
@@ -62,7 +62,7 @@ class Memcached implements Adapter
     }
 
     /**
-     * @param  string  $key
+     * @param string $key
      * @return bool
      */
     public function purge(string $key): bool
@@ -85,6 +85,24 @@ class Memcached implements Adapter
     {
         $statuses = $this->memcached->getStats();
 
-        return ! empty($statuses);
+        return !empty($statuses);
+    }
+
+    /**
+     * @return int
+     */
+    public function getSize(): int
+    {
+        $size = 0;
+        $servers = $this->memcached->getServerList();
+        if (!empty($servers)) {
+            $stats = $this->memcached->getStats();
+            $key = $servers[0]['host'] . ":" . $servers[0]['port'];
+            if (isset($stats[$key])) {
+                $size = $stats[$key]["curr_items"] ?? 0;
+            }
+        }
+
+        return $size;
     }
 }

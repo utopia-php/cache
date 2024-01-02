@@ -33,4 +33,11 @@ interface Adapter
      * @return bool
      */
     public function ping(): bool;
+
+    /**
+     *
+     * @return int
+     */
+    public function getSize(): int;
+
 }

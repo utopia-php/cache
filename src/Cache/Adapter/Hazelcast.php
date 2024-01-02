@@ -80,4 +80,22 @@ class Hazelcast implements Adapter
 
         return ! empty($statuses);
     }
+
+    /**
+     * @return int
+     */
+    public function getSize(): int
+    {
+        $size = 0;
+        $servers = $this->memcached->getServerList();
+        if (!empty($servers)) {
+            $stats = $this->memcached->getStats();
+            $key = $servers[0]['host'] . ":" . $servers[0]['port'];
+            if (isset($stats[$key])) {
+                $size = $stats[$key]["total_items"] ?? 0;
+            }
+        }
+
+        return $size;
+    }
 }

@@ -22,6 +22,15 @@ class RedisTest extends Base
         self::$cache = null;
     }
 
+
+    public function testGetSize(): void
+    {
+        self::$cache->save('test:file33', 'file33');
+        self::$cache->save('test:file34', 'file34');
+        self::$cache->save('test:file35', 'file35');
+        $this->assertEquals(3, self::$cache->getSize());
+    }
+
     /**
      * Wildcard is only supported by Redis at the moment.
      * If global support is introduced, move test to Base.php

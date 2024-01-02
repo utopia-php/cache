@@ -100,6 +100,30 @@ class Filesystem implements Adapter
     }
 
     /**
+     * @return int
+     */
+    public function getSize(): int
+    {
+        try {
+            return $this->getDirectorySize(dirname($this->path));
+        } catch (Exception $e) {
+            return 0;
+        }
+
+    }
+
+    function getDirectorySize ($dir): int
+    {
+        $size = 0;
+        foreach (glob(rtrim($dir, '/').'/*', GLOB_NOSORT) as $each) {
+            $size += is_file($each) ? filesize($each) : $this->getDirectorySize($each);
+        }
+
+        return $size;
+    }
+
+
+    /**
      * @param  string  $filename
      * @return string
      */

@@ -19,6 +19,11 @@ class NoneTest extends Base
         self::$cache = null;
     }
 
+    public function testGetSize(): void
+    {
+        $this->assertEquals(0, self::$cache->getSize());
+    }
+
     public function testEmptyCacheKey(): void
     {
         self::$cache->purge($this->key);
