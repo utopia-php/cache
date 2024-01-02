@@ -111,6 +111,10 @@ class Filesystem implements Adapter
         }
     }
 
+    /**
+     * @param string $dir
+     * @return int
+     */
     public function getDirectorySize($dir): int
     {
         $size = 0;
