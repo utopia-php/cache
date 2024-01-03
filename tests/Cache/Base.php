@@ -115,7 +115,6 @@ abstract class Base extends TestCase
         $result = self::$cache->flush();
 
         $this->assertEquals(true, $result);
-
         $this->assertEquals(false, self::$cache->load('x', 100));
         $this->assertEquals(false, self::$cache->load('y', 100));
     }
