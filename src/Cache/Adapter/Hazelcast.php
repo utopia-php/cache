@@ -29,7 +29,7 @@ class Hazelcast implements Adapter
             $cache = json_decode($cache, true);
         }
 
-        if (!isset($cache['data'])) {
+        if (! is_array($cache)) {
             return false;
         }
 
