@@ -29,7 +29,11 @@ class Hazelcast implements Adapter
             $cache = json_decode($cache, true);
         }
 
-        if (! empty($cache['data']) && ($cache['time'] + $ttl > time())) { // Cache is valid
+        if (empty($cache['data'])) {
+            return false;
+        }
+
+        if (($cache['time'] + $ttl > time())) { // Cache is valid
             return $cache['data'];
         }
 
