@@ -12,6 +12,15 @@ class MemoryTest extends Base
         self::$cache = new Cache(new Memory());
     }
 
+    public function testGetSize(): void
+    {
+        self::$cache->save('test:file33', 'file33');
+        self::$cache->save('test:file34', 'file34');
+        self::$cache->save('test:file35', 'file35');
+        self::$cache->save('test:file36', 'file36');
+        $this->assertEquals(4, self::$cache->getSize());
+    }
+
     public static function tearDownAfterClass(): void
     {
         self::$cache::setCaseSensitivity(false);

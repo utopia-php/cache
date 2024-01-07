@@ -93,4 +93,14 @@ class Cache
     {
         return $this->adapter->ping();
     }
+
+    /**
+     * Get db size.
+     *
+     * @return int
+     */
+    public function getSize(): int
+    {
+        return $this->adapter->getSize();
+    }
 }

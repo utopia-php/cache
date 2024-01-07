@@ -16,6 +16,12 @@ class MemcachedTest extends Base
         self::$cache = new Cache(new MemcachedAdapter($mc));
     }
 
+    public function testGetSize(): void
+    {
+        self::$cache->save('test:file33', 'file33');
+        $this->assertEquals(1, self::$cache->getSize());
+    }
+
     public static function tearDownAfterClass(): void
     {
         self::$cache::setCaseSensitivity(false);

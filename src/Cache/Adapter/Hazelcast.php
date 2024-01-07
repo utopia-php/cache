@@ -24,10 +24,16 @@ class Hazelcast implements Adapter
      */
     public function load(string $key, int $ttl): mixed
     {
-        /** @var array{time: int, data: string} */
-        $cache = json_decode($this->memcached->get($key), true);
+        $cache = $this->memcached->get($key);
+        if (is_string($cache)) {
+            $cache = json_decode($cache, true);
+        }
 
-        if (! empty($cache['data']) && ($cache['time'] + $ttl > time())) { // Cache is valid
+        if (! is_array($cache)) {
+            return false;
+        }
+
+        if (($cache['time'] + $ttl > time())) { // Cache is valid
             return $cache['data'];
         }
 
@@ -36,8 +42,8 @@ class Hazelcast implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array  $data
-     * @return bool|string|array
+     * @param  string|array<int|string, mixed>  $data
+     * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, $data): bool|string|array
     {
@@ -79,5 +85,25 @@ class Hazelcast implements Adapter
         $statuses = $this->memcached->getServerList();
 
         return ! empty($statuses);
+    }
+
+    /**
+     * Returning total number of keys
+     *
+     * @return int
+     */
+    public function getSize(): int
+    {
+        $size = 0;
+        $servers = $this->memcached->getServerList();
+        if (! empty($servers)) {
+            $stats = $this->memcached->getStats();
+            $key = $servers[0]['host'].':'.$servers[0]['port'];
+            if (isset($stats[$key])) {
+                $size = $stats[$key]['total_items'] ?? 0;
+            }
+        }
+
+        return $size;
     }
 }

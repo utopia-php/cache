@@ -100,6 +100,46 @@ class Filesystem implements Adapter
     }
 
     /**
+     * Returning root directory size in bytes
+     *
+     * @return int
+     */
+    public function getSize(): int
+    {
+        try {
+            return $this->getDirectorySize(dirname($this->path));
+        } catch (Exception) {
+            return 0;
+        }
+    }
+
+    /**
+     * @param  string  $dir
+     * @return int
+     */
+    private function getDirectorySize(string $dir): int
+    {
+        $size = 0;
+        $normalizedPath = rtrim($dir, '/').'/*';
+
+        $paths = glob($normalizedPath, GLOB_NOSORT);
+        if ($paths === false) {
+            return $size;
+        }
+
+        foreach ($paths as $path) {
+            if (is_file($path)) {
+                $fileSize = filesize($path);
+                $size += $fileSize !== false ? $fileSize : 0;
+            } elseif (is_dir($path)) {
+                $size += $this->getDirectorySize($path);
+            }
+        }
+
+        return $size;
+    }
+
+    /**
      * @param  string  $filename
      * @return string
      */

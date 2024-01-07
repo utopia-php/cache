@@ -18,10 +18,16 @@ class HazelcastTest extends Base
     public static function tearDownAfterClass(): void
     {
         self::$cache::setCaseSensitivity(false);
+        // @phpstan-ignore-next-line
         self::$cache = null;
     }
 
-    public function testFlush()
+    public function testGetSize(): void
+    {
+        $this->assertEquals(0, self::$cache->getSize());
+    }
+
+    public function testFlush(): void
     {
         //not implemented as Hazelcast doesn't support flush functionality
         $result = self::$cache->flush();

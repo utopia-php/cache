@@ -101,6 +101,21 @@ class Sharding implements Adapter
     }
 
     /**
+     * Returning total number of keys of all adapters
+     *
+     * @return int
+     */
+    public function getSize(): int
+    {
+        $size = 0;
+        foreach ($this->adapters as $value) {
+            $size += $value->getSize();
+        }
+
+        return $size;
+    }
+
+    /**
      * @param  string  $key
      * @return Adapter
      */
