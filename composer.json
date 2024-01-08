@@ -2,7 +2,7 @@
     "name": "utopia-php/cache",
     "description": "A simple cache library to manage application cache storing, loading and purging",
     "type": "library",
-    "keywords": ["php","framework", "upf", "utopia", "cache"],
+    "keywords": ["php", "framework", "upf", "utopia", "cache"],
     "license": "MIT",
     "minimum-stability": "stable",
     "scripts": {
@@ -11,16 +11,17 @@
         "format": "./vendor/bin/pint"
     },
     "autoload": {
-        "psr-4": {"Utopia\\Cache\\": "src/Cache"}
+        "psr-4": { "Utopia\\Cache\\": "src/Cache" }
     },
     "autoload-dev": {
-        "psr-4": {"Utopia\\Tests\\": "tests/Cache"}
+        "psr-4": { "Utopia\\Tests\\": "tests/Cache" }
     },
     "require": {
         "php": ">=8.0",
         "ext-json": "*",
         "ext-redis": "*",
-        "ext-memcached": "*"
+        "ext-memcached": "*",
+        "ext-mcrouter": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.3",
