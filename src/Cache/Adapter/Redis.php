@@ -3,7 +3,7 @@
 namespace Utopia\Cache\Adapter;
 
 use Exception;
-use Redis as Client;
+use RedisCluster as Client;
 use Utopia\Cache\Adapter;
 
 class Redis implements Adapter
