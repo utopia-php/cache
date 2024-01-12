@@ -1,5 +1,5 @@
 {
-    "name": "utopia-php/cache",
+    "name": "kabbajHoussine/cache",
     "description": "A simple cache library to manage application cache storing, loading and purging",
     "type": "library",
     "keywords": ["php","framework", "upf", "utopia", "cache"],
@@ -11,10 +11,10 @@
         "format": "./vendor/bin/pint"
     },
     "autoload": {
-        "psr-4": {"Utopia\\Cache\\": "src/Cache"}
+        "psr-4": {"KabbajHoussine\\Cache\\": "src/Cache"}
     },
     "autoload-dev": {
-        "psr-4": {"Utopia\\Tests\\": "tests/Cache"}
+        "psr-4": {"KabbajHoussine\\Tests\\": "tests/Cache"}
     },
     "require": {
         "php": ">=8.0",
