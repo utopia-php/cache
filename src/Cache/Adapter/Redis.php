@@ -1,10 +1,10 @@
 <?php
 
-namespace Utopia\Cache\Adapter;
+namespace KabbajHoussine\Cache\Adapter;
 
 use Exception;
 use RedisCluster as Client;
-use Utopia\Cache\Adapter;
+use KabbajHoussine\Cache\Adapter;
 
 class Redis implements Adapter
 {
