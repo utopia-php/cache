@@ -1,6 +1,6 @@
 <?php
 
-namespace kabbajHoussine\Cache;
+namespace KabbajHoussine\Cache;
 
 class Cache
 {
