@@ -1,6 +1,6 @@
 <?php
 
-namespace Utopia\Cache;
+namespace kabbajHoussine\Cache;
 
 interface Adapter
 {
