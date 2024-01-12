@@ -1,9 +1,9 @@
 <?php
 
-namespace Utopia\Cache\Adapter;
+namespace kabbajHoussine\Cache\Adapter;
 
 use Exception;
-use Utopia\Cache\Adapter;
+use kabbajHoussine\Cache\Adapter;
 
 class Filesystem implements Adapter
 {
