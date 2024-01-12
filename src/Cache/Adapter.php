@@ -1,6 +1,6 @@
 <?php
 
-namespace kabbajHoussine\Cache;
+namespace KabbajHoussine\Cache;
 
 interface Adapter
 {
