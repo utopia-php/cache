@@ -1,9 +1,9 @@
 <?php
 
-namespace Utopia\Cache\Adapter;
+namespace KabbajHoussine\Cache\Adapter;
 
 use Memcached as Client;
-use Utopia\Cache\Adapter;
+use KabbajHoussine\Cache\Adapter;
 
 class Hazelcast implements Adapter
 {
