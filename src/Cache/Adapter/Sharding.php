@@ -1,8 +1,8 @@
 <?php
 
-namespace Utopia\Cache\Adapter;
+namespace KabbajHoussine\Cache\Adapter;
 
-use Utopia\Cache\Adapter;
+use KabbajHoussine\Cache\Adapter;
 
 class Sharding implements Adapter
 {
