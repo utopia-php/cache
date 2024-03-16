@@ -39,10 +39,11 @@ class Filesystem implements Adapter
     }
 
     /**
-     * @param string $key
-     * @param mixed $data
-     * @return bool|string|array
-     * @throws Exception
+     * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
+     * @return bool|string|array<int|string, mixed>
+     *
+     * @throws \Exception
      */
     public function save(string $key, mixed $data): bool|string|array
     {
@@ -53,9 +54,9 @@ class Filesystem implements Adapter
         $file = $this->getPath($key);
         $dir = dirname($file);
 
-        if (!file_exists($dir)) {
-            if (!mkdir($dir, 0755, true)) {
-                if (!file_exists($dir)) {
+        if (! file_exists($dir)) {
+            if (! mkdir($dir, 0755, true)) {
+                if (! file_exists($dir)) {
                     throw new Exception("Can't create directory {$dir}");
                 }
             }
@@ -63,7 +64,6 @@ class Filesystem implements Adapter
 
         return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
     }
-
 
     /**
      * @param  string  $key
