@@ -53,16 +53,19 @@ class Filesystem implements Adapter
 
         $file = $this->getPath($key);
         $dir = dirname($file);
-
-        if (! file_exists($dir)) {
-            if (! mkdir($dir, 0755, true)) {
-                if (! file_exists($dir)) {
-                    throw new Exception("Can't create directory {$dir}");
+        try {
+            if (! file_exists($dir)) {
+                if (! mkdir($dir, 0755, true)) {
+                    if (! file_exists($dir)) {
+                        throw new Exception("Can't create directory {$dir}");
+                    }
                 }
             }
-        }
 
-        return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
+            return file_put_contents($file, $data, LOCK_EX) !== false;
+        } catch (\Exception $e) {
+            throw new Exception($e->getMessage());
+        }
     }
 
     /**
