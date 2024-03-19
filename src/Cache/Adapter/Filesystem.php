@@ -43,7 +43,7 @@ class Filesystem implements Adapter
      * @param  string|array<int|string, mixed>  $data
      * @return bool|string|array<int|string, mixed>
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function save(string $key, mixed $data): bool|string|array
     {
@@ -52,18 +52,18 @@ class Filesystem implements Adapter
         }
 
         $file = $this->getPath($key);
-
-        if (! \file_exists(\dirname($file))) { // Checks if directory path to file exists
-            if (! @\mkdir(\dirname($file), 0755, true)) {
-                throw new Exception('Can\'t create directory '.\dirname($file));
+        $dir = dirname($file);
+        try {
+            if (! file_exists($dir)) {
+                if (! mkdir($dir, 0755, true) && ! file_exists($dir)) {
+                    throw new Exception("Can't create directory {$dir}");
+                }
             }
 
-            if (! \file_exists(\dirname($file))) { // Checks race condition for mkdir function
-                throw new Exception('Can\'t create directory '.\dirname($file));
-            }
+            return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
+        } catch (Exception $e) {
+            throw new Exception($e->getMessage());
         }
-
-        return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
     }
 
     /**
