@@ -43,7 +43,7 @@ class Filesystem implements Adapter
      * @param  string|array<int|string, mixed>  $data
      * @return bool|string|array<int|string, mixed>
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function save(string $key, mixed $data): bool|string|array
     {
@@ -60,8 +60,8 @@ class Filesystem implements Adapter
                 }
             }
 
-            return file_put_contents($file, $data, LOCK_EX) !== false;
-        } catch (\Exception $e) {
+            return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
+        } catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
     }
