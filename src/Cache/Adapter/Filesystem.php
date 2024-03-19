@@ -55,10 +55,8 @@ class Filesystem implements Adapter
         $dir = dirname($file);
         try {
             if (! file_exists($dir)) {
-                if (! mkdir($dir, 0755, true)) {
-                    if (! file_exists($dir)) {
-                        throw new Exception("Can't create directory {$dir}");
-                    }
+                if (! mkdir($dir, 0755, true) && ! file_exists($dir)) {
+                    throw new Exception("Can't create directory {$dir}");
                 }
             }
 
