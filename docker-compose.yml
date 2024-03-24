@@ -1,15 +1,17 @@
 version: '3.1'
 
 services:  
-  php8:
-    container_name: php8
+  tests:
+    container_name: tests
     build:
       context: .
-      dockerfile: php8.0.Dockerfile
+      dockerfile: Dockerfile.php-${PHP_VERSION:-8.3}
     networks:
       - database
     volumes:
-      - ./:/usr/src/code
+      - ./phpunit.xml:/usr/code/phpunit.xml
+      - ./src:/usr/code/src
+      - ./tests:/usr/code/tests
     
   redis:
     image: redis:6.0-alpine
