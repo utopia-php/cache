@@ -9,7 +9,9 @@ services:
     networks:
       - database
     volumes:
-      - ./:/usr/src/code
+      - ./phpunit.xml:/usr/code/phpunit.xml
+      - ./src:/usr/code/src
+      - ./tests:/usr/code/tests
     
   redis:
     image: redis:6.0-alpine
