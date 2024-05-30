@@ -62,6 +62,19 @@ class Cache
     }
 
     /**
+     * Returns a list of keys.
+     *
+     * @param  string  $key
+     * @return array
+     */
+    public function list(string $key): array
+    {
+        $key = self::$caseSensitive ? $key : \strtolower($key);
+
+        return $this->adapter->list($key);
+    }
+
+    /**
      * Removes data from cache. Returns true on success of false on failure.
      *
      * @param  string  $key

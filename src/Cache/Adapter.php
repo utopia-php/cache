@@ -20,6 +20,12 @@ interface Adapter
 
     /**
      * @param  string  $key
+     * @return array
+     */
+    public function list(string $key): array;
+
+    /**
+     * @param  string  $key
      * @return bool
      */
     public function purge(string $key): bool;

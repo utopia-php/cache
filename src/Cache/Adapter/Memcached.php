@@ -62,6 +62,15 @@ class Memcached implements Adapter
     }
 
     /**
+     * @param string $key
+     * @return array
+     */
+    public function list(string $key): array
+    {
+        return [];
+    }
+
+    /**
      * @param  string  $key
      * @return bool
      */

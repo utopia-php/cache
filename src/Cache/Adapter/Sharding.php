@@ -65,6 +65,16 @@ class Sharding implements Adapter
     }
 
     /**
+     * @param string $key
+     * @return array
+     */
+    public function list(string $key): array
+    {
+        return $this->getAdapter($key)->list($key);
+
+    }
+
+    /**
      * @param  string  $key
      * @return bool
      */

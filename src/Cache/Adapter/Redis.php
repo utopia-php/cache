@@ -30,7 +30,13 @@ class Redis implements Adapter
      */
     public function load(string $key, int $ttl): mixed
     {
-        $redis_string = $this->redis->get($key);
+        $parts = explode('---', $key);
+        $hashKey = $parts[0] ?? null;
+        $key = $parts[1] ?? null;
+
+
+        $redis_string = $this->redis->hGet($hashKey, $key);
+
         if ($redis_string === false) {
             return false;
         }
@@ -56,12 +62,26 @@ class Redis implements Adapter
             return false;
         }
 
-        $cache = [
+        $parts = explode('---', $key);
+        $hashKey = $parts[0] ?? null;
+        $key = $parts[1] ?? null;
+
+
+        $value = [
             'time' => \time(),
             'data' => $data,
         ];
 
-        return ($this->redis->set($key, json_encode($cache))) ? $data : false;
+        return ($this->redis->hSet($hashKey, $key, json_encode($value)) ? $data : false);
+    }
+
+    /**
+     * @param string $key
+     * @return array
+     */
+    public function list(string $key): array
+    {
+        return (empty($this->redis->hKeys($key)) ? $this->redis->hKeys($key) : []);
     }
 
     /**
@@ -70,10 +90,6 @@ class Redis implements Adapter
      */
     public function purge(string $key): bool
     {
-        if (\str_ends_with($key, ':*')) {
-            return (bool) $this->redis->del($this->redis->keys($key));
-        }
-
         return (bool) $this->redis->del($key); // unlink() returns number of keys deleted
     }
 
