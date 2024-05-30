@@ -31,11 +31,10 @@ class Redis implements Adapter
     public function load(string $key, int $ttl): mixed
     {
         $parts = explode('---', $key);
-        $hashKey = $parts[0] ?? null;
-        $key = $parts[1] ?? null;
+        $key = $parts[0] ?? '';
+        $hashKey = $parts[1] ?? '';
 
-
-        $redis_string = $this->redis->hGet($hashKey, $key);
+        $redis_string = $this->redis->hGet($key, $hashKey);
 
         if ($redis_string === false) {
             return false;
@@ -63,25 +62,24 @@ class Redis implements Adapter
         }
 
         $parts = explode('---', $key);
-        $hashKey = $parts[0] ?? null;
-        $key = $parts[1] ?? null;
-
+        $key = $parts[0] ?? '';
+        $hashKey = $parts[1] ?? '';
 
         $value = [
             'time' => \time(),
             'data' => $data,
         ];
 
-        return ($this->redis->hSet($hashKey, $key, json_encode($value)) ? $data : false);
+        return $this->redis->hSet($key, $hashKey, json_encode($value)) ? $data : false;
     }
 
     /**
-     * @param string $key
+     * @param  string  $key
      * @return array
      */
     public function list(string $key): array
     {
-        return (empty($this->redis->hKeys($key)) ? $this->redis->hKeys($key) : []);
+        return empty($this->redis->hKeys($key)) ? $this->redis->hKeys($key) : [];
     }
 
     /**

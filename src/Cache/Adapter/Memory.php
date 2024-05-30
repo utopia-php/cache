@@ -57,7 +57,7 @@ class Memory implements Adapter
     }
 
     /**
-     * @param string $key
+     * @param  string  $key
      * @return array
      */
     public function list(string $key): array
