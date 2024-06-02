@@ -23,12 +23,12 @@ class Memcached implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl
-     * @param  string|null  $hashKey optional
+     * @param string $key
+     * @param int $ttl
+     * @param string $hashKey optional
      * @return mixed
      */
-    public function load(string $key, int $ttl, string $hashKey = null): mixed
+    public function load(string $key, int $ttl, string $hashKey = ''): mixed
     {
         /** @var array{time: int, data: string}|false */
         $cache = $this->memcached->get($key);
@@ -44,12 +44,12 @@ class Memcached implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  array|string  $data
-     * @param  string|null  $hashKey optional
+     * @param string $key
+     * @param array|string $data
+     * @param string $hashKey optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hashKey = null): bool|string|array
+    public function save(string $key, array|string $data, string $hashKey = ''): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -73,11 +73,11 @@ class Memcached implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string|null  $hashKey optional
+     * @param string $key
+     * @param string $hashKey optional
      * @return bool
      */
-    public function purge(string $key, string $hashKey = null): bool
+    public function purge(string $key, string $hashKey = ''): bool
     {
         return $this->memcached->delete($key);
     }

@@ -30,8 +30,8 @@ class ShardingTest extends Base
 
     public function testGetSize(): void
     {
-        self::$cache->save('test:file33', 'file33');
-        self::$cache->save('test:file34', 'file34');
+        self::$cache->save('test:file33', 'file33', 'test:file33');
+        self::$cache->save('test:file34', 'file34', 'test:file33');
         $this->assertEquals(2, self::$cache->getSize());
     }
 

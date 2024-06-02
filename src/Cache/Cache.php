@@ -36,14 +36,15 @@ class Cache
     /**
      * Load cached data. return false in no valid cache.
      *
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
-     * @param  string|null  $hashKey optional
+     * @param string $key
+     * @param int $ttl time in seconds
+     * @param string $hashKey optional
      * @return mixed
      */
-    public function load(string $key, int $ttl, string $hashKey = null): mixed
+    public function load(string $key, int $ttl, string $hashKey = ''): mixed
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
+        $hashKey = self::$caseSensitive ? $hashKey : \strtolower($hashKey);
 
         return $this->adapter->load($key, $ttl, $hashKey);
     }
@@ -51,14 +52,15 @@ class Cache
     /**
      * Save data to cache. Returns data on success of false on failure.
      *
-     * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
-     * @param  string|null  $hashKey optional
+     * @param string $key
+     * @param string|array<int|string, mixed> $data
+     * @param string $hashKey optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, mixed $data, string $hashKey = null): bool|string|array
+    public function save(string $key, mixed $data, string $hashKey = ''): bool|string|array
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
+        $hashKey = self::$caseSensitive ? $hashKey : \strtolower($hashKey);
 
         return $this->adapter->save($key, $data, $hashKey);
     }
@@ -79,13 +81,14 @@ class Cache
     /**
      * Removes data from cache. Returns true on success of false on failure.
      *
-     * @param  string  $key
-     * @param  string|null  $hashKey optional
+     * @param string $key
+     * @param string $hashKey optional
      * @return bool
      */
-    public function purge(string $key, string $hashKey = null): bool
+    public function purge(string $key, string $hashKey = ''): bool
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
+        $hashKey = self::$caseSensitive ? $hashKey : \strtolower($hashKey);
 
         return $this->adapter->purge($key, $hashKey);
     }

@@ -4,6 +4,8 @@ namespace Utopia\Cache\Adapter;
 
 use Exception;
 use Redis as Client;
+use RedisException;
+use Throwable;
 use Utopia\Cache\Adapter;
 
 class Redis implements Adapter
@@ -24,13 +26,14 @@ class Redis implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
-     * @param  string|null  $hashKey optional
+     * @param string $key
+     * @param int $ttl time in seconds
+     * @param string $hashKey optional
      * @return mixed
      */
-    public function load(string $key, int $ttl, string $hashKey = null): mixed
+    public function load(string $key, int $ttl, string $hashKey = ''): mixed
     {
+
         $redis_string = $this->redis->hGet($key, $hashKey);
 
         if ($redis_string === false) {
@@ -48,14 +51,14 @@ class Redis implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string|array  $data
-     * @param  string|null  $hashKey optional
+     * @param string $key
+     * @param string|array $data
+     * @param string $hashKey optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hashKey = null): bool|string|array
+    public function save(string $key, array|string $data, string $hashKey = ''): bool|string|array
     {
-        if (empty($key) || empty($data)) {
+        if (empty($key) || empty($data) || empty($hashKey)) {
             return false;
         }
 
@@ -64,7 +67,12 @@ class Redis implements Adapter
             'data' => $data,
         ];
 
-        return $this->redis->hSet($key, $hashKey, json_encode($value)) ? $data : false;
+        try {
+            $this->redis->hSet($key, $hashKey, json_encode($value));
+            return $data;
+        } catch (Throwable $th) {
+            return false;
+        }
     }
 
     /**
@@ -77,13 +85,13 @@ class Redis implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string|null  $hashKey optional
+     * @param string $key
+     * @param string $hashKey optional
      * @return bool
      */
-    public function purge(string $key, string $hashKey = null): bool
+    public function purge(string $key, string $hashKey = ''): bool
     {
-        if (! empty($hashKey)) {
+        if (!empty($hashKey)) {
             return (bool) $this->redis->hdel($key, $hashKey);
         }
 
