@@ -42,10 +42,10 @@ class Hazelcast implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
+     * @param  string|array  $data
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, $data): bool|string|array
+    public function save(string $key, array|string $data): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;

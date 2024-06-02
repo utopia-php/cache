@@ -25,9 +25,10 @@ class Filesystem implements Adapter
     /**
      * @param  string  $key
      * @param  int  $ttl time in seconds
+     * @param  string|null  $hashKey optional
      * @return mixed
      */
-    public function load(string $key, int $ttl): mixed
+    public function load(string $key, int $ttl, string $hashKey = null): mixed
     {
         $file = $this->getPath($key);
 
@@ -40,12 +41,13 @@ class Filesystem implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
+     * @param  array|string  $data
+     * @param  string|null  $hashKey optional
      * @return bool|string|array<int|string, mixed>
      *
      * @throws Exception
      */
-    public function save(string $key, mixed $data): bool|string|array
+    public function save(string $key, array|string $data, string $hashKey = null): bool|string|array
     {
         if (empty($data)) {
             return false;
@@ -77,11 +79,10 @@ class Filesystem implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string|null  $hashKey optional
      * @return bool
-     *
-     * @throws Exception
      */
-    public function purge(string $key): bool
+    public function purge(string $key, string $hashKey = null): bool
     {
         $file = $this->getPath($key);
 

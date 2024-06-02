@@ -38,13 +38,14 @@ class Cache
      *
      * @param  string  $key
      * @param  int  $ttl time in seconds
+     * @param  string|null  $hashKey optional
      * @return mixed
      */
-    public function load(string $key, int $ttl): mixed
+    public function load(string $key, int $ttl, string $hashKey = null): mixed
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
 
-        return $this->adapter->load($key, $ttl);
+        return $this->adapter->load($key, $ttl, $hashKey);
     }
 
     /**
@@ -52,13 +53,14 @@ class Cache
      *
      * @param  string  $key
      * @param  string|array<int|string, mixed>  $data
+     * @param  string|null  $hashKey optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, mixed $data): bool|string|array
+    public function save(string $key, mixed $data, string $hashKey = null): bool|string|array
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
 
-        return $this->adapter->save($key, $data);
+        return $this->adapter->save($key, $data, $hashKey);
     }
 
     /**
@@ -78,13 +80,14 @@ class Cache
      * Removes data from cache. Returns true on success of false on failure.
      *
      * @param  string  $key
+     * @param  string|null  $hashKey optional
      * @return bool
      */
-    public function purge(string $key): bool
+    public function purge(string $key, string $hashKey = null): bool
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
 
-        return $this->adapter->purge($key);
+        return $this->adapter->purge($key, $hashKey);
     }
 
     /**

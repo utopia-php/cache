@@ -26,14 +26,11 @@ class Redis implements Adapter
     /**
      * @param  string  $key
      * @param  int  $ttl time in seconds
+     * @param  string|null  $hashKey optional
      * @return mixed
      */
-    public function load(string $key, int $ttl): mixed
+    public function load(string $key, int $ttl, string $hashKey = null): mixed
     {
-        $parts = explode('---', $key);
-        $key = $parts[0] ?? '';
-        $hashKey = $parts[1] ?? '';
-
         $redis_string = $this->redis->hGet($key, $hashKey);
 
         if ($redis_string === false) {
@@ -52,18 +49,15 @@ class Redis implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
+     * @param  string|array  $data
+     * @param  string|null  $hashKey optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, $data): bool|string|array
+    public function save(string $key, array|string $data, string $hashKey = null): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
         }
-
-        $parts = explode('---', $key);
-        $key = $parts[0] ?? '';
-        $hashKey = $parts[1] ?? '';
 
         $value = [
             'time' => \time(),
@@ -84,11 +78,16 @@ class Redis implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string|null  $hashKey optional
      * @return bool
      */
-    public function purge(string $key): bool
+    public function purge(string $key, string $hashKey = null): bool
     {
-        return (bool) $this->redis->del($key); // unlink() returns number of keys deleted
+        if (! empty($hashKey)) {
+            return (bool) $this->redis->hdel($key, $hashKey);
+        }
+
+        return (bool) $this->redis->del($key);
     }
 
     /**

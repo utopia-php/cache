@@ -24,9 +24,9 @@ class RedisTest extends Base
 
     public function testGetSize(): void
     {
-        self::$cache->save('test:file33', 'file33');
-        self::$cache->save('test:file34', 'file34');
-        self::$cache->save('test:file35', 'file35');
+        self::$cache->save('test:file33', 'file33', 'test:file33');
+        self::$cache->save('test:file34', 'file34', 'test:file34');
+        self::$cache->save('test:file35', 'file35', 'test:file35');
         $this->assertEquals(3, self::$cache->getSize());
     }
 
@@ -36,8 +36,8 @@ class RedisTest extends Base
      */
     public function testCachePurgeWildcard(): void
     {
-        $data1 = self::$cache->save('test:file1', 'file1');
-        $data2 = self::$cache->save('test:file2', 'file2');
+        $data1 = self::$cache->save('test:file1', 'file1', 'test:file1');
+        $data2 = self::$cache->save('test:file2', 'file2', 'test:file2');
 
         $this->assertEquals('file1', $data1);
         $this->assertEquals('file2', $data2);
@@ -45,9 +45,9 @@ class RedisTest extends Base
         $result = self::$cache->purge('test:*');
         $this->assertEquals(true, $result);
 
-        $data = self::$cache->load('test:file1', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load('test:file1', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'test:file1');
         $this->assertEquals(false, $data);
-        $data = self::$cache->load('test:file2', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load('test:file2', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'test:file2');
         $this->assertEquals(false, $data);
 
         /**
