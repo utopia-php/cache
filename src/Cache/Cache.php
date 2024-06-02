@@ -36,9 +36,9 @@ class Cache
     /**
      * Load cached data. return false in no valid cache.
      *
-     * @param string $key
-     * @param int $ttl time in seconds
-     * @param string $hashKey optional
+     * @param  string  $key
+     * @param  int  $ttl time in seconds
+     * @param  string  $hashKey optional
      * @return mixed
      */
     public function load(string $key, int $ttl, string $hashKey = ''): mixed
@@ -52,9 +52,9 @@ class Cache
     /**
      * Save data to cache. Returns data on success of false on failure.
      *
-     * @param string $key
-     * @param string|array<int|string, mixed> $data
-     * @param string $hashKey optional
+     * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
+     * @param  string  $hashKey optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, mixed $data, string $hashKey = ''): bool|string|array
@@ -81,8 +81,8 @@ class Cache
     /**
      * Removes data from cache. Returns true on success of false on failure.
      *
-     * @param string $key
-     * @param string $hashKey optional
+     * @param  string  $key
+     * @param  string  $hashKey optional
      * @return bool
      */
     public function purge(string $key, string $hashKey = ''): bool
