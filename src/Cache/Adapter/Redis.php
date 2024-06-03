@@ -98,4 +98,14 @@ class Redis implements Adapter
             return false;
         }
     }
+
+    /**
+     * Returning total number of keys
+     *
+     * @return int
+     */
+    public function getSize(): int
+    {
+        return $this->redis->dbSize();
+    }
 }

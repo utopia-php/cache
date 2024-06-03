@@ -22,6 +22,11 @@ class HazelcastTest extends Base
         self::$cache = null;
     }
 
+    public function testGetSize(): void
+    {
+        $this->assertEquals(0, self::$cache->getSize());
+    }
+
     public function testFlush(): void
     {
         //not implemented as Hazelcast doesn't support flush functionality

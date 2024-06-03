@@ -57,4 +57,12 @@ class None implements Adapter
     {
         return true;
     }
+
+    /**
+     * @return int
+     */
+    public function getSize(): int
+    {
+        return 0;
+    }
 }

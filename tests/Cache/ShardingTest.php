@@ -28,6 +28,13 @@ class ShardingTest extends Base
         ]));
     }
 
+    public function testGetSize(): void
+    {
+        self::$cache->save('test:file33', 'file33');
+        self::$cache->save('test:file34', 'file34');
+        $this->assertEquals(2, self::$cache->getSize());
+    }
+
     public static function tearDownAfterClass(): void
     {
         self::$cache::setCaseSensitivity(false);

@@ -11,7 +11,7 @@ COPY composer.json /usr/local/src/
 RUN composer update --ignore-platform-reqs --optimize-autoloader \
     --no-plugins --no-scripts --prefer-dist
     
-FROM php:8.0-cli-alpine as final
+FROM appwrite/utopia-base:php-8.3-0.1.0 as final
 
 ENV PHP_MEMCACHED_VERSION=v3.2.0
 
@@ -21,18 +21,9 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN \
   apk update \
-  && apk add --no-cache make automake autoconf gcc g++ git zlib-dev libmemcached-dev \
+  && apk add --no-cache make automake autoconf g++ gcc zlib-dev libmemcached-dev \
   && rm -rf /var/cache/apk/*
-
-RUN \
-  # Redis Extension
-  git clone https://github.com/phpredis/phpredis.git && \
-  cd phpredis && \
-  git checkout $PHP_REDIS_VERSION && \
-  phpize && \
-  ./configure && \
-  make && make install && \
-  cd ..
+    
 
 RUN echo extension=redis.so >> /usr/local/etc/php/conf.d/redis.ini
 

@@ -88,4 +88,14 @@ class Memory implements Adapter
     {
         return true;
     }
+
+    /**
+     * Returning total number of keys
+     *
+     * @return int
+     */
+    public function getSize(): int
+    {
+        return count($this->store);
+    }
 }

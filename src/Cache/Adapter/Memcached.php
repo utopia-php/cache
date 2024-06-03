@@ -87,4 +87,24 @@ class Memcached implements Adapter
 
         return ! empty($statuses);
     }
+
+    /**
+     * Returning total number of keys
+     *
+     * @return int
+     */
+    public function getSize(): int
+    {
+        $size = 0;
+        $servers = $this->memcached->getServerList();
+        if (! empty($servers)) {
+            $stats = $this->memcached->getStats();
+            $key = $servers[0]['host'].':'.$servers[0]['port'];
+            if (isset($stats[$key])) {
+                $size = $stats[$key]['curr_items'] ?? 0;
+            }
+        }
+
+        return $size;
+    }
 }

@@ -43,7 +43,7 @@ class Filesystem implements Adapter
      * @param  string|array<int|string, mixed>  $data
      * @return bool|string|array<int|string, mixed>
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function save(string $key, mixed $data): bool|string|array
     {
@@ -52,18 +52,18 @@ class Filesystem implements Adapter
         }
 
         $file = $this->getPath($key);
-
-        if (! \file_exists(\dirname($file))) { // Checks if directory path to file exists
-            if (! @\mkdir(\dirname($file), 0755, true)) {
-                throw new Exception('Can\'t create directory '.\dirname($file));
+        $dir = dirname($file);
+        try {
+            if (! file_exists($dir)) {
+                if (! mkdir($dir, 0755, true) && ! file_exists($dir)) {
+                    throw new Exception("Can't create directory {$dir}");
+                }
             }
 
-            if (! \file_exists(\dirname($file))) { // Checks race condition for mkdir function
-                throw new Exception('Can\'t create directory '.\dirname($file));
-            }
+            return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
+        } catch (Exception $e) {
+            throw new Exception($e->getMessage());
         }
-
-        return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
     }
 
     /**
@@ -97,6 +97,46 @@ class Filesystem implements Adapter
     public function ping(): bool
     {
         return file_exists($this->path) && is_writable($this->path) && is_readable($this->path);
+    }
+
+    /**
+     * Returning root directory size in bytes
+     *
+     * @return int
+     */
+    public function getSize(): int
+    {
+        try {
+            return $this->getDirectorySize(dirname($this->path));
+        } catch (Exception) {
+            return 0;
+        }
+    }
+
+    /**
+     * @param  string  $dir
+     * @return int
+     */
+    private function getDirectorySize(string $dir): int
+    {
+        $size = 0;
+        $normalizedPath = rtrim($dir, '/').'/*';
+
+        $paths = glob($normalizedPath, GLOB_NOSORT);
+        if ($paths === false) {
+            return $size;
+        }
+
+        foreach ($paths as $path) {
+            if (is_file($path)) {
+                $fileSize = filesize($path);
+                $size += $fileSize !== false ? $fileSize : 0;
+            } elseif (is_dir($path)) {
+                $size += $this->getDirectorySize($path);
+            }
+        }
+
+        return $size;
     }
 
     /**
