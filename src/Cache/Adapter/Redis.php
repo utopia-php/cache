@@ -4,6 +4,7 @@ namespace Utopia\Cache\Adapter;
 
 use Exception;
 use Redis as Client;
+use Throwable;
 use Utopia\Cache\Adapter;
 
 class Redis implements Adapter
@@ -26,11 +27,13 @@ class Redis implements Adapter
     /**
      * @param  string  $key
      * @param  int  $ttl time in seconds
+     * @param  string  $hash optional
      * @return mixed
      */
-    public function load(string $key, int $ttl): mixed
+    public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        $redis_string = $this->redis->get($key);
+        $redis_string = $this->redis->hGet($key, $hash);
+
         if ($redis_string === false) {
             return false;
         }
@@ -47,34 +50,55 @@ class Redis implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
+     * @param  array<int|string, mixed>|string  $data
+     * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, $data): bool|string|array
+    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
-        if (empty($key) || empty($data)) {
+        if (empty($key) || empty($data) || empty($hash)) {
             return false;
         }
 
-        $cache = [
-            'time' => \time(),
-            'data' => $data,
-        ];
+        try {
+            $value = json_encode([
+                'time' => \time(),
+                'data' => $data,
+            ], flags: JSON_THROW_ON_ERROR);
+        } catch(Throwable $th) {
+            return false;
+        }
 
-        return ($this->redis->set($key, json_encode($cache))) ? $data : false;
+        try {
+            $this->redis->hSet($key, $hash, $value);
+
+            return $data;
+        } catch (Throwable $th) {
+            return false;
+        }
     }
 
     /**
      * @param  string  $key
+     * @return string[]
+     */
+    public function list(string $key): array
+    {
+        return empty($this->redis->hKeys($key)) ? $this->redis->hKeys($key) : [];
+    }
+
+    /**
+     * @param  string  $key
+     * @param  string  $hash optional
      * @return bool
      */
-    public function purge(string $key): bool
+    public function purge(string $key, string $hash = ''): bool
     {
-        if (\str_ends_with($key, ':*')) {
-            return (bool) $this->redis->del($this->redis->keys($key));
+        if (! empty($hash)) {
+            return (bool) $this->redis->hdel($key, $hash);
         }
 
-        return (bool) $this->redis->del($key); // unlink() returns number of keys deleted
+        return (bool) $this->redis->del($key);
     }
 
     /**

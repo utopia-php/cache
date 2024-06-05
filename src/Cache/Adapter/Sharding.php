@@ -47,30 +47,42 @@ class Sharding implements Adapter
     /**
      * @param  string  $key
      * @param  int  $ttl time in seconds
+     * @param  string  $hash optional
      * @return mixed
      */
-    public function load(string $key, int $ttl): mixed
+    public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        return $this->getAdapter($key)->load($key, $ttl);
+        return $this->getAdapter($key)->load($key, $ttl, $hash);
     }
 
     /**
      * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
+     * @param  array<int|string, mixed>|string  $data
+     * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, $data): bool|string|array
+    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
-        return $this->getAdapter($key)->save($key, $data);
+        return $this->getAdapter($key)->save($key, $data, $hash);
     }
 
     /**
      * @param  string  $key
+     * @return string[]
+     */
+    public function list(string $key): array
+    {
+        return $this->getAdapter($key)->list($key);
+    }
+
+    /**
+     * @param  string  $key
+     * @param  string  $hash optional
      * @return bool
      */
-    public function purge(string $key): bool
+    public function purge(string $key, string $hash = ''): bool
     {
-        return $this->getAdapter($key)->purge($key);
+        return $this->getAdapter($key)->purge($key, $hash);
     }
 
     /**

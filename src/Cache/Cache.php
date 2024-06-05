@@ -38,13 +38,15 @@ class Cache
      *
      * @param  string  $key
      * @param  int  $ttl time in seconds
+     * @param  string  $hash optional
      * @return mixed
      */
-    public function load(string $key, int $ttl): mixed
+    public function load(string $key, int $ttl, string $hash = ''): mixed
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
+        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->load($key, $ttl);
+        return $this->adapter->load($key, $ttl, $hash);
     }
 
     /**
@@ -52,26 +54,43 @@ class Cache
      *
      * @param  string  $key
      * @param  string|array<int|string, mixed>  $data
+     * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, mixed $data): bool|string|array
+    public function save(string $key, mixed $data, string $hash = ''): bool|string|array
+    {
+        $key = self::$caseSensitive ? $key : \strtolower($key);
+        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
+
+        return $this->adapter->save($key, $data, $hash);
+    }
+
+    /**
+     * Returns a list of keys.
+     *
+     * @param  string  $key
+     * @return string[]
+     */
+    public function list(string $key): array
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
 
-        return $this->adapter->save($key, $data);
+        return $this->adapter->list($key);
     }
 
     /**
      * Removes data from cache. Returns true on success of false on failure.
      *
      * @param  string  $key
+     * @param  string  $hash optional
      * @return bool
      */
-    public function purge(string $key): bool
+    public function purge(string $key, string $hash = ''): bool
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
+        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->purge($key);
+        return $this->adapter->purge($key, $hash);
     }
 
     /**
