@@ -60,12 +60,12 @@ class Redis implements Adapter
             return false;
         }
 
-        $value = json_encode([
-            'time' => \time(),
-            'data' => $data,
-        ]);
-
-        if (! $value) {
+        try {
+            $value = json_encode([
+                'time' => \time(),
+                'data' => $data,
+            ], flags: JSON_THROW_ON_ERROR);
+        } catch(Throwable $th) {
             return false;
         }
 
