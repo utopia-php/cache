@@ -38,7 +38,7 @@ class Memory implements Adapter
 
     /**
      * @param  string  $key
-     * @param  array|string  $data
+     * @param array<int|string, mixed>|string $data
      * @param  string  $hashKey optional
      * @return bool|string|array<int|string, mixed>
      */
@@ -60,7 +60,7 @@ class Memory implements Adapter
 
     /**
      * @param  string  $key
-     * @return array
+     * @return string[]
      */
     public function list(string $key): array
     {
