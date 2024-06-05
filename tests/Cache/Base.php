@@ -70,7 +70,6 @@ abstract class Base extends TestCase
     {
         // Ensure case in-sensitivity first (configured in adapter's setUp)
         $data = self::$cache->save('planet', 'Earth', 'planet');
-        var_dump($data);
         $this->assertEquals('Earth', $data);
 
         $data = self::$cache->load('planet', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'planet');
