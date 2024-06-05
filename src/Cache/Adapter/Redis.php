@@ -50,7 +50,7 @@ class Redis implements Adapter
 
     /**
      * @param  string  $key
-     * @param array<int|string, mixed>|string $data
+     * @param  array<int|string, mixed>|string  $data
      * @param  string  $hashKey optional
      * @return bool|string|array<int|string, mixed>
      */

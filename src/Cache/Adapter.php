@@ -22,7 +22,7 @@ interface Adapter
 
     /**
      * @param  string  $key
-     * @return array
+     * @return string[]
      */
     public function list(string $key): array;
 
