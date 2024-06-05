@@ -60,13 +60,17 @@ class Redis implements Adapter
             return false;
         }
 
-        $value = [
+        $value = json_encode([
             'time' => \time(),
             'data' => $data,
-        ];
+        ]);
+
+        if (! $value) {
+            return false;
+        }
 
         try {
-            $this->redis->hSet($key, $hashKey, json_encode($value));
+            $this->redis->hSet($key, $hashKey, $value);
 
             return $data;
         } catch (Throwable $th) {
