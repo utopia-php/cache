@@ -16,10 +16,10 @@ class None implements Adapter
     /**
      * @param  string  $key
      * @param  int  $ttl
-     * @param  string  $hashKey optional
+     * @param  string  $hash optional
      * @return mixed
      */
-    public function load(string $key, int $ttl, string $hashKey = ''): mixed
+    public function load(string $key, int $ttl, string $hash = ''): mixed
     {
         return false;
     }
@@ -27,10 +27,10 @@ class None implements Adapter
     /**
      * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
-     * @param  string  $hashKey optional
+     * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hashKey = ''): bool|string|array
+    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
         return false;
     }
@@ -46,10 +46,10 @@ class None implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string  $hashKey optional
+     * @param  string  $hash optional
      * @return bool
      */
-    public function purge(string $key, string $hashKey = ''): bool
+    public function purge(string $key, string $hash = ''): bool
     {
         return true;
     }

@@ -27,12 +27,12 @@ class Redis implements Adapter
     /**
      * @param  string  $key
      * @param  int  $ttl time in seconds
-     * @param  string  $hashKey optional
+     * @param  string  $hash optional
      * @return mixed
      */
-    public function load(string $key, int $ttl, string $hashKey = ''): mixed
+    public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        $redis_string = $this->redis->hGet($key, $hashKey);
+        $redis_string = $this->redis->hGet($key, $hash);
 
         if ($redis_string === false) {
             return false;
@@ -51,12 +51,12 @@ class Redis implements Adapter
     /**
      * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
-     * @param  string  $hashKey optional
+     * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hashKey = ''): bool|string|array
+    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
-        if (empty($key) || empty($data) || empty($hashKey)) {
+        if (empty($key) || empty($data) || empty($hash)) {
             return false;
         }
 
@@ -70,7 +70,7 @@ class Redis implements Adapter
         }
 
         try {
-            $this->redis->hSet($key, $hashKey, $value);
+            $this->redis->hSet($key, $hash, $value);
 
             return $data;
         } catch (Throwable $th) {
@@ -89,13 +89,13 @@ class Redis implements Adapter
 
     /**
      * @param  string  $key
-     * @param  string  $hashKey optional
+     * @param  string  $hash optional
      * @return bool
      */
-    public function purge(string $key, string $hashKey = ''): bool
+    public function purge(string $key, string $hash = ''): bool
     {
-        if (! empty($hashKey)) {
-            return (bool) $this->redis->hdel($key, $hashKey);
+        if (! empty($hash)) {
+            return (bool) $this->redis->hdel($key, $hash);
         }
 
         return (bool) $this->redis->del($key);

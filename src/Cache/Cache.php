@@ -38,15 +38,15 @@ class Cache
      *
      * @param  string  $key
      * @param  int  $ttl time in seconds
-     * @param  string  $hashKey optional
+     * @param  string  $hash optional
      * @return mixed
      */
-    public function load(string $key, int $ttl, string $hashKey = ''): mixed
+    public function load(string $key, int $ttl, string $hash = ''): mixed
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
-        $hashKey = self::$caseSensitive ? $hashKey : \strtolower($hashKey);
+        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->load($key, $ttl, $hashKey);
+        return $this->adapter->load($key, $ttl, $hash);
     }
 
     /**
@@ -54,15 +54,15 @@ class Cache
      *
      * @param  string  $key
      * @param  string|array<int|string, mixed>  $data
-     * @param  string  $hashKey optional
+     * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, mixed $data, string $hashKey = ''): bool|string|array
+    public function save(string $key, mixed $data, string $hash = ''): bool|string|array
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
-        $hashKey = self::$caseSensitive ? $hashKey : \strtolower($hashKey);
+        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->save($key, $data, $hashKey);
+        return $this->adapter->save($key, $data, $hash);
     }
 
     /**
@@ -82,15 +82,15 @@ class Cache
      * Removes data from cache. Returns true on success of false on failure.
      *
      * @param  string  $key
-     * @param  string  $hashKey optional
+     * @param  string  $hash optional
      * @return bool
      */
-    public function purge(string $key, string $hashKey = ''): bool
+    public function purge(string $key, string $hash = ''): bool
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
-        $hashKey = self::$caseSensitive ? $hashKey : \strtolower($hashKey);
+        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->purge($key, $hashKey);
+        return $this->adapter->purge($key, $hash);
     }
 
     /**
