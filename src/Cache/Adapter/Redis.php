@@ -86,7 +86,7 @@ class Redis implements Adapter
     {
         $keys = $this->redis->hKeys($key);
 
-        if(empty($keys)){
+        if (empty($keys)) {
             return [];
         }
 
