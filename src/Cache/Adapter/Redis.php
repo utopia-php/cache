@@ -84,6 +84,8 @@ class Redis implements Adapter
      */
     public function list(string $key): array
     {
+        var_dump("list");
+        var_dump($key);
         return empty($this->redis->hKeys($key)) ? [] : $this->redis->hKeys($key);
     }
 
