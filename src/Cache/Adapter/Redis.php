@@ -32,6 +32,11 @@ class Redis implements Adapter
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
+
+        if(empty($hash)){
+            $hash = $key;
+        }
+
         $redis_string = $this->redis->hGet($key, $hash);
 
         if ($redis_string === false) {
@@ -56,8 +61,13 @@ class Redis implements Adapter
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
-        if (empty($key) || empty($data) || empty($hash)) {
+
+        if (empty($key) || empty($data)) {
             return false;
+        }
+
+        if(empty($hash)){
+            $hash = $key;
         }
 
         try {
