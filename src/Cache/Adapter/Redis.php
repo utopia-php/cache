@@ -94,7 +94,13 @@ class Redis implements Adapter
      */
     public function list(string $key): array
     {
-        return empty($this->redis->hKeys($key)) ? $this->redis->hKeys($key) : [];
+        $keys = $this->redis->hKeys($key);
+
+        if (empty($keys)) {
+            return [];
+        }
+
+        return $keys;
     }
 
     /**
