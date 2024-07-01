@@ -34,26 +34,26 @@ abstract class Base extends TestCase
     public function testCacheSave(): void
     {
         // test $data array
-        $result = self::$cache->save($this->key, $this->dataArray);
+        $result = self::$cache->save($this->key, $this->dataArray, $this->key);
 
         $this->assertEquals($this->dataArray, $result);
 
         // test $data string
-        $result = self::$cache->save($this->key, $this->data);
+        $result = self::$cache->save($this->key, $this->data, $this->key);
 
         $this->assertEquals($this->data, $result);
     }
 
     public function testNotEmptyCacheKey(): void
     {
-        $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */, $this->key);
 
         $this->assertEquals($this->data, $data);
     }
 
     public function testCachePurge(): void
     {
-        $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */, $this->key);
 
         $this->assertEquals($this->data, $data);
 
@@ -61,7 +61,7 @@ abstract class Base extends TestCase
 
         $this->assertEquals(true, $result);
 
-        $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */, $this->key);
 
         $this->assertEquals(false, $data);
     }
@@ -69,32 +69,32 @@ abstract class Base extends TestCase
     public function testCaseInsensitivity(): void
     {
         // Ensure case in-sensitivity first (configured in adapter's setUp)
-        $data = self::$cache->save('planet', 'Earth');
+        $data = self::$cache->save('planet', 'Earth', 'planet');
         $this->assertEquals('Earth', $data);
 
-        $data = self::$cache->load('planet', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load('planet', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'planet');
         $this->assertEquals('Earth', $data);
-        $data = self::$cache->load('PLANET', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load('PLANET', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'PLANET');
         $this->assertEquals('Earth', $data);
-        $data = self::$cache->load('PlAnEt', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load('PlAnEt', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'PlAnEt');
         $this->assertEquals('Earth', $data);
 
         $result = self::$cache->purge('PLaNEt');
         $this->assertEquals(true, $result);
 
-        $data = self::$cache->load('planet', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load('planet', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'planet');
         $this->assertEquals(false, $data);
-        $data = self::$cache->load('PLANET', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load('PLANET', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'PLANET');
         $this->assertEquals(false, $data);
 
         // Test case sensitivity
         self::$cache::setCaseSensitivity(true);
 
-        $data = self::$cache->save('color', 'pink');
+        $data = self::$cache->save('color', 'pink', 'color');
         $this->assertEquals('pink', $data);
-        $data = self::$cache->load('color', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load('color', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'color');
         $this->assertEquals('pink', $data);
-        $data = self::$cache->load('COLOR', 60 * 60 * 24 * 30 * 3 /* 3 months */);
+        $data = self::$cache->load('COLOR', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'COLOR');
         $this->assertEquals(false, $data);
     }
 
@@ -105,18 +105,18 @@ abstract class Base extends TestCase
 
     public function testFlush(): void
     {
-        $result1 = self::$cache->save('x', 'x');
-        $result2 = self::$cache->save('y', 'y');
+        $result1 = self::$cache->save('x', 'x', 'x');
+        $result2 = self::$cache->save('y', 'y', 'y');
 
-        $this->assertEquals($result1, self::$cache->load('x', 100));
-        $this->assertEquals($result2, self::$cache->load('y', 100));
+        $this->assertEquals($result1, self::$cache->load('x', 100, 'x'));
+        $this->assertEquals($result2, self::$cache->load('y', 100, 'y'));
 
         // test $data string
         $result = self::$cache->flush();
 
         $this->assertEquals(true, $result);
-        $this->assertEquals(false, self::$cache->load('x', 100));
-        $this->assertEquals(false, self::$cache->load('y', 100));
+        $this->assertEquals(false, self::$cache->load('x', 100, 'x'));
+        $this->assertEquals(false, self::$cache->load('y', 100, 'y'));
     }
 
     public function testListeners(): void

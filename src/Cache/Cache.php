@@ -91,12 +91,15 @@ class Cache
      *
      * @param  string  $key
      * @param  int  $ttl time in seconds
+     * @param  string  $hash optional
      * @return mixed
      */
-    public function load(string $key, int $ttl): mixed
+    public function load(string $key, int $ttl, string $hash = ''): mixed
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
-        $loaded = $this->adapter->load($key, $ttl);
+        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
+
+        $loaded = $this->adapter->load($key, $ttl, $hash);
 
         if (! $this->listenersStatus) {
             return $loaded;
@@ -115,14 +118,15 @@ class Cache
      * Save data to cache. Returns data on success of false on failure.
      *
      * @param  string  $key
-     * @param  string|array  $data
-     * @return bool|string|array
+     * @param  string|array<int|string, mixed>  $data
+     * @param  string  $hash optional
+     * @return bool|string|array<int|string, mixed>
      */
-    // @phpstan-ignore-next-line
-    public function save($key, $data)
+    public function save(string $key, mixed $data, string $hash = ''): bool|string|array
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
-        $saved = $this->adapter->save($key, $data);
+        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
+        $saved = $this->adapter->save($key, $data, $hash);
 
         if (! $this->listenersStatus) {
             return $saved;
@@ -138,15 +142,30 @@ class Cache
     }
 
     /**
+     * Returns a list of keys.
+     *
+     * @param  string  $key
+     * @return string[]
+     */
+    public function list(string $key): array
+    {
+        $key = self::$caseSensitive ? $key : \strtolower($key);
+
+        return $this->adapter->list($key);
+    }
+
+    /**
      * Removes data from cache. Returns true on success of false on failure.
      *
      * @param  string  $key
+     * @param  string  $hash optional
      * @return bool
      */
-    public function purge($key): bool
+    public function purge(string $key, string $hash = ''): bool
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
-        $purged = $this->adapter->purge($key);
+        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
+        $purged = $this->adapter->purge($key, $hash);
 
         if (! $this->listenersStatus) {
             return $purged;
