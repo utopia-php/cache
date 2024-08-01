@@ -131,7 +131,8 @@ class Cache
         if (! $this->listenersStatus) {
             return $saved;
         }
-
+        var_dump('save');
+        var_dump($key);
         foreach ($this->listeners[self::EVENT_SAVE] ?? [] as $listener) {
             if (is_callable($listener)) {
                 call_user_func($listener, $key);
@@ -172,6 +173,8 @@ class Cache
         }
 
         foreach ($this->listeners[self::EVENT_PURGE] ?? [] as $listener) {
+            var_dump('purge');
+            var_dump($key);
             if (is_callable($listener)) {
                 call_user_func($listener, $key);
             }
