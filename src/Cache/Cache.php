@@ -127,12 +127,13 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $hash = self::$caseSensitive ? $hash : \strtolower($hash);
         $saved = $this->adapter->save($key, $data, $hash);
-
+        var_dump('save');
+        var_dump($this->listenersStatus);
         if (! $this->listenersStatus) {
             return $saved;
         }
-        var_dump('save');
         var_dump($key);
+         var_dump('---------');
         foreach ($this->listeners[self::EVENT_SAVE] ?? [] as $listener) {
             if (is_callable($listener)) {
                 call_user_func($listener, $key);
@@ -167,14 +168,16 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $hash = self::$caseSensitive ? $hash : \strtolower($hash);
         $purged = $this->adapter->purge($key, $hash);
-
+        var_dump('purge');
+        var_dump($this->listenersStatus);
         if (! $this->listenersStatus) {
             return $purged;
         }
 
         foreach ($this->listeners[self::EVENT_PURGE] ?? [] as $listener) {
-            var_dump('purge');
+
             var_dump($key);
+            var_dump('&&&&&&&&&&&&&');
             if (is_callable($listener)) {
                 call_user_func($listener, $key);
             }
