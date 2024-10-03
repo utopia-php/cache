@@ -3,7 +3,6 @@
 namespace Utopia\Tests;
 
 use Redis as Redis;
-use Throwable;
 use Utopia\Cache\Adapter\Redis as RedisAdapter;
 use Utopia\Cache\Adapter\Sharding;
 use Utopia\Cache\Cache;
