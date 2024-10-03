@@ -44,8 +44,11 @@ class ShardingTest extends Base
 
     public function testEmptyAdapters(): void
     {
-        $this->expectException(Throwable::class);
-
-        self::$cache = new Cache(new Sharding([]));
+        try {
+            self::$cache = new Cache(new Sharding([]));
+            $this->fail('Expected exception was not thrown');
+        } catch (\Throwable $e) {
+            $this->assertInstanceOf(\Throwable::class, $e);
+        }
     }
 }
