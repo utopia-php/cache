@@ -76,7 +76,9 @@ class Redis implements Adapter
         } catch(Throwable $th) {
             return false;
         }
-
+         var_dump('SAVING CACHE => ');
+         var_dump($key);
+         var_dump($value);
         try {
             $this->redis->hSet($key, $hash, $value);
 
