@@ -11,7 +11,7 @@ COPY composer.json /usr/local/src/
 RUN composer update --ignore-platform-reqs --optimize-autoloader \
     --no-plugins --no-scripts --prefer-dist
     
-FROM appwrite/utopia-base:php-8.2-0.1.0 as final
+FROM appwrite/utopia-base:php-8.2-0.1.2 as final
 
 ENV PHP_MEMCACHED_VERSION=v3.2.0
 

@@ -38,6 +38,7 @@ class RedisCluster implements Adapter
 
         $redis_string = $this->redis->hGet($key, $hash);
 
+        /** @phpstan-ignore identical.alwaysFalse */
         if ($redis_string === false) {
             return false;
         }
