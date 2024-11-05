@@ -96,6 +96,9 @@ abstract class Base extends TestCase
         $this->assertEquals('pink', $data);
         $data = self::$cache->load('COLOR', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'COLOR');
         $this->assertEquals(false, $data);
+
+        $result = self::$cache->purge('color');
+        $this->assertEquals(true, $result);
     }
 
     public function testPing(): void
