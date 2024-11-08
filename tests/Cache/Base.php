@@ -121,4 +121,28 @@ abstract class Base extends TestCase
         $this->assertEquals(false, self::$cache->load('x', 100, 'x'));
         $this->assertEquals(false, self::$cache->load('y', 100, 'y'));
     }
+
+    public function testListeners(): void
+    {
+        self::$cache->on(Cache::EVENT_SAVE, function ($key) {
+            $this->assertEquals('x', $key);
+        });
+
+        self::$cache->on(Cache::EVENT_LOAD, function ($key) {
+            $this->assertEquals('y', $key);
+        });
+
+        self::$cache->on(Cache::EVENT_PURGE, function ($key) {
+            $this->assertEquals('z', $key);
+        });
+
+        self::$cache->save('x', '10');
+        self::$cache->load('y', 10);
+        self::$cache->purge('z');
+        self::$cache->setListenersStatus(false);
+        self::$cache->load('x', 10);
+        self::$cache->purge('x');
+        self::$cache->setListenersStatus(true);
+        self::$cache->load('y', 10);
+    }
 }

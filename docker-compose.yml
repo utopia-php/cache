@@ -69,26 +69,26 @@ services:
       HZ_NETWORK_MEMCACHEPROTOCOL_ENABLED: "true"
     container_name: hazelcast
     networks:
-      - database  
+      - database
 
   memcached:
     image: memcached:1.6.17-alpine
     container_name: memcached
     networks:
       - database
-  
+
   shardA:
     image: redis:6.0-alpine
     container_name: shardA
     networks:
       - database
-  
+
   shardB:
     image: redis:6.0-alpine
     container_name: shardB
     networks:
-      - database  
-  
+      - database
+
   shardC:
     image: redis:6.0-alpine
     container_name: shardC

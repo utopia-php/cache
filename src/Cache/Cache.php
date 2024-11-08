@@ -5,9 +5,35 @@ namespace Utopia\Cache;
 class Cache
 {
     /**
+     * @var string
+     */
+    const EVENT_LOAD = 'load';
+
+    /**
+     * @var string
+     */
+    const EVENT_SAVE = 'save';
+
+    /**
+     * @var string
+     */
+    const EVENT_PURGE = 'purge';
+
+    /**
      * @var Adapter
      */
-    private $adapter;
+    private Adapter $adapter;
+
+    /**
+     * @var array
+     */
+    // @phpstan-ignore-next-line
+    private array $listeners = [];
+
+    /**
+     * @var bool
+     */
+    private bool $listenersStatus = true;
 
     /**
      * @var bool If cache keys are case sensitive
@@ -20,6 +46,33 @@ class Cache
     public function __construct(Adapter $adapter)
     {
         $this->adapter = $adapter;
+    }
+
+    /**
+     * Add event listener.
+     *
+     * @param  string  $event
+     * @param  callable  $callback
+     * @return Cache
+     */
+    public function on(string $event, callable $callback): self
+    {
+        $this->listeners[$event][] = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Set disableListeners
+     *
+     * @param  bool  $status
+     * @return self
+     */
+    public function setListenersStatus(bool $status): self
+    {
+        $this->listenersStatus = $status;
+
+        return $this;
     }
 
     /**
@@ -46,7 +99,19 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->load($key, $ttl, $hash);
+        $loaded = $this->adapter->load($key, $ttl, $hash);
+
+        if (! $this->listenersStatus) {
+            return $loaded;
+        }
+
+        foreach ($this->listeners[self::EVENT_LOAD] ?? [] as $listener) {
+            if (is_callable($listener)) {
+                call_user_func($listener, $key);
+            }
+        }
+
+        return $loaded;
     }
 
     /**
@@ -61,8 +126,19 @@ class Cache
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $hash = self::$caseSensitive ? $hash : \strtolower($hash);
+        $saved = $this->adapter->save($key, $data, $hash);
 
-        return $this->adapter->save($key, $data, $hash);
+        if (! $this->listenersStatus) {
+            return $saved;
+        }
+
+        foreach ($this->listeners[self::EVENT_SAVE] ?? [] as $listener) {
+            if (is_callable($listener)) {
+                call_user_func($listener, $key);
+            }
+        }
+
+        return $saved;
     }
 
     /**
@@ -89,8 +165,18 @@ class Cache
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $hash = self::$caseSensitive ? $hash : \strtolower($hash);
+        $purged = $this->adapter->purge($key, $hash);
+        if (! $this->listenersStatus) {
+            return $purged;
+        }
 
-        return $this->adapter->purge($key, $hash);
+        foreach ($this->listeners[self::EVENT_PURGE] ?? [] as $listener) {
+            if (is_callable($listener)) {
+                call_user_func($listener, $key);
+            }
+        }
+
+        return $purged;
     }
 
     /**
