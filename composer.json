@@ -7,8 +7,8 @@
     "minimum-stability": "stable",
     "scripts": {
         "check": "./vendor/bin/phpstan analyse --level max src tests",
-        "lint": "./vendor/bin/pint --test",
-        "format": "./vendor/bin/pint"
+        "lint": "./vendor/bin/pint --test --config pint.json",
+        "format": "./vendor/bin/pint --config pint.json"
     },
     "autoload": {
         "psr-4": {"Utopia\\Cache\\": "src/Cache"}
@@ -26,6 +26,6 @@
         "phpunit/phpunit": "^9.3",
         "vimeo/psalm": "4.13.1",
         "phpstan/phpstan": "^1.12",
-        "laravel/pint": "1.2.*"
+        "laravel/pint": "^1.2"
     }
 }
