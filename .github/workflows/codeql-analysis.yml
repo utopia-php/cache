@@ -18,3 +18,34 @@ jobs:
       run: |
         docker run --rm -v $PWD:/app composer sh -c \
         "composer install --profile --ignore-platform-reqs && composer check"
+
+    [push]
+jobs:
+  linter:
+    runs-on: ubuntu-latest  # The OS to run the job on
+
+    steps:
+      # Step 1: Checkout the code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up PHP with a specific version
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'  # Adjust the PHP version as per your requirement
+          extensions: mbstring, xml, bcmath  # Add any other extensions you might need
+
+      # Step 3: Install Composer
+      - name: Install Composer
+        run: |
+          curl -sS https://getcomposer.org/installer | php
+          mv composer.phar /usr/local/bin/composer
+
+      # Step 4: Install dependencies using Composer
+      - name: Install dependencies
+        run: composer install --prefer-dist
+
+      # Step 5: Run the Composer check command (assuming composer check runs the linter)
+      - name: Run Composer check (Linter)
+        run: composer check

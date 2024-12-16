@@ -6,7 +6,7 @@
     "license": "MIT",
     "minimum-stability": "stable",
     "scripts": {
-        "check": "./vendor/bin/phpstan analyse --level max src tests",
+        "check": "./cache analyse --level 8 -c  ./vendor ./src ./tests",
         "lint": "./vendor/bin/pint --test",
         "format": "./vendor/bin/pint"
     },
@@ -17,7 +17,7 @@
         "psr-4": {"Utopia\\Tests\\": "tests/Cache"}
     },
     "require": {
-        "php": ">=8.0",
+        "php": ">=8.3",
         "ext-json": "*",
         "ext-redis": "*",
         "ext-memcached": "*"
@@ -27,5 +27,10 @@
         "vimeo/psalm": "4.13.1",
         "phpstan/phpstan": "^1.12",
         "laravel/pint": "1.2.*"
+    },
+    "config": {
+        "platform": {
+            "php": "8.3"
+        }
     }
 }
