@@ -10,9 +10,10 @@ services:
       - ./phpunit.xml:/usr/code/phpunit.xml
       - ./src:/usr/src/code/src
       - ./tests:/usr/src/code/tests
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - redis
-      - redis-cluster-0
+      - cache-redis-cluster-0
       - hazelcast
       - memcached
       - shardA
@@ -21,45 +22,45 @@ services:
     
   redis:
     image: redis:6.0-alpine
-    container_name: redis
+    container_name: cache-redis
     networks:
       - database
 
-  redis-cluster-0:
+  cache-redis-cluster-0:
     image: docker.io/bitnami/redis-cluster:7.4
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2 redis-cluster-3
+      - REDIS_NODES=cache-redis-cluster-0 cache-redis-cluster-1 cache-redis-cluster-2 cache-redis-cluster-3
       - REDIS_CLUSTER_CREATOR=yes
       - REDIS_CLUSTER_REPLICAS=0
     networks:
       - database
     depends_on:
-      - redis-cluster-1
-      - redis-cluster-2
-      - redis-cluster-3
+      - cache-redis-cluster-1
+      - cache-redis-cluster-2
+      - cache-redis-cluster-3
 
-  redis-cluster-1:
+  cache-redis-cluster-1:
     image: docker.io/bitnami/redis-cluster:7.4
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2 redis-cluster-3
+      - REDIS_NODES=cache-redis-cluster-0 cache-redis-cluster-1 cache-redis-cluster-2 cache-redis-cluster-3
     networks:
       - database
 
-  redis-cluster-2:
+  cache-redis-cluster-2:
     image: docker.io/bitnami/redis-cluster:7.4
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2 redis-cluster-3
+      - REDIS_NODES=cache-redis-cluster-0 cache-redis-cluster-1 cache-redis-cluster-2 cache-redis-cluster-3
     networks:
       - database
 
-  redis-cluster-3:
+  cache-redis-cluster-3:
     image: docker.io/bitnami/redis-cluster:7.4
     environment:
       - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2 redis-cluster-3
+      - REDIS_NODES=cache-redis-cluster-0 cache-redis-cluster-1 cache-redis-cluster-2 cache-redis-cluster-3
     networks:
       - database
 
