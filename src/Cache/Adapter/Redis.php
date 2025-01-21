@@ -261,9 +261,6 @@ class Redis implements Adapter
         return false;
     }
 
-    /**
-     * Reconnect to Redis
-     */
     private function reconnect(): void
     {
         $newRedis = new Client();
