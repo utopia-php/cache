@@ -22,13 +22,16 @@ class Redis implements Adapter
 
     private int $port;
 
-    private int $timeout;
+    private float $timeout;
 
     private ?string $persistentId;
 
-    private int $readTimeout;
+    private float $readTimeout;
 
-    private mixed $auth;
+    /**
+     * @var array<string>|string
+     */
+    private array|string $auth;
 
     /**
      * Redis constructor.
@@ -40,7 +43,7 @@ class Redis implements Adapter
         // On connection loss, RedisClient loses the connection info. So we need to store the connection info.
         $this->host = $redis->getHost();
         $this->port = $redis->getPort();
-        $this->timeout = $redis->getTimeout();
+        $this->timeout = ($redis->getTimeout()) ? $redis->getTimeout() : 0;
         $this->persistentId = $redis->getPersistentId();
         $this->readTimeout = $redis->getReadTimeout();
 
@@ -94,7 +97,11 @@ class Redis implements Adapter
 
         $redis_string = $this->executeRedisCommand(fn () => $this->redis->hGet($key, $hash));
 
-        if ($redis_string === false) {
+        if ($redis_string === false || $redis_string === null) {
+            return false;
+        }
+
+        if (gettype($redis_string) !== 'string') {
             return false;
         }
 
@@ -148,6 +155,7 @@ class Redis implements Adapter
      */
     public function list(string $key): array
     {
+        /** @var array<string> */
         $keys = $this->executeRedisCommand(fn () => $this->redis->hKeys($key));
 
         if (empty($keys)) {
@@ -176,7 +184,7 @@ class Redis implements Adapter
      */
     public function flush(): bool
     {
-        return $this->executeRedisCommand(fn () => $this->redis->flushAll());
+        return (bool) $this->executeRedisCommand(fn () => $this->redis->flushAll());
     }
 
     /**
@@ -200,7 +208,10 @@ class Redis implements Adapter
      */
     public function getSize(): int
     {
-        return $this->executeRedisCommand(fn () => $this->redis->dbSize());
+        /** @var int */
+        $size = $this->executeRedisCommand(fn () => $this->redis->dbSize());
+
+        return $size;
     }
 
     /**
@@ -246,6 +257,8 @@ class Redis implements Adapter
                 usleep($this->retryDelay * 1000); // Convert milliseconds to microseconds
             }
         }
+
+        return false;
     }
 
     /**
