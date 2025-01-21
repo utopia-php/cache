@@ -16,7 +16,7 @@ class Redis implements Adapter
 
     private int $maxRetries = 0;
 
-    private int $retryDelay = 4000; // milliseconds
+    private int $retryDelay = 1000; // milliseconds
 
     private string $host;
 
