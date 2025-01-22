@@ -12,9 +12,42 @@ class Hazelcast implements Adapter
      */
     protected Client $memcached;
 
+    private int $maxRetries = 0;
+
+    private int $retryDelay = 1000; // milliseconds
+
     public function __construct(Client $memcached)
     {
         $this->memcached = $memcached;
+    }
+
+    /**
+     * Set the maximum number of retries.
+     *
+     * The client will automatically retry the request if an connection error occurs.
+     * If the request fails after the maximum number of retries, an exception will be thrown.
+     *
+     * @param  int  $maxRetries
+     * @return self
+     */
+    public function setMaxRetries(int $maxRetries): self
+    {
+        $this->maxRetries = $maxRetries;
+
+        return $this;
+    }
+
+    /**
+     * Set the retry delay in milliseconds.
+     *
+     * @param  int  $retryDelay
+     * @return self
+     */
+    public function setRetryDelay(int $retryDelay): self
+    {
+        $this->retryDelay = $retryDelay;
+
+        return $this;
     }
 
     /**
@@ -25,7 +58,7 @@ class Hazelcast implements Adapter
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        $cache = $this->memcached->get($key);
+        $cache = $this->executeMemcachedCommand(fn () => $this->memcached->get($key));
         if (is_string($cache)) {
             $cache = json_decode($cache, true);
         }
@@ -58,7 +91,7 @@ class Hazelcast implements Adapter
             'data' => $data,
         ];
 
-        return ($this->memcached->set($key, json_encode($cache))) ? $data : false;
+        return ($this->executeMemcachedCommand(fn () => $this->memcached->set($key, json_encode($cache)))) ? $data : false;
     }
 
     /**
@@ -77,7 +110,7 @@ class Hazelcast implements Adapter
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        return $this->memcached->delete($key);
+        return (bool) $this->executeMemcachedCommand(fn () => $this->memcached->delete($key));
     }
 
     /**
@@ -94,7 +127,7 @@ class Hazelcast implements Adapter
      */
     public function ping(): bool
     {
-        $statuses = $this->memcached->getServerList();
+        $statuses = $this->executeMemcachedCommand(fn () => $this->memcached->getServerList());
 
         return ! empty($statuses);
     }
@@ -117,5 +150,64 @@ class Hazelcast implements Adapter
         }
 
         return $size;
+    }
+
+    /**
+     * @return int
+     */
+    public function getMaxRetries(): int
+    {
+        return $this->maxRetries;
+    }
+
+    /**
+     * @return int
+     */
+    public function getRetryDelay(): int
+    {
+        return $this->retryDelay;
+    }
+
+    /**
+     * Execute a Memcached command with retry logic
+     *
+     * @param  callable  $callback The Memcached operation to execute
+     * @return mixed The result of the Memcached operation
+     *
+     * @throws \MemcachedException When all retry attempts fail
+     */
+    private function executeMemcachedCommand(callable $callback): mixed
+    {
+        $attempts = 0;
+        $maxAttempts = max(1, $this->maxRetries);
+
+        while ($attempts < $maxAttempts) {
+            $result = $callback();
+
+            if ($result === false && in_array($this->memcached->getResultCode(), [
+                \Memcached::RES_HOST_LOOKUP_FAILURE,
+                \Memcached::RES_UNKNOWN_READ_FAILURE,
+                \Memcached::RES_WRITE_FAILURE,
+                \Memcached::RES_PROTOCOL_ERROR,
+                \Memcached::RES_INVALID_HOST_PROTOCOL,
+                \Memcached::RES_CONNECTION_SOCKET_CREATE_FAILURE,
+                \Memcached::RES_CONNECTION_FAILURE,
+                \Memcached::RES_SERVER_TEMPORARILY_DISABLED,
+            ])) {
+                $attempts++;
+
+                if ($attempts >= $maxAttempts) {
+                    throw new \MemcachedException('Memcached connection failed after '.$attempts.' attempts. Error: '.$this->memcached->getResultMessage());
+                }
+
+                usleep($this->retryDelay * 1000);
+
+                continue;
+            }
+
+            return $result;
+        }
+
+        return false;
     }
 }

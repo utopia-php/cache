@@ -21,7 +21,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN \
   apk update \
-  && apk add --no-cache make automake autoconf g++ gcc zlib-dev libmemcached-dev \
+  && apk add --no-cache make automake autoconf g++ gcc zlib-dev libmemcached-dev docker-cli \
   && rm -rf /var/cache/apk/*
 
 

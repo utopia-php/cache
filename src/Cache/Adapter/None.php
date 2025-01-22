@@ -14,6 +14,31 @@ class None implements Adapter
     }
 
     /**
+     * Set the maximum number of retries.
+     *
+     * The client will automatically retry the request if an connection error occurs.
+     * If the request fails after the maximum number of retries, an exception will be thrown.
+     *
+     * @param  int  $maxRetries
+     * @return self
+     */
+    public function setMaxRetries(int $maxRetries): self
+    {
+        return $this;
+    }
+
+    /**
+     * Set the retry delay in milliseconds.
+     *
+     * @param  int  $retryDelay
+     * @return self
+     */
+    public function setRetryDelay(int $retryDelay): self
+    {
+        return $this;
+    }
+
+    /**
      * @param  string  $key
      * @param  int  $ttl
      * @param  string  $hash optional
@@ -74,6 +99,22 @@ class None implements Adapter
      * @return int
      */
     public function getSize(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @return int
+     */
+    public function getMaxRetries(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @return int
+     */
+    public function getRetryDelay(): int
     {
         return 0;
     }
