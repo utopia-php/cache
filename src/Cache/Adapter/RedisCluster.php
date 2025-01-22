@@ -15,13 +15,30 @@ class RedisCluster implements Adapter
     protected Client $redis;
 
     /**
+     * @var array<string>
+     */
+    protected array $seeds;
+
+    /**
+     * @var ?string
+     */
+    protected ?string $name;
+
+    private int $maxRetries = 0;
+
+    private int $retryDelay = 1000; // milliseconds
+
+    /**
      * Redis constructor.
      *
      * @param  Client  $redis
+     * @param  array<string>  $seeds
      */
-    public function __construct(Client $redis)
+    public function __construct(Client $redis, array $seeds, ?string $name = null)
     {
         $this->redis = $redis;
+        $this->seeds = $seeds;
+        $this->name = $name;
     }
 
     /**
@@ -35,6 +52,8 @@ class RedisCluster implements Adapter
      */
     public function setMaxRetries(int $maxRetries): self
     {
+        $this->maxRetries = $maxRetries;
+
         return $this;
     }
 
@@ -46,6 +65,8 @@ class RedisCluster implements Adapter
      */
     public function setRetryDelay(int $retryDelay): self
     {
+        $this->retryDelay = $retryDelay;
+
         return $this;
     }
 
@@ -61,9 +82,9 @@ class RedisCluster implements Adapter
             $hash = $key;
         }
 
-        $redis_string = $this->redis->hGet($key, $hash);
+        /** @var string|false */
+        $redis_string = $this->executeRedisCommand(fn () => $this->redis->hGet($key, $hash));
 
-        /** @phpstan-ignore identical.alwaysFalse */
         if ($redis_string === false) {
             return false;
         }
@@ -104,7 +125,7 @@ class RedisCluster implements Adapter
         }
 
         try {
-            $this->redis->hSet($key, $hash, $value);
+            $this->executeRedisCommand(fn () => $this->redis->hSet($key, $hash, $value));
 
             return $data;
         } catch (Throwable $th) {
@@ -118,7 +139,8 @@ class RedisCluster implements Adapter
      */
     public function list(string $key): array
     {
-        $keys = $this->redis->hKeys($key);
+        /** @var array<string> */
+        $keys = (array) $this->executeRedisCommand(fn () => $this->redis->hKeys($key));
 
         if (empty($keys)) {
             return [];
@@ -135,10 +157,10 @@ class RedisCluster implements Adapter
     public function purge(string $key, string $hash = ''): bool
     {
         if (! empty($hash)) {
-            return (bool) $this->redis->hdel($key, $hash);
+            return (bool) $this->executeRedisCommand(fn () => $this->redis->hdel($key, $hash));
         }
 
-        return (bool) $this->redis->del($key);
+        return (bool) $this->executeRedisCommand(fn () => $this->redis->del($key));
     }
 
     /**
@@ -146,11 +168,13 @@ class RedisCluster implements Adapter
      */
     public function flush(): bool
     {
-        foreach ($this->redis->_masters() as $master) {
-            $this->redis->flushAll($master);
-        }
+        return (bool) $this->executeRedisCommand(function () {
+            foreach ($this->redis->_masters() as $master) {
+                $this->redis->flushAll($master);
+            }
 
-        return true;
+            return true;
+        });
     }
 
     /**
@@ -159,11 +183,13 @@ class RedisCluster implements Adapter
     public function ping(): bool
     {
         try {
-            foreach ($this->redis->_masters() as $master) {
-                $this->redis->ping($master);
-            }
+            return (bool) $this->executeRedisCommand(function () {
+                foreach ($this->redis->_masters() as $master) {
+                    $this->redis->ping($master);
+                }
 
-            return true;
+                return true;
+            });
         } catch (Exception $e) {
             return false;
         }
@@ -176,12 +202,20 @@ class RedisCluster implements Adapter
      */
     public function getSize(): int
     {
-        $size = 0;
-        foreach ($this->redis->_masters() as $master) {
-            $size += $this->redis->dbSize($master);
+        $size = $this->executeRedisCommand(function () {
+            $size = 0;
+            foreach ($this->redis->_masters() as $master) {
+                $size += $this->redis->dbSize($master);
+            }
+
+            return $size;
+        });
+
+        if ($size === false || ! is_numeric($size)) {
+            return 0;
         }
 
-        return $size;
+        return (int) $size;
     }
 
     /**
@@ -198,5 +232,59 @@ class RedisCluster implements Adapter
     public function getRetryDelay(): int
     {
         return 1000;
+    }
+
+    /**
+     * @return ?string
+     */
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    /**
+     * @return array<string>
+     */
+    public function getSeeds(): array
+    {
+        return $this->seeds;
+    }
+
+    /**
+     * Execute a Redis command with retry logic
+     *
+     * @param  callable  $callback
+     * @return mixed
+     *
+     * @throws \RedisException
+     */
+    private function executeRedisCommand(callable $callback): mixed
+    {
+        $attempts = 0;
+        $maxAttempts = max(1, $this->maxRetries);
+
+        while ($attempts < $maxAttempts) {
+            try {
+                return $callback();
+            } catch (\RedisClusterException $th) {
+                $this->reconnect();
+                $attempts++;
+
+                if ($attempts >= $maxAttempts) {
+                    throw $th;
+                }
+
+                usleep($this->retryDelay * 1000); // Convert milliseconds to microseconds
+            }
+        }
+
+        return false;
+    }
+
+    private function reconnect(): void
+    {
+        $newRedis = new Client($this->name, $this->seeds);
+
+        $this->redis = $newRedis;
     }
 }

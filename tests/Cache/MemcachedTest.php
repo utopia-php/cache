@@ -28,23 +28,24 @@ class MemcachedTest extends Base
         $mc = new Memcached();
         $mc->addServer('memcached', 11211);
         self::$cache = new Cache((new MemcachedAdapter($mc))->setMaxRetries(3));
+        self::$cache->save('test:reconnect', 'reconnect');
 
         $stdout = '';
         $stderr = '';
         Console::execute('docker ps -a --filter "name=memcached" --format "{{.Names}}" | xargs -r docker stop', '', $stdout, $stderr);
-        sleep(1);
+        sleep(3);
 
         try {
-            self::$cache->load('test:file33', 5);
-            Console::execute('docker ps -a --filter "name=memcached" --format "{{.Names}}" | xargs -r docker start', '', $stdout, $stderr);
+            self::$cache->load('test:reconnect', 5);
             $this->fail('Memcached connection should have failed');
         } catch (\MemcachedException $e) {
-            Console::execute('docker ps -a --filter "name=memcached" --format "{{.Names}}" | xargs -r docker start', '', $stdout, $stderr);
-            sleep(3);
         }
 
-        $this->assertEquals('file33', self::$cache->save('test:file33', 'file33', 'test:file33'));
-        $this->assertEquals('file33', self::$cache->load('test:file33', 5));
+        Console::execute('docker ps -a --filter "name=memcached" --format "{{.Names}}" | xargs -r docker start', '', $stdout, $stderr);
+        sleep(3);
+
+        $this->assertEquals('reconnect', self::$cache->save('test:reconnect', 'reconnect', 'test:reconnect'));
+        $this->assertEquals('reconnect', self::$cache->load('test:reconnect', 5));
     }
 
     public static function tearDownAfterClass(): void
