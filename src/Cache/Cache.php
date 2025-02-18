@@ -51,7 +51,7 @@ class Cache
     /**
      * Set telemetry adapter and create histograms for cache operations.
      *
-     * @param Telemetry $telemetry
+     * @param  Telemetry  $telemetry
      */
     public function setTelemetry(Telemetry $telemetry): void
     {
@@ -89,7 +89,7 @@ class Cache
     /**
      * Initialize with a no-op telemetry adapter by default.
      *
-     * @param Adapter $adapter
+     * @param  Adapter  $adapter
      */
     public function __construct(Adapter $adapter)
     {
@@ -219,6 +219,7 @@ class Cache
         $result = $this->adapter->getSize();
         $duration = microtime(true) - $start;
         $this->sizeDuration?->record($duration, ['operation' => 'size']);
+
         return $result;
     }
 }
