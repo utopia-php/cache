@@ -215,11 +215,10 @@ class Cache
      */
     public function getSize(): int
     {
-        // Optionally, you could instrument getSize() if needed.
         $start = microtime(true);
         $result = $this->adapter->getSize();
         $duration = microtime(true) - $start;
-        $this->sizeDuration?->record($duration, ['operation' => 'getSize']);
+        $this->sizeDuration?->record($duration, ['operation' => 'size']);
         return $result;
     }
 }
