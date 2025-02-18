@@ -20,12 +20,19 @@
         "php": ">=8.0",
         "ext-json": "*",
         "ext-redis": "*",
-        "ext-memcached": "*"
+        "ext-memcached": "*",
+        "utopia-php/telemetry": "0.1.*"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.3",
         "vimeo/psalm": "4.13.1",
         "phpstan/phpstan": "^1.12",
         "laravel/pint": "1.2.*"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true,
+            "tbachert/spi": true
+        }
     }
 }

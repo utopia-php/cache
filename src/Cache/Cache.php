@@ -2,6 +2,10 @@
 
 namespace Utopia\Cache;
 
+use Utopia\Telemetry\Adapter as Telemetry;
+use Utopia\Telemetry\Adapter\None as NoTelemetry;
+use Utopia\Telemetry\Histogram;
+
 class Cache
 {
     /**
@@ -15,11 +19,82 @@ class Cache
     public static bool $caseSensitive = false;
 
     /**
-     * @param  Adapter  $adapter
+     * @var Telemetry
+     */
+    protected Telemetry $telemetry;
+
+    /**
+     * @var Histogram|null
+     */
+    protected ?Histogram $loadDuration = null;
+
+    /**
+     * @var Histogram|null
+     */
+    protected ?Histogram $saveDuration = null;
+
+    /**
+     * @var Histogram|null
+     */
+    protected ?Histogram $purgeDuration = null;
+
+    /**
+     * @var Histogram|null
+     */
+    protected ?Histogram $flushDuration = null;
+
+    /**
+     * @var Histogram|null
+     */
+    protected ?Histogram $sizeDuration = null;
+
+    /**
+     * Set telemetry adapter and create histograms for cache operations.
+     *
+     * @param Telemetry $telemetry
+     */
+    public function setTelemetry(Telemetry $telemetry): void
+    {
+        $this->telemetry = $telemetry;
+
+        $this->loadDuration = $telemetry->createHistogram(
+            'cache.load.duration',
+            's',
+            null,
+            ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
+        );
+
+        $this->saveDuration = $telemetry->createHistogram(
+            'cache.save.duration',
+            's',
+            null,
+            ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
+        );
+
+        $this->purgeDuration = $telemetry->createHistogram(
+            'cache.purge.duration',
+            's',
+            null,
+            ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
+        );
+
+        $this->flushDuration = $telemetry->createHistogram(
+            'cache.flush.duration',
+            's',
+            null,
+            ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
+        );
+    }
+
+    /**
+     * Initialize with a no-op telemetry adapter by default.
+     *
+     * @param Adapter $adapter
      */
     public function __construct(Adapter $adapter)
     {
         $this->adapter = $adapter;
+        $this->setTelemetry(new NoTelemetry());
     }
 
     /**
@@ -46,7 +121,12 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->load($key, $ttl, $hash);
+        $start = microtime(true);
+        $result = $this->adapter->load($key, $ttl, $hash);
+        $duration = microtime(true) - $start;
+        $this->loadDuration?->record($duration, ['operation' => 'load']);
+
+        return $result;
     }
 
     /**
@@ -62,7 +142,12 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->save($key, $data, $hash);
+        $start = microtime(true);
+        $result = $this->adapter->save($key, $data, $hash);
+        $duration = microtime(true) - $start;
+        $this->saveDuration?->record($duration, ['operation' => 'save']);
+
+        return $result;
     }
 
     /**
@@ -90,7 +175,12 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->purge($key, $hash);
+        $start = microtime(true);
+        $result = $this->adapter->purge($key, $hash);
+        $duration = microtime(true) - $start;
+        $this->purgeDuration?->record($duration, ['operation' => 'purge']);
+
+        return $result;
     }
 
     /**
@@ -100,7 +190,12 @@ class Cache
      */
     public function flush(): bool
     {
-        return $this->adapter->flush();
+        $start = microtime(true);
+        $result = $this->adapter->flush();
+        $duration = microtime(true) - $start;
+        $this->flushDuration?->record($duration, ['operation' => 'flush']);
+
+        return $result;
     }
 
     /**
@@ -120,6 +215,11 @@ class Cache
      */
     public function getSize(): int
     {
-        return $this->adapter->getSize();
+        // Optionally, you could instrument getSize() if needed.
+        $start = microtime(true);
+        $result = $this->adapter->getSize();
+        $duration = microtime(true) - $start;
+        $this->sizeDuration?->record($duration, ['operation' => 'getSize']);
+        return $result;
     }
 }
