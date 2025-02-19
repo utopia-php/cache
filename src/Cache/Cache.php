@@ -21,27 +21,7 @@ class Cache
     /**
      * @var Histogram|null
      */
-    protected ?Histogram $loadDuration = null;
-
-    /**
-     * @var Histogram|null
-     */
-    protected ?Histogram $saveDuration = null;
-
-    /**
-     * @var Histogram|null
-     */
-    protected ?Histogram $purgeDuration = null;
-
-    /**
-     * @var Histogram|null
-     */
-    protected ?Histogram $flushDuration = null;
-
-    /**
-     * @var Histogram|null
-     */
-    protected ?Histogram $sizeDuration = null;
+    protected ?Histogram $operationDuration = null;
 
     /**
      * Set telemetry adapter and create histograms for cache operations.
@@ -50,29 +30,8 @@ class Cache
      */
     public function setTelemetry(Telemetry $telemetry): void
     {
-        $this->loadDuration = $telemetry->createHistogram(
-            'cache.load.duration',
-            's',
-            null,
-            ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
-        );
-
-        $this->saveDuration = $telemetry->createHistogram(
-            'cache.save.duration',
-            's',
-            null,
-            ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
-        );
-
-        $this->purgeDuration = $telemetry->createHistogram(
-            'cache.purge.duration',
-            's',
-            null,
-            ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
-        );
-
-        $this->flushDuration = $telemetry->createHistogram(
-            'cache.flush.duration',
+        $this->operationDuration = $telemetry->createHistogram(
+            'cache.operation.duration',
             's',
             null,
             ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
@@ -117,7 +76,7 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->load($key, $ttl, $hash);
         $duration = microtime(true) - $start;
-        $this->loadDuration?->record($duration, [
+        $this->operationDuration?->record($duration, [
             'operation' => 'load',
             'adapter' => $this->adapter->getName(),
         ]);
@@ -145,7 +104,7 @@ class Cache
             $result = false;
         } finally {
             $duration = microtime(true) - $start;
-            $this->saveDuration?->record($duration, [
+            $this->operationDuration?->record($duration, [
                 'operation' => 'save',
                 'adapter' => $this->adapter->getName(),
             ]);
@@ -182,7 +141,7 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->purge($key, $hash);
         $duration = microtime(true) - $start;
-        $this->purgeDuration?->record($duration, [
+        $this->operationDuration?->record($duration, [
             'operation' => 'purge',
             'adapter' => $this->adapter->getName(),
         ]);
@@ -200,7 +159,7 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->flush();
         $duration = microtime(true) - $start;
-        $this->flushDuration?->record($duration, [
+        $this->operationDuration?->record($duration, [
             'operation' => 'flush',
             'adapter' => $this->adapter->getName(),
         ]);
@@ -228,7 +187,7 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->getSize();
         $duration = microtime(true) - $start;
-        $this->sizeDuration?->record($duration, [
+        $this->operationDuration?->record($duration, [
             'operation' => 'size',
             'adapter' => $this->adapter->getName(),
         ]);
