@@ -202,7 +202,7 @@ class Cache
         $duration = microtime(true) - $start;
         $this->flushDuration?->record($duration, [
             'operation' => 'flush',
-            'adapter' => strtolower(get_class($this->adapter)),
+            'adapter' => $this->adapter->getName(),
         ]);
 
         return $result;
