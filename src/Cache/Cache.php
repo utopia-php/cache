@@ -19,11 +19,6 @@ class Cache
     public static bool $caseSensitive = false;
 
     /**
-     * @var Telemetry
-     */
-    protected Telemetry $telemetry;
-
-    /**
      * @var Histogram|null
      */
     protected ?Histogram $loadDuration = null;
@@ -55,8 +50,6 @@ class Cache
      */
     public function setTelemetry(Telemetry $telemetry): void
     {
-        $this->telemetry = $telemetry;
-
         $this->loadDuration = $telemetry->createHistogram(
             'cache.load.duration',
             's',
@@ -124,7 +117,10 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->load($key, $ttl, $hash);
         $duration = microtime(true) - $start;
-        $this->loadDuration?->record($duration, ['operation' => 'load']);
+        $this->loadDuration?->record($duration, [
+            'operation' => 'load',
+            'adapter' => strtolower(get_class($this->adapter)),
+        ]);
 
         return $result;
     }
@@ -145,7 +141,10 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->save($key, $data, $hash);
         $duration = microtime(true) - $start;
-        $this->saveDuration?->record($duration, ['operation' => 'save']);
+        $this->saveDuration?->record($duration, [
+            'operation' => 'save',
+            'adapter' => strtolower(get_class($this->adapter)),
+        ]);
 
         return $result;
     }
@@ -178,7 +177,10 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->purge($key, $hash);
         $duration = microtime(true) - $start;
-        $this->purgeDuration?->record($duration, ['operation' => 'purge']);
+        $this->purgeDuration?->record($duration, [
+            'operation' => 'purge',
+            'adapter' => strtolower(get_class($this->adapter)),
+        ]);
 
         return $result;
     }
@@ -193,7 +195,10 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->flush();
         $duration = microtime(true) - $start;
-        $this->flushDuration?->record($duration, ['operation' => 'flush']);
+        $this->flushDuration?->record($duration, [
+            'operation' => 'flush',
+            'adapter' => strtolower(get_class($this->adapter)),
+        ]);
 
         return $result;
     }
@@ -218,7 +223,10 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->getSize();
         $duration = microtime(true) - $start;
-        $this->sizeDuration?->record($duration, ['operation' => 'size']);
+        $this->sizeDuration?->record($duration, [
+            'operation' => 'size',
+            'adapter' => strtolower(get_class($this->adapter)),
+        ]);
 
         return $result;
     }
