@@ -119,7 +119,7 @@ class Cache
         $duration = microtime(true) - $start;
         $this->loadDuration?->record($duration, [
             'operation' => 'load',
-            'adapter' => $this->adapter->getName()
+            'adapter' => $this->adapter->getName(),
         ]);
 
         return $result;
@@ -135,7 +135,7 @@ class Cache
      */
     public function save(string $key, mixed $data, string $hash = ''): bool|string|array
     {
-        $key  = self::$caseSensitive ? $key : strtolower($key);
+        $key = self::$caseSensitive ? $key : strtolower($key);
         $hash = self::$caseSensitive ? $hash : strtolower($hash);
         $start = microtime(true);
 
@@ -147,7 +147,7 @@ class Cache
             $duration = microtime(true) - $start;
             $this->saveDuration?->record($duration, [
                 'operation' => 'save',
-                'adapter'   => $this->adapter->getName()
+                'adapter' => $this->adapter->getName(),
             ]);
         }
 
@@ -184,7 +184,7 @@ class Cache
         $duration = microtime(true) - $start;
         $this->purgeDuration?->record($duration, [
             'operation' => 'purge',
-            'adapter' => $this->adapter->getName()
+            'adapter' => $this->adapter->getName(),
         ]);
 
         return $result;
@@ -230,7 +230,7 @@ class Cache
         $duration = microtime(true) - $start;
         $this->sizeDuration?->record($duration, [
             'operation' => 'size',
-            'adapter' => $this->adapter->getName()
+            'adapter' => $this->adapter->getName(),
         ]);
 
         return $result;
