@@ -77,4 +77,12 @@ class None implements Adapter
     {
         return 0;
     }
+
+    /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        return 'none';
+    }
 }

@@ -190,4 +190,12 @@ class Filesystem implements Adapter
 
         return rmdir($path);
     }
+
+    /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        return 'filesystem';
+    }
 }

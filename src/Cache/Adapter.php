@@ -47,4 +47,9 @@ interface Adapter
      * @return int
      */
     public function getSize(): int;
+
+    /**
+     * @return string
+     */
+    public function getName(): string;
 }

@@ -119,7 +119,7 @@ class Cache
         $duration = microtime(true) - $start;
         $this->loadDuration?->record($duration, [
             'operation' => 'load',
-            'adapter' => strtolower(get_class($this->adapter)),
+            'adapter' => $this->adapter->getName()
         ]);
 
         return $result;
@@ -135,16 +135,21 @@ class Cache
      */
     public function save(string $key, mixed $data, string $hash = ''): bool|string|array
     {
-        $key = self::$caseSensitive ? $key : \strtolower($key);
-        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
-
+        $key  = self::$caseSensitive ? $key : strtolower($key);
+        $hash = self::$caseSensitive ? $hash : strtolower($hash);
         $start = microtime(true);
-        $result = $this->adapter->save($key, $data, $hash);
-        $duration = microtime(true) - $start;
-        $this->saveDuration?->record($duration, [
-            'operation' => 'save',
-            'adapter' => strtolower(get_class($this->adapter)),
-        ]);
+
+        try {
+            $result = $this->adapter->save($key, $data, $hash);
+        } catch (\Throwable $e) {
+            $result = false;
+        } finally {
+            $duration = microtime(true) - $start;
+            $this->saveDuration?->record($duration, [
+                'operation' => 'save',
+                'adapter'   => $this->adapter->getName()
+            ]);
+        }
 
         return $result;
     }
@@ -179,7 +184,7 @@ class Cache
         $duration = microtime(true) - $start;
         $this->purgeDuration?->record($duration, [
             'operation' => 'purge',
-            'adapter' => strtolower(get_class($this->adapter)),
+            'adapter' => $this->adapter->getName()
         ]);
 
         return $result;
@@ -225,7 +230,7 @@ class Cache
         $duration = microtime(true) - $start;
         $this->sizeDuration?->record($duration, [
             'operation' => 'size',
-            'adapter' => strtolower(get_class($this->adapter)),
+            'adapter' => $this->adapter->getName()
         ]);
 
         return $result;

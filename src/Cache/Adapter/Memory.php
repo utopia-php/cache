@@ -110,4 +110,12 @@ class Memory implements Adapter
     {
         return count($this->store);
     }
+
+    /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        return 'memory';
+    }
 }

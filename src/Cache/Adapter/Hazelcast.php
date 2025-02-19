@@ -118,4 +118,12 @@ class Hazelcast implements Adapter
 
         return $size;
     }
+
+    /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        return 'hazelcast';
+    }
 }

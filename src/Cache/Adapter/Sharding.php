@@ -128,6 +128,14 @@ class Sharding implements Adapter
     }
 
     /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        return 'sharding';
+    }
+
+    /**
      * @param  string  $key
      * @return Adapter
      */

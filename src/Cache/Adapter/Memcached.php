@@ -119,4 +119,12 @@ class Memcached implements Adapter
 
         return $size;
     }
+
+    /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        return 'memcached';
+    }
 }

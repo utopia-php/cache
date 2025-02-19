@@ -146,4 +146,12 @@ class Redis implements Adapter
     {
         return $this->redis->dbSize();
     }
+
+    /**
+     * @return string
+     */
+    public function getName(): string
+    {
+        return 'redis-cluster';
+    }
 }
