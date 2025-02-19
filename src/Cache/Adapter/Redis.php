@@ -152,6 +152,6 @@ class Redis implements Adapter
      */
     public function getName(): string
     {
-        return 'redis-cluster';
+        return 'redis';
     }
 }
