@@ -99,9 +99,7 @@ class Cache
         $start = microtime(true);
 
         try {
-            $result = $this->adapter->save($key, $data, $hash);
-        } catch (\Throwable $e) {
-            $result = false;
+            return $this->adapter->save($key, $data, $hash);
         } finally {
             $duration = microtime(true) - $start;
             $this->operationDuration?->record($duration, [
@@ -109,8 +107,6 @@ class Cache
                 'adapter' => $this->adapter->getName(),
             ]);
         }
-
-        return $result;
     }
 
     /**
