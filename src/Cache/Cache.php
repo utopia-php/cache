@@ -78,7 +78,7 @@ class Cache
         $duration = microtime(true) - $start;
         $this->operationDuration?->record($duration, [
             'operation' => 'load',
-            'adapter' => $this->adapter->getName(),
+            'adapter' => $this->adapter->getName($key),
         ]);
 
         return $result;
@@ -104,7 +104,7 @@ class Cache
             $duration = microtime(true) - $start;
             $this->operationDuration?->record($duration, [
                 'operation' => 'save',
-                'adapter' => $this->adapter->getName(),
+                'adapter' => $this->adapter->getName($key),
             ]);
         }
     }
@@ -119,7 +119,15 @@ class Cache
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
 
-        return $this->adapter->list($key);
+        $start = microtime(true);
+        $result = $this->adapter->list($key);
+        $duration = microtime(true) - $start;
+        $this->operationDuration?->record($duration, [
+            'operation' => 'list',
+            'adapter' => $this->adapter->getName($key),
+        ]);
+
+        return $result;
     }
 
     /**
@@ -139,7 +147,7 @@ class Cache
         $duration = microtime(true) - $start;
         $this->operationDuration?->record($duration, [
             'operation' => 'purge',
-            'adapter' => $this->adapter->getName(),
+            'adapter' => $this->adapter->getName($key),
         ]);
 
         return $result;
