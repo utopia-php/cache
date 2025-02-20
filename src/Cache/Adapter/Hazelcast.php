@@ -122,7 +122,7 @@ class Hazelcast implements Adapter
     /**
      * @return string
      */
-    public function getName(): string
+    public function getName(?string $key = null): string
     {
         return 'hazelcast';
     }

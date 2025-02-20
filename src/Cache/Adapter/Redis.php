@@ -148,9 +148,10 @@ class Redis implements Adapter
     }
 
     /**
+     * @param  string|null  $key
      * @return string
      */
-    public function getName(): string
+    public function getName(?string $key = null): string
     {
         return 'redis';
     }

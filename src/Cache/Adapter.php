@@ -49,7 +49,8 @@ interface Adapter
     public function getSize(): int;
 
     /**
+     * @param  string|null  $key
      * @return string
      */
-    public function getName(): string;
+    public function getName(?string $key = null): string;
 }
