@@ -146,4 +146,13 @@ class Redis implements Adapter
     {
         return $this->redis->dbSize();
     }
+
+    /**
+     * @param  string|null  $key
+     * @return string
+     */
+    public function getName(?string $key = null): string
+    {
+        return 'redis';
+    }
 }

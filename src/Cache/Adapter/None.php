@@ -77,4 +77,13 @@ class None implements Adapter
     {
         return 0;
     }
+
+    /**
+     * @param  string|null  $key
+     * @return string
+     */
+    public function getName(?string $key = null): string
+    {
+        return 'none';
+    }
 }

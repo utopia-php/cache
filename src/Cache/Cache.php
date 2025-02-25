@@ -2,6 +2,10 @@
 
 namespace Utopia\Cache;
 
+use Utopia\Telemetry\Adapter as Telemetry;
+use Utopia\Telemetry\Adapter\None as NoTelemetry;
+use Utopia\Telemetry\Histogram;
+
 class Cache
 {
     /**
@@ -15,11 +19,34 @@ class Cache
     public static bool $caseSensitive = false;
 
     /**
+     * @var Histogram|null
+     */
+    protected ?Histogram $operationDuration = null;
+
+    /**
+     * Set telemetry adapter and create histograms for cache operations.
+     *
+     * @param  Telemetry  $telemetry
+     */
+    public function setTelemetry(Telemetry $telemetry): void
+    {
+        $this->operationDuration = $telemetry->createHistogram(
+            'cache.operation.duration',
+            's',
+            null,
+            ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
+        );
+    }
+
+    /**
+     * Initialize with a no-op telemetry adapter by default.
+     *
      * @param  Adapter  $adapter
      */
     public function __construct(Adapter $adapter)
     {
         $this->adapter = $adapter;
+        $this->setTelemetry(new NoTelemetry());
     }
 
     /**
@@ -46,7 +73,15 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->load($key, $ttl, $hash);
+        $start = microtime(true);
+        $result = $this->adapter->load($key, $ttl, $hash);
+        $duration = microtime(true) - $start;
+        $this->operationDuration?->record($duration, [
+            'operation' => 'load',
+            'adapter' => $this->adapter->getName($key),
+        ]);
+
+        return $result;
     }
 
     /**
@@ -59,10 +94,19 @@ class Cache
      */
     public function save(string $key, mixed $data, string $hash = ''): bool|string|array
     {
-        $key = self::$caseSensitive ? $key : \strtolower($key);
-        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
+        $key = self::$caseSensitive ? $key : strtolower($key);
+        $hash = self::$caseSensitive ? $hash : strtolower($hash);
+        $start = microtime(true);
 
-        return $this->adapter->save($key, $data, $hash);
+        try {
+            return $this->adapter->save($key, $data, $hash);
+        } finally {
+            $duration = microtime(true) - $start;
+            $this->operationDuration?->record($duration, [
+                'operation' => 'save',
+                'adapter' => $this->adapter->getName($key),
+            ]);
+        }
     }
 
     /**
@@ -75,7 +119,15 @@ class Cache
     {
         $key = self::$caseSensitive ? $key : \strtolower($key);
 
-        return $this->adapter->list($key);
+        $start = microtime(true);
+        $result = $this->adapter->list($key);
+        $duration = microtime(true) - $start;
+        $this->operationDuration?->record($duration, [
+            'operation' => 'list',
+            'adapter' => $this->adapter->getName($key),
+        ]);
+
+        return $result;
     }
 
     /**
@@ -90,7 +142,15 @@ class Cache
         $key = self::$caseSensitive ? $key : \strtolower($key);
         $hash = self::$caseSensitive ? $hash : \strtolower($hash);
 
-        return $this->adapter->purge($key, $hash);
+        $start = microtime(true);
+        $result = $this->adapter->purge($key, $hash);
+        $duration = microtime(true) - $start;
+        $this->operationDuration?->record($duration, [
+            'operation' => 'purge',
+            'adapter' => $this->adapter->getName($key),
+        ]);
+
+        return $result;
     }
 
     /**
@@ -100,7 +160,15 @@ class Cache
      */
     public function flush(): bool
     {
-        return $this->adapter->flush();
+        $start = microtime(true);
+        $result = $this->adapter->flush();
+        $duration = microtime(true) - $start;
+        $this->operationDuration?->record($duration, [
+            'operation' => 'flush',
+            'adapter' => $this->adapter->getName(),
+        ]);
+
+        return $result;
     }
 
     /**
@@ -120,6 +188,14 @@ class Cache
      */
     public function getSize(): int
     {
-        return $this->adapter->getSize();
+        $start = microtime(true);
+        $result = $this->adapter->getSize();
+        $duration = microtime(true) - $start;
+        $this->operationDuration?->record($duration, [
+            'operation' => 'size',
+            'adapter' => $this->adapter->getName(),
+        ]);
+
+        return $result;
     }
 }

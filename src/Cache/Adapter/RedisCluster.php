@@ -158,4 +158,13 @@ class RedisCluster implements Adapter
 
         return $size;
     }
+
+    /**
+     * @param  string|null  $key
+     * @return string
+     */
+    public function getName(?string $key = null): string
+    {
+        return 'redis-cluster';
+    }
 }

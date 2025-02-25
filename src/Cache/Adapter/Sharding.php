@@ -128,6 +128,18 @@ class Sharding implements Adapter
     }
 
     /**
+     * @return string
+     */
+    public function getName(?string $key = null): string
+    {
+        if ($key === null) {
+            return $this->adapters[0]->getName();
+        }
+
+        return $this->getAdapter($key)->getName();
+    }
+
+    /**
      * @param  string  $key
      * @return Adapter
      */
