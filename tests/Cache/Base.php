@@ -16,11 +16,6 @@ abstract class Base extends TestCase
      */
     protected array $dataArray = ['test', 'data', 'string'];
 
-    public static function tearDownAfterClass(): void
-    {
-        self::$cache::setCaseSensitivity(false);
-    }
-
     /**
      * General tests
      * Can be overwritten in a specific adapter if required, such as None cache
@@ -82,7 +77,7 @@ abstract class Base extends TestCase
         $this->assertEquals(false, $data);
 
         // Test case sensitivity
-        self::$cache::setCaseSensitivity(true);
+        self::$cache->setCaseSensitivity(true);
 
         $data = self::$cache->save('color', 'pink', 'color');
         $this->assertEquals('pink', $data);
