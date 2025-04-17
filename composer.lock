@@ -1781,16 +1781,16 @@
         },
         {
             "name": "utopia-php/pools",
-            "version": "0.8.1",
+            "version": "0.8.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/utopia-php/pools.git",
-                "reference": "53c228721012c157375500fd7b6250ee5a15f4ad"
+                "reference": "05c67aba42eb68ac65489cc1e7fc5db83db2dd4d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/utopia-php/pools/zipball/53c228721012c157375500fd7b6250ee5a15f4ad",
-                "reference": "53c228721012c157375500fd7b6250ee5a15f4ad",
+                "url": "https://api.github.com/repos/utopia-php/pools/zipball/05c67aba42eb68ac65489cc1e7fc5db83db2dd4d",
+                "reference": "05c67aba42eb68ac65489cc1e7fc5db83db2dd4d",
                 "shasum": ""
             },
             "require": {
@@ -1827,9 +1827,9 @@
             ],
             "support": {
                 "issues": "https://github.com/utopia-php/pools/issues",
-                "source": "https://github.com/utopia-php/pools/tree/0.8.1"
+                "source": "https://github.com/utopia-php/pools/tree/0.8.2"
             },
-            "time": "2025-04-17T01:41:27+00:00"
+            "time": "2025-04-17T02:04:54+00:00"
         },
         {
             "name": "utopia-php/telemetry",
