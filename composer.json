@@ -21,7 +21,8 @@
         "ext-json": "*",
         "ext-redis": "*",
         "ext-memcached": "*",
-        "utopia-php/telemetry": "0.1.*"
+        "utopia-php/telemetry": "0.1.*",
+        "utopia-php/pools": "0.8.*"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.3",

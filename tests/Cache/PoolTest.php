@@ -3,18 +3,23 @@
 namespace Utopia\Tests;
 
 use Utopia\Cache\Adapter\Filesystem;
+use Utopia\Cache\Adapter\Pool;
 use Utopia\Cache\Cache;
 
-class FilesystemTest extends Base
+class PoolTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
-        $path = __DIR__.'/tests/data';
+        $path = __DIR__.'/tests/pool';
         if (! file_exists($path)) {
             mkdir($path, 0777, true);
         }
 
-        self::$cache = new Cache(new Filesystem($path));
+        $pool = new \Utopia\Pools\Pool('test', 10, function () use ($path) {
+            return new Filesystem($path);
+        });
+
+        self::$cache = new Cache(new Pool($pool));
     }
 
     public function testGetSize(): void

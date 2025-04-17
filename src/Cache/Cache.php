@@ -8,15 +8,12 @@ use Utopia\Telemetry\Histogram;
 
 class Cache
 {
-    /**
-     * @var Adapter
-     */
-    private $adapter;
+    private Adapter $adapter;
 
     /**
-     * @var bool If cache keys are case sensitive
+     * @var bool If cache keys are case-sensitive
      */
-    public static bool $caseSensitive = false;
+    public bool $caseSensitive = false;
 
     /**
      * @var Histogram|null
@@ -52,12 +49,12 @@ class Cache
     /**
      * Toggle case sensitivity of keys inside cache
      *
-     * @param  bool  $value if true, cache keys will be case sensitive
+     * @param  bool  $value if true, cache keys will be case-sensitive
      * @return bool
      */
-    public static function setCaseSensitivity(bool $value): bool
+    public function setCaseSensitivity(bool $value): bool
     {
-        return self::$caseSensitive = $value;
+        return $this->caseSensitive = $value;
     }
 
     /**
@@ -70,8 +67,8 @@ class Cache
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        $key = self::$caseSensitive ? $key : \strtolower($key);
-        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
+        $key = $this->caseSensitive ? $key : \strtolower($key);
+        $hash = $this->caseSensitive ? $hash : \strtolower($hash);
 
         $start = microtime(true);
         $result = $this->adapter->load($key, $ttl, $hash);
@@ -94,8 +91,8 @@ class Cache
      */
     public function save(string $key, mixed $data, string $hash = ''): bool|string|array
     {
-        $key = self::$caseSensitive ? $key : strtolower($key);
-        $hash = self::$caseSensitive ? $hash : strtolower($hash);
+        $key = $this->caseSensitive ? $key : strtolower($key);
+        $hash = $this->caseSensitive ? $hash : strtolower($hash);
         $start = microtime(true);
 
         try {
@@ -117,7 +114,7 @@ class Cache
      */
     public function list(string $key): array
     {
-        $key = self::$caseSensitive ? $key : \strtolower($key);
+        $key = $this->caseSensitive ? $key : \strtolower($key);
 
         $start = microtime(true);
         $result = $this->adapter->list($key);
@@ -139,8 +136,8 @@ class Cache
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        $key = self::$caseSensitive ? $key : \strtolower($key);
-        $hash = self::$caseSensitive ? $hash : \strtolower($hash);
+        $key = $this->caseSensitive ? $key : \strtolower($key);
+        $hash = $this->caseSensitive ? $hash : \strtolower($hash);
 
         $start = microtime(true);
         $result = $this->adapter->purge($key, $hash);
