@@ -32,7 +32,7 @@ class Filesystem implements Adapter
     {
         $file = $this->getPath($key);
 
-        if (\file_exists($file) && (\filemtime($file) + $ttl > \time())) { // Cache is valid
+        if ($this->fileExistsCaseSensitive($file) && (\filemtime($file) + $ttl > \time())) { // Cache is valid
             return \file_get_contents($file);
         }
 
@@ -170,7 +170,7 @@ class Filesystem implements Adapter
             throw new Exception("$path must be a directory");
         }
 
-        if (substr($path, strlen($path) - 1, 1) != '/') {
+        if (! str_ends_with($path, '/')) {
             $path .= '/';
         }
 
@@ -198,5 +198,38 @@ class Filesystem implements Adapter
     public function getName(?string $key = null): string
     {
         return 'filesystem';
+    }
+
+    /**
+     * Enforce case sensitivity in case the filesystem is case insensitive
+     *
+     * @param  string  $filename
+     * @return bool
+     */
+    private function fileExistsCaseSensitive(string $filename): bool
+    {
+        if (! \file_exists($filename)) {
+            return false;
+        }
+
+        $dirPath = \dirname($filename);
+        $realName = \basename($filename);
+
+        $handle = \opendir($dirPath);
+        if ($handle === false) {
+            return false;
+        }
+
+        while (($entry = \readdir($handle)) !== false) {
+            if ($entry === $realName) {
+                \closedir($handle);
+
+                return true;
+            }
+        }
+
+        \closedir($handle);
+
+        return false;
     }
 }
