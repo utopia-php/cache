@@ -8,12 +8,12 @@ use Utopia\Pools\Pool as UtopiaPool;
 class Pool implements Adapter
 {
     /**
-     * @var UtopiaPool<Adapter>
+     * @var UtopiaPool<covariant Adapter>
      */
     protected UtopiaPool $pool;
 
     /**
-     * @param  UtopiaPool<Adapter>  $pool The pool to use for connections. Must contain instances of Adapter.
+     * @param  UtopiaPool<covariant Adapter>  $pool The pool to use for connections. Must contain instances of Adapter.
      *
      * @throws \Exception
      */
