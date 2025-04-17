@@ -12,13 +12,6 @@ class NoneTest extends Base
         self::$cache = new Cache(new None());
     }
 
-    public static function tearDownAfterClass(): void
-    {
-        self::$cache::setCaseSensitivity(false);
-        // @phpstan-ignore-next-line
-        self::$cache = null;
-    }
-
     public function testGetSize(): void
     {
         $this->assertEquals(0, self::$cache->getSize());

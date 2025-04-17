@@ -16,6 +16,11 @@ abstract class Base extends TestCase
      */
     protected array $dataArray = ['test', 'data', 'string'];
 
+    public static function tearDownAfterClass(): void
+    {
+        self::$cache::setCaseSensitivity(false);
+    }
+
     /**
      * General tests
      * Can be overwritten in a specific adapter if required, such as None cache

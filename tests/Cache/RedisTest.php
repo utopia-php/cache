@@ -15,13 +15,6 @@ class RedisTest extends Base
         self::$cache = new Cache(new RedisAdapter($redis));
     }
 
-    public static function tearDownAfterClass(): void
-    {
-        self::$cache::setCaseSensitivity(false);
-        // @phpstan-ignore-next-line
-        self::$cache = null;
-    }
-
     public function testGetSize(): void
     {
         self::$cache->save('test:file33', 'file33', 'test:file33');

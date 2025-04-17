@@ -16,13 +16,6 @@ class RedisClusterTest extends Base
         self::$cache = new Cache(new RedisAdapter(self::$redis));
     }
 
-    public static function tearDownAfterClass(): void
-    {
-        self::$cache::setCaseSensitivity(false);
-        // @phpstan-ignore-next-line
-        self::$cache = null;
-    }
-
     public function testGetSize(): void
     {
         for ($i = 0; $i < 20; $i++) {

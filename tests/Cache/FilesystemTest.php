@@ -22,11 +22,4 @@ class FilesystemTest extends Base
         self::$cache->save('test', 'test');
         $this->assertEquals(4, self::$cache->getSize());
     }
-
-    public static function tearDownAfterClass(): void
-    {
-        self::$cache::setCaseSensitivity(false);
-        // @phpstan-ignore-next-line
-        self::$cache = null;
-    }
 }
