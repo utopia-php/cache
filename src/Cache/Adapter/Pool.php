@@ -51,36 +51,71 @@ class Pool implements Adapter
 
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
-        return $this->delegate(__FUNCTION__, \func_get_args());
+        /**
+         * @var bool|string|array<mixed> $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
     }
 
     public function list(string $key): array
     {
-        return $this->delegate(__FUNCTION__, \func_get_args());
+        /**
+         * @var array<string> $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
     }
 
     public function purge(string $key, string $hash = ''): bool
     {
-        return $this->delegate(__FUNCTION__, \func_get_args()); // TODO: Implement purge() method.
+        /**
+         * @var bool $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
     }
 
     public function flush(): bool
     {
-        return $this->delegate(__FUNCTION__, \func_get_args()); // TODO: Implement flush() method.
+        /**
+         * @var bool $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
     }
 
     public function ping(): bool
     {
-        return $this->delegate(__FUNCTION__, \func_get_args());
+        /**
+         * @var bool $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
     }
 
     public function getSize(): int
     {
-        return $this->delegate(__FUNCTION__, \func_get_args());
+        /**
+         * @var int $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
     }
 
     public function getName(?string $key = null): string
     {
-        return $this->delegate(__FUNCTION__, \func_get_args());
+        /**
+         * @var string $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
     }
 }
