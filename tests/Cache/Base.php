@@ -8,9 +8,7 @@ use Utopia\Cache\Cache;
 abstract class Base extends TestCase
 {
     protected static Cache $cache;
-
     protected string $key = 'test-key-for-cache';
-
     protected string $data = 'test data string';
 
     /**
