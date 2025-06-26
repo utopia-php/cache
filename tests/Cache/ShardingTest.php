@@ -3,7 +3,6 @@
 namespace Utopia\Tests;
 
 use Redis as Redis;
-use Throwable;
 use Utopia\Cache\Adapter\Redis as RedisAdapter;
 use Utopia\Cache\Adapter\Sharding;
 use Utopia\Cache\Cache;
@@ -37,8 +36,11 @@ class ShardingTest extends Base
 
     public function testEmptyAdapters(): void
     {
-        $this->expectException(Throwable::class);
-
-        self::$cache = new Cache(new Sharding([]));
+        try {
+            self::$cache = new Cache(new Sharding([]));
+            $this->fail('Expected exception was not thrown');
+        } catch (\Throwable $e) {
+            $this->assertInstanceOf(\Throwable::class, $e);
+        }
     }
 }
