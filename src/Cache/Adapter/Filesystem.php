@@ -32,7 +32,12 @@ class Filesystem implements Adapter
     {
         $file = $this->getPath($key);
 
-        if (\file_exists($file) && (\filemtime($file) + $ttl > \time())) { // Cache is valid
+        if (\file_exists($file) && (\filemtime($file) + $ttl > \time())) {
+            // Cache is valid – update modification time so entry stays warm
+            // touch() is a lightweight syscall that only updates inode timestamps
+            // and does not rewrite the file contents.
+            @\touch($file);
+
             return \file_get_contents($file);
         }
 
