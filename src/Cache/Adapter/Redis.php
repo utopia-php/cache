@@ -4,6 +4,7 @@ namespace Utopia\Cache\Adapter;
 
 use Exception;
 use Redis as Client;
+use RedisException;
 use Throwable;
 use Utopia\Cache\Adapter;
 
@@ -15,13 +16,53 @@ class Redis implements Adapter
     protected Client $redis;
 
     /**
+     * Redis host
+     *
+     * @var string
+     */
+    protected string $host;
+
+    /**
+     * Redis port
+     *
+     * @var int
+     */
+    protected int $port;
+
+    /**
+     * Redis max attempts
+     *
+     * @var int
+     */
+    protected int $maxAttempts = 3;
+
+    /**
+     * Redis initial delay
+     *
+     * @var int
+     */
+    protected int $initialDelayMs = 100;
+
+    /**
      * Redis constructor.
      *
      * @param  Client  $redis
      */
-    public function __construct(Client $redis)
+    public function __construct(Client $redis, ?string $host = null, ?int $port = null, ?int $maxAttempts = 3, ?int $initialDelayMs = 100)
     {
+        if ($maxAttempts < 1) {
+            $this->maxAttempts = 1;
+        }
+
+        if ($initialDelayMs < 1) {
+            $this->initialDelayMs = 1;
+        }
+
         $this->redis = $redis;
+        $this->host = $host;
+        $this->port = $port;
+        $this->maxAttempts = $maxAttempts;
+        $this->initialDelayMs = $initialDelayMs;
     }
 
     /**
@@ -36,17 +77,35 @@ class Redis implements Adapter
             $hash = $key;
         }
 
-        $redis_string = $this->redis->hGet($key, $hash);
+        $getCache = function () use ($key, $hash, $ttl) {
+            $redis_string = $this->redis->hGet($key, $hash);
 
-        if ($redis_string === false) {
+            if ($redis_string === false) {
+                return false;
+            }
+
+            /** @var array{time: int, data: string} */
+            $cache = json_decode($redis_string, true);
+
+            if ($cache['time'] + $ttl > time()) { // Cache is valid
+                return $cache['data'];
+            }
+
             return false;
-        }
+        };
 
-        /** @var array{time: int, data: string} */
-        $cache = json_decode($redis_string, true);
-
-        if ($cache['time'] + $ttl > time()) { // Cache is valid
-            return $cache['data'];
+        try {
+            return $getCache();
+        } catch (RedisException $e) {
+            if (strpos($e->getMessage(), 'Connection lost') !== false || strpos($e->getMessage(), 'went away') !== false) {
+                if ($this->attemptReconnectWithBackoff()) {
+                    try {
+                        return $getCache();
+                    } catch (RedisException $e2) {
+                        return false;
+                    }
+                }
+            }
         }
 
         return false;
@@ -77,13 +136,29 @@ class Redis implements Adapter
             return false;
         }
 
-        try {
+        $setCache = function () use ($key, $hash, $value, $data) {
             $this->redis->hSet($key, $hash, $value);
 
             return $data;
+        };
+
+        try {
+            return $setCache();
+        } catch (RedisException $e) {
+            if (strpos($e->getMessage(), 'Connection lost') !== false || strpos($e->getMessage(), 'went away') !== false) {
+                if ($this->attemptReconnectWithBackoff()) {
+                    try {
+                        return $setCache();
+                    } catch (RedisException $e2) {
+                        return false;
+                    }
+                }
+            }
         } catch (Throwable $th) {
             return false;
         }
+
+        return false;
     }
 
     /**
@@ -154,5 +229,35 @@ class Redis implements Adapter
     public function getName(?string $key = null): string
     {
         return 'redis';
+    }
+
+    /**
+     * Attempt to reconnect to Redis with retry and exponential backoff.
+     *
+     * @return bool true if reconnected successfully, false otherwise
+     */
+    protected function attemptReconnectWithBackoff(): bool
+    {
+        $attempt = 0;
+        $delayMs = $this->initialDelayMs;
+
+        while ($attempt < $this->maxAttempts) {
+            try {
+                $this->redis->connect($this->host, $this->port);
+
+                return true;
+            } catch (RedisException $e) {
+                $attempt++;
+
+                if ($attempt >= $this->maxAttempts) {
+                    break;
+                }
+
+                usleep($delayMs * 1000);
+                $delayMs *= 2;
+            }
+        }
+
+        return false;
     }
 }
