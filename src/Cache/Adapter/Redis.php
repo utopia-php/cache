@@ -18,51 +18,53 @@ class Redis implements Adapter
     /**
      * Redis host
      *
-     * @var string
+     * @var string|null
      */
-    protected string $host;
+    protected ?string $host = null;
 
     /**
      * Redis port
      *
      * @var int
      */
-    protected int $port;
+    protected ?int $port = null;
 
     /**
      * Redis max attempts
      *
      * @var int
      */
-    protected int $maxAttempts = 3;
+    protected int $maxAttempts;
 
     /**
      * Redis initial delay
      *
      * @var int
      */
-    protected int $initialDelayMs = 100;
+    protected int $initialDelayMs;
 
     /**
      * Redis constructor.
      *
      * @param  Client  $redis
      */
-    public function __construct(Client $redis, ?string $host = null, ?int $port = null, ?int $maxAttempts = 3, ?int $initialDelayMs = 100)
+    public function __construct(Client $redis, ?string $host = null, ?int $port = null, ?int $maxAttempts = null, ?int $initialDelayMs = null)
     {
-        if ($maxAttempts < 1) {
-            $this->maxAttempts = 1;
-        }
-
-        if ($initialDelayMs < 1) {
-            $this->initialDelayMs = 1;
-        }
-
         $this->redis = $redis;
         $this->host = $host;
         $this->port = $port;
-        $this->maxAttempts = $maxAttempts;
-        $this->initialDelayMs = $initialDelayMs;
+        $this->maxAttempts = $maxAttempts ?? 3;
+        $this->initialDelayMs = $initialDelayMs ?? 100;
+    }
+
+    protected function isConnectionIssue(RedisException $e): bool
+    {
+        $msg = $e->getMessage();
+
+        return str_contains($msg, 'Connection lost')
+            || str_contains($msg, 'went away')
+            || str_contains($msg, 'read error')
+            || str_contains($msg, 'timed out');
     }
 
     /**
@@ -97,7 +99,7 @@ class Redis implements Adapter
         try {
             return $getCache();
         } catch (RedisException $e) {
-            if (strpos($e->getMessage(), 'Connection lost') !== false || strpos($e->getMessage(), 'went away') !== false) {
+            if ($this->isConnectionIssue($e)) {
                 if ($this->attemptReconnectWithBackoff()) {
                     try {
                         return $getCache();
@@ -145,7 +147,7 @@ class Redis implements Adapter
         try {
             return $setCache();
         } catch (RedisException $e) {
-            if (strpos($e->getMessage(), 'Connection lost') !== false || strpos($e->getMessage(), 'went away') !== false) {
+            if ($this->isConnectionIssue($e)) {
                 if ($this->attemptReconnectWithBackoff()) {
                     try {
                         return $setCache();
@@ -238,6 +240,10 @@ class Redis implements Adapter
      */
     protected function attemptReconnectWithBackoff(): bool
     {
+        if ($this->host === null || $this->port === null) {
+            return false;
+        }
+
         $attempt = 0;
         $delayMs = $this->initialDelayMs;
 
