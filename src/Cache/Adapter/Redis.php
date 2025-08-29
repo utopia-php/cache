@@ -53,8 +53,8 @@ class Redis implements Adapter
         $this->redis = $redis;
         $this->host = $host;
         $this->port = $port;
-        $this->maxAttempts = $maxAttempts ?? 3;
-        $this->initialDelayMs = $initialDelayMs ?? 100;
+        $this->maxAttempts = max(1, $maxAttempts ?? 3);
+        $this->initialDelayMs = max(0, $initialDelayMs ?? 100);
     }
 
     protected function isConnectionIssue(RedisException $e): bool
@@ -108,6 +108,8 @@ class Redis implements Adapter
                     }
                 }
             }
+        } catch (Throwable $th) {
+            return false;
         }
 
         return false;
@@ -261,6 +263,8 @@ class Redis implements Adapter
 
                 usleep($delayMs * 1000);
                 $delayMs *= 2;
+            } catch (Throwable $th) {
+                return false;
             }
         }
 
