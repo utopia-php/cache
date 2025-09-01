@@ -15,13 +15,32 @@ class Redis implements Adapter
     protected Client $redis;
 
     /**
+     * @var string|null
+     */
+    protected ?string $dsn;
+
+    /**
+     * @var int|null
+     */
+    protected ?int $port;
+
+    /**
      * Redis constructor.
      *
      * @param  Client  $redis
      */
-    public function __construct(Client $redis)
+    public function __construct(Client $redis, ?string $dsn, ?int $port)
     {
         $this->redis = $redis;
+        $this->dsn = $dsn;
+        $this->port = $port;
+    }
+
+    public function connect(): void
+    {
+        if (isset($this->dsn) && isset($this->port)) {
+            $this->redis->connect($this->dsn, $this->port);
+        }
     }
 
     /**
