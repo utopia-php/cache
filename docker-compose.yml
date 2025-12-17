@@ -28,8 +28,9 @@ services:
   redis-cluster:
     image: grokzen/redis-cluster:7.0.10
     container_name: redis-cluster
+    hostname: redis-cluster
     environment:
-      - IP=0.0.0.0
+      - IP=redis-cluster
     networks:
       - database
 
