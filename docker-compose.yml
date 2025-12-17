@@ -12,54 +12,24 @@ services:
       - ./tests:/usr/src/code/tests
     depends_on:
       - redis
-      - redis-cluster-0
+      - redis-cluster
       - hazelcast
       - memcached
       - shardA
       - shardB
       - shardC
-    
+
   redis:
     image: redis:6.0-alpine
     container_name: redis
     networks:
       - database
 
-  redis-cluster-0:
-    image: docker.io/bitnami/redis-cluster:7.4
+  redis-cluster:
+    image: grokzen/redis-cluster:7.0.10
+    container_name: redis-cluster
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2 redis-cluster-3
-      - REDIS_CLUSTER_CREATOR=yes
-      - REDIS_CLUSTER_REPLICAS=0
-    networks:
-      - database
-    depends_on:
-      - redis-cluster-1
-      - redis-cluster-2
-      - redis-cluster-3
-
-  redis-cluster-1:
-    image: docker.io/bitnami/redis-cluster:7.4
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2 redis-cluster-3
-    networks:
-      - database
-
-  redis-cluster-2:
-    image: docker.io/bitnami/redis-cluster:7.4
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2 redis-cluster-3
-    networks:
-      - database
-
-  redis-cluster-3:
-    image: docker.io/bitnami/redis-cluster:7.4
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2 redis-cluster-3
+      - IP=0.0.0.0
     networks:
       - database
 
