@@ -12,7 +12,7 @@ class RedisClusterTest extends Base
 
     public static function setUpBeforeClass(): void
     {
-        self::$redis = new RedisCluster(null, ['redis-cluster-0:6379', 'redis-cluster-1:6379', 'redis-cluster-2:6379']);
+        self::$redis = new RedisCluster(null, ['redis-cluster:7000', 'redis-cluster:7001', 'redis-cluster:7002']);
         self::$cache = new Cache(new RedisAdapter(self::$redis));
     }
 
