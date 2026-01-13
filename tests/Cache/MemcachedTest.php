@@ -2,7 +2,7 @@
 
 namespace Utopia\Tests;
 
-use Memcached as Memcached;
+use Memcached;
 use Utopia\Cache\Adapter\Memcached as MemcachedAdapter;
 use Utopia\Cache\Cache;
 use Utopia\CLI\Console;
@@ -11,21 +11,21 @@ class MemcachedTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
-        $mc = new Memcached();
+        $mc = new Memcached;
         $mc->addServer('memcached', 11211);
 
         self::$cache = new Cache(new MemcachedAdapter($mc));
     }
 
-    public function testGetSize(): void
+    public function test_get_size(): void
     {
         self::$cache->save('test:file33', 'file33');
         $this->assertEquals(1, self::$cache->getSize());
     }
 
-    public function testCacheReconnect(): void
+    public function test_cache_reconnect(): void
     {
-        $mc = new Memcached();
+        $mc = new Memcached;
         $mc->addServer('memcached', 11211);
         self::$cache = new Cache((new MemcachedAdapter($mc))->setMaxRetries(3));
         self::$cache->save('test:reconnect', 'reconnect');
