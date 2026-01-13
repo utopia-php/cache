@@ -14,7 +14,9 @@ class Memory implements Adapter
     /**
      * Memory constructor.
      */
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     /**
      * Set the maximum number of retries.
@@ -40,7 +42,7 @@ class Memory implements Adapter
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        if (! empty($key) && isset($this->store[$key])) {
+        if (!empty($key) && isset($this->store[$key])) {
             /** @var array{time: int, data: string} */
             $saved = $this->store[$key];
 
@@ -84,7 +86,7 @@ class Memory implements Adapter
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        if (! empty($key) && isset($this->store[$key])) { // if a key is passed and it exists in cache
+        if (!empty($key) && isset($this->store[$key])) { // if a key is passed and it exists in cache
             unset($this->store[$key]);
 
             return true;

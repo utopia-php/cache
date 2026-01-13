@@ -9,7 +9,9 @@ class None implements Adapter
     /**
      * None constructor.
      */
-    public function __construct() {}
+    public function __construct()
+    {
+    }
 
     /**
      * Set the maximum number of retries.

@@ -50,7 +50,7 @@ class MemcachedTest extends Base
 
     public static function tearDownAfterClass(): void
     {
-        self::$cache::setCaseSensitivity(false);
+        self::$cache->setCaseSensitivity(false);
         // @phpstan-ignore-next-line
         self::$cache = null;
     }
