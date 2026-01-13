@@ -63,7 +63,7 @@ class Hazelcast implements Adapter
             $cache = json_decode($cache, true);
         }
 
-        if (! is_array($cache)) {
+        if (! is_array($cache) || ! isset($cache['time'], $cache['data']) || ! is_int($cache['time'])) {
             return false;
         }
 
@@ -141,11 +141,17 @@ class Hazelcast implements Adapter
     {
         $size = 0;
         $servers = $this->memcached->getServerList();
-        if (! empty($servers)) {
+        if (! empty($servers) && is_array($servers[0])) {
             $stats = $this->memcached->getStats();
-            $key = $servers[0]['host'].':'.$servers[0]['port'];
-            if (isset($stats[$key])) {
-                $size = $stats[$key]['total_items'] ?? 0;
+            if (is_array($stats) && isset($servers[0]['host'], $servers[0]['port'])) {
+                $host = $servers[0]['host'];
+                $port = $servers[0]['port'];
+                if (is_string($host) && (is_int($port) || is_string($port))) {
+                    $key = $host.':'.$port;
+                    if (isset($stats[$key]) && is_array($stats[$key]) && isset($stats[$key]['total_items'])) {
+                        $size = (int) $stats[$key]['total_items'];
+                    }
+                }
             }
         }
 

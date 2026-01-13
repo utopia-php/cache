@@ -169,7 +169,9 @@ class RedisCluster implements Adapter
     public function flush(): bool
     {
         return (bool) $this->executeRedisCommand(function () {
-            foreach ($this->redis->_masters() as $master) {
+            /** @var array<string> $masters */
+            $masters = $this->redis->_masters();
+            foreach ($masters as $master) {
                 $this->redis->flushAll($master);
             }
 
@@ -184,7 +186,9 @@ class RedisCluster implements Adapter
     {
         try {
             return (bool) $this->executeRedisCommand(function () {
-                foreach ($this->redis->_masters() as $master) {
+                /** @var array<string> $masters */
+                $masters = $this->redis->_masters();
+                foreach ($masters as $master) {
                     $this->redis->ping($master);
                 }
 
@@ -204,7 +208,9 @@ class RedisCluster implements Adapter
     {
         $size = $this->executeRedisCommand(function () {
             $size = 0;
-            foreach ($this->redis->_masters() as $master) {
+            /** @var array<string> $masters */
+            $masters = $this->redis->_masters();
+            foreach ($masters as $master) {
                 $size += $this->redis->dbSize($master);
             }
 
@@ -223,7 +229,7 @@ class RedisCluster implements Adapter
      */
     public function getMaxRetries(): int
     {
-        return 0;
+        return $this->maxRetries;
     }
 
     /**
@@ -231,15 +237,7 @@ class RedisCluster implements Adapter
      */
     public function getRetryDelay(): int
     {
-        return 1000;
-    }
-
-    /**
-     * @return ?string
-     */
-    public function getName(): ?string
-    {
-        return $this->name;
+        return $this->retryDelay;
     }
 
     /**

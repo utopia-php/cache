@@ -28,10 +28,7 @@ class Redis implements Adapter
 
     private float $readTimeout;
 
-    /**
-     * @var array<string>|string
-     */
-    private array|string $auth;
+    private string $auth = '';
 
     /**
      * Redis constructor.
@@ -43,7 +40,8 @@ class Redis implements Adapter
         // On connection loss, RedisClient loses the connection info. So we need to store the connection info.
         $this->host = $redis->getHost();
         $this->port = $redis->getPort();
-        $this->timeout = ($redis->getTimeout()) ? $redis->getTimeout() : 0;
+        $timeout = $redis->getTimeout();
+        $this->timeout = ($timeout !== false) ? (float) $timeout : 0.0;
         $this->persistentId = $redis->getPersistentId();
         $this->readTimeout = $redis->getReadTimeout();
 

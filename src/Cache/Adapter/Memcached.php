@@ -142,11 +142,17 @@ class Memcached implements Adapter
     {
         $size = 0;
         $servers = $this->memcached->getServerList();
-        if (! empty($servers)) {
+        if (! empty($servers) && is_array($servers[0])) {
             $stats = $this->memcached->getStats();
-            $key = $servers[0]['host'].':'.$servers[0]['port'];
-            if (isset($stats[$key])) {
-                $size = $stats[$key]['curr_items'] ?? 0;
+            if (is_array($stats) && isset($servers[0]['host'], $servers[0]['port'])) {
+                $host = $servers[0]['host'];
+                $port = $servers[0]['port'];
+                if (is_string($host) && (is_int($port) || is_string($port))) {
+                    $key = $host.':'.$port;
+                    if (isset($stats[$key]) && is_array($stats[$key]) && isset($stats[$key]['curr_items'])) {
+                        $size = (int) $stats[$key]['curr_items'];
+                    }
+                }
             }
         }
 
