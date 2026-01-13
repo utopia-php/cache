@@ -137,7 +137,7 @@ class RedisCluster implements Adapter
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        if (!empty($hash)) {
+        if (! empty($hash)) {
             return (bool) $this->executeRedisCommand(fn () => $this->redis->hdel($key, $hash));
         }
 
