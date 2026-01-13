@@ -40,7 +40,7 @@ class Redis implements Adapter
         $this->persistentId = $redis->getPersistentId();
         $this->readTimeout = $redis->getReadTimeout();
 
-        if (! empty($redis->getAuth())) {
+        if (!empty($redis->getAuth())) {
             $this->auth = $redis->getAuth();
         }
 
@@ -153,7 +153,7 @@ class Redis implements Adapter
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        if (! empty($hash)) {
+        if (!empty($hash)) {
             return (bool) $this->executeRedisCommand(fn () => $this->redis->hdel($key, $hash));
         }
 
@@ -239,7 +239,7 @@ class Redis implements Adapter
             $this->readTimeout,
         );
 
-        if (! empty($this->auth)) {
+        if (!empty($this->auth)) {
             $newRedis->auth($this->auth);
         }
 

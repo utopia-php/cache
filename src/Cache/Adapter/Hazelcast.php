@@ -111,7 +111,7 @@ class Hazelcast implements Adapter
     {
         $statuses = $this->executeMemcachedCommand(fn () => $this->memcached->getServerList());
 
-        return ! empty($statuses);
+        return !empty($statuses);
     }
 
     /**
@@ -121,7 +121,7 @@ class Hazelcast implements Adapter
     {
         $size = 0;
         $servers = $this->memcached->getServerList();
-        if (! empty($servers) && is_array($servers[0])) {
+        if (!empty($servers) && is_array($servers[0])) {
             $stats = $this->memcached->getStats();
             if (is_array($stats) && isset($servers[0]['host'], $servers[0]['port'])) {
                 $host = $servers[0]['host'];
