@@ -7,29 +7,20 @@ use Utopia\Cache\Cache;
 
 abstract class Base extends TestCase
 {
-    /**
-     * @var Cache
-     */
-    protected static $cache = null;
+    protected static Cache $cache;
+
+    protected string $key = 'test-key-for-cache';
+
+    protected string $data = 'test data string';
 
     /**
-     * @var string
+     * @var array<string>
      */
-    protected $key = 'test-key-for-cache';
-
-    /**
-     * @var string
-     */
-    protected $data = 'test data string';
-
-    /**
-     * @var string[]
-     */
-    protected $dataArray = ['test', 'data', 'string'];
+    protected array $dataArray = ['test', 'data', 'string'];
 
     /**
      * General tests
-     * Can be overwritten in specific adapter if required, such as None Cache
+     * Can be overwritten in a specific adapter if required, such as None cache
      */
     public function testCacheSave(): void
     {
@@ -88,7 +79,7 @@ abstract class Base extends TestCase
         $this->assertEquals(false, $data);
 
         // Test case sensitivity
-        self::$cache::setCaseSensitivity(true);
+        self::$cache->setCaseSensitivity(true);
 
         $data = self::$cache->save('color', 'pink', 'color');
         $this->assertEquals('pink', $data);

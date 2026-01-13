@@ -20,7 +20,9 @@
         "php": ">=8.0",
         "ext-json": "*",
         "ext-redis": "*",
-        "ext-memcached": "*"
+        "ext-memcached": "*",
+        "utopia-php/telemetry": "*",
+        "utopia-php/pools": "0.8.*"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.3",
@@ -28,5 +30,11 @@
         "phpstan/phpstan": "^1.12",
         "laravel/pint": "1.2.*",
         "utopia-php/cli": "0.14.*"
+    },
+    "config": {
+        "allow-plugins": {
+            "php-http/discovery": true,
+            "tbachert/spi": true
+        }
     }
 }

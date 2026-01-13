@@ -217,6 +217,15 @@ class Filesystem implements Adapter
     }
 
     /**
+     * @param  string|null  $key
+     * @return string
+     */
+    public function getName(?string $key = null): string
+    {
+        return 'filesystem';
+    }
+
+    /**
      * @return int
      */
     public function getMaxRetries(): int

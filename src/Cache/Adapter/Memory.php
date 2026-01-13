@@ -137,6 +137,15 @@ class Memory implements Adapter
     }
 
     /**
+     * @param  string|null  $key
+     * @return string
+     */
+    public function getName(?string $key = null): string
+    {
+        return 'memory';
+    }
+
+    /**
      * @return int
      */
     public function getMaxRetries(): int

@@ -35,13 +35,6 @@ class ShardingTest extends Base
         $this->assertEquals(2, self::$cache->getSize());
     }
 
-    public static function tearDownAfterClass(): void
-    {
-        self::$cache::setCaseSensitivity(false);
-        // @phpstan-ignore-next-line
-        self::$cache = null;
-    }
-
     public function testEmptyAdapters(): void
     {
         $this->expectException(Throwable::class);

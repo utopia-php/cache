@@ -153,6 +153,14 @@ class Hazelcast implements Adapter
     }
 
     /**
+     * @return string
+     */
+    public function getName(?string $key = null): string
+    {
+        return 'hazelcast';
+    }
+
+    /*
      * @return int
      */
     public function getMaxRetries(): int

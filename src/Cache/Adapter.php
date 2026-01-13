@@ -49,6 +49,12 @@ interface Adapter
     public function getSize(): int;
 
     /**
+     * @param  string|null  $key
+     * @return string
+     */
+    public function getName(?string $key = null): string;
+
+    /**
      * Set the maximum number of retries.
      *
      * The client will automatically retry the request if an connection error occurs.
