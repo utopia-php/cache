@@ -11,9 +11,6 @@ class Sharding implements Adapter
      */
     protected array $adapters;
 
-    /**
-     * @var int
-     */
     protected int $count = 0;
 
     /**
@@ -45,10 +42,35 @@ class Sharding implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
-     * @param  string  $hash optional
-     * @return mixed
+     * Set the maximum number of retries.
+     *
+     * The client will automatically retry the request if an connection error occurs.
+     * If the request fails after the maximum number of retries, an exception will be thrown.
+     */
+    public function setMaxRetries(int $maxRetries): self
+    {
+        foreach ($this->adapters as $adapter) {
+            $adapter->setMaxRetries($maxRetries);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Set the retry delay in milliseconds.
+     */
+    public function setRetryDelay(int $retryDelay): self
+    {
+        foreach ($this->adapters as $adapter) {
+            $adapter->setRetryDelay($retryDelay);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param  int  $ttl  time in seconds
+     * @param  string  $hash  optional
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
@@ -56,9 +78,8 @@ class Sharding implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
-     * @param  string  $hash optional
+     * @param  string  $hash  optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
@@ -67,7 +88,6 @@ class Sharding implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -76,18 +96,13 @@ class Sharding implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string  $hash optional
-     * @return bool
+     * @param  string  $hash  optional
      */
     public function purge(string $key, string $hash = ''): bool
     {
         return $this->getAdapter($key)->purge($key, $hash);
     }
 
-    /**
-     * @return bool
-     */
     public function flush(): bool
     {
         $result = true;
@@ -98,9 +113,6 @@ class Sharding implements Adapter
         return $result;
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         foreach ($this->adapters as $value) {
@@ -114,8 +126,6 @@ class Sharding implements Adapter
 
     /**
      * Returning total number of keys of all adapters
-     *
-     * @return int
      */
     public function getSize(): int
     {
@@ -127,9 +137,6 @@ class Sharding implements Adapter
         return $size;
     }
 
-    /**
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         if ($key === null) {
@@ -139,15 +146,21 @@ class Sharding implements Adapter
         return $this->getAdapter($key)->getName();
     }
 
-    /**
-     * @param  string  $key
-     * @return Adapter
-     */
     protected function getAdapter(string $key): Adapter
     {
         $hash = \crc32($key);
         $index = $hash % $this->count;
 
         return $this->adapters[$index];
+    }
+
+    public function getMaxRetries(): int
+    {
+        return 0;
+    }
+
+    public function getRetryDelay(): int
+    {
+        return 0;
     }
 }

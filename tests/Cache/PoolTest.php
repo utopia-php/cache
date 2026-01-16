@@ -22,7 +22,7 @@ class PoolTest extends Base
         self::$cache = new Cache(new Pool($pool));
     }
 
-    public function testGetSize(): void
+    public function test_get_size(): void
     {
         self::$cache->save('test', 'test');
         $this->assertEquals(4, self::$cache->getSize());

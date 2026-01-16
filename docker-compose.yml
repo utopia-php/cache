@@ -10,6 +10,7 @@ services:
       - ./phpunit.xml:/usr/code/phpunit.xml
       - ./src:/usr/src/code/src
       - ./tests:/usr/src/code/tests
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - redis
       - redis-cluster
@@ -21,7 +22,7 @@ services:
 
   redis:
     image: redis:6.0-alpine
-    container_name: redis
+    container_name: cache-redis
     networks:
       - database
 

@@ -13,7 +13,7 @@ class Pool implements Adapter
     protected UtopiaPool $pool;
 
     /**
-     * @param  UtopiaPool<covariant Adapter>  $pool The pool to use for connections. Must contain instances of Adapter.
+     * @param  UtopiaPool<covariant Adapter>  $pool  The pool to use for connections. Must contain instances of Adapter.
      *
      * @throws \Exception
      */
@@ -33,9 +33,7 @@ class Pool implements Adapter
      *
      * Required because __call() can't be used to implement abstract methods.
      *
-     * @param  string  $method
      * @param  array<mixed>  $args
-     * @return mixed
      */
     public function delegate(string $method, array $args): mixed
     {
@@ -113,6 +111,44 @@ class Pool implements Adapter
     {
         /**
          * @var string $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
+    }
+
+    public function setMaxRetries(int $maxRetries): self
+    {
+        $this->pool->use(function (Adapter $adapter) use ($maxRetries) {
+            $adapter->setMaxRetries($maxRetries);
+        });
+
+        return $this;
+    }
+
+    public function setRetryDelay(int $retryDelay): self
+    {
+        $this->pool->use(function (Adapter $adapter) use ($retryDelay) {
+            $adapter->setRetryDelay($retryDelay);
+        });
+
+        return $this;
+    }
+
+    public function getMaxRetries(): int
+    {
+        /**
+         * @var int $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
+    }
+
+    public function getRetryDelay(): int
+    {
+        /**
+         * @var int $result
          */
         $result = $this->delegate(__FUNCTION__, \func_get_args());
 

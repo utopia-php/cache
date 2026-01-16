@@ -9,26 +9,70 @@ use Utopia\Cache\Adapter;
 
 class Redis implements Adapter
 {
-    /**
-     * @var Client
-     */
     protected Client $redis;
+
+    private int $maxRetries = 0;
+
+    private int $retryDelay = 1000; // milliseconds
+
+    private string $host;
+
+    private int $port;
+
+    private float $timeout;
+
+    private ?string $persistentId;
+
+    private float $readTimeout;
+
+    private string $auth = '';
 
     /**
      * Redis constructor.
-     *
-     * @param  Client  $redis
      */
     public function __construct(Client $redis)
     {
+        // On connection loss, RedisClient loses the connection info. So we need to store the connection info.
+        $this->host = $redis->getHost();
+        $this->port = $redis->getPort();
+        $timeout = $redis->getTimeout();
+        $this->timeout = ($timeout !== false) ? (float) $timeout : 0.0;
+        $this->persistentId = $redis->getPersistentId();
+        $this->readTimeout = $redis->getReadTimeout();
+
+        if (! empty($redis->getAuth())) {
+            $this->auth = $redis->getAuth();
+        }
+
         $this->redis = $redis;
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
-     * @param  string  $hash optional
-     * @return mixed
+     * Set the maximum number of retries.
+     *
+     * The client will automatically retry the request if an connection error occurs.
+     * If the request fails after the maximum number of retries, an exception will be thrown.
+     */
+    public function setMaxRetries(int $maxRetries): self
+    {
+        $this->maxRetries = $maxRetries;
+
+        return $this;
+    }
+
+    /**
+     * Set the retry delay in milliseconds.
+     */
+    public function setRetryDelay(int $retryDelay): self
+    {
+        $this->retryDelay = $retryDelay;
+
+        return $this;
+    }
+
+    /**
+     * @param  int  $ttl  time in seconds
+     * @param  string  $hash  optional
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
@@ -36,16 +80,20 @@ class Redis implements Adapter
             $hash = $key;
         }
 
-        $redis_string = $this->redis->hGet($key, $hash);
+        $redis_string = $this->executeRedisCommand(fn () => $this->redis->hGet($key, $hash));
 
-        if ($redis_string === false) {
+        if ($redis_string === false || $redis_string === null) {
+            return false;
+        }
+
+        if (gettype($redis_string) !== 'string') {
             return false;
         }
 
         /** @var array{time: int, data: string} */
         $cache = json_decode($redis_string, true);
 
-        if ($cache['time'] + $ttl > time()) { // Cache is valid
+        if (time() < $cache['time'] + $ttl) { // Cache is valid
             return $cache['data'];
         }
 
@@ -53,9 +101,8 @@ class Redis implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
-     * @param  string  $hash optional
+     * @param  string  $hash  optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
@@ -73,12 +120,12 @@ class Redis implements Adapter
                 'time' => \time(),
                 'data' => $data,
             ], flags: JSON_THROW_ON_ERROR);
-        } catch(Throwable $th) {
+        } catch (Throwable $th) {
             return false;
         }
 
         try {
-            $this->redis->hSet($key, $hash, $value);
+            $this->executeRedisCommand(fn () => $this->redis->hSet($key, $hash, $value));
 
             return $data;
         } catch (Throwable $th) {
@@ -87,12 +134,12 @@ class Redis implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
     {
-        $keys = $this->redis->hKeys($key);
+        /** @var array<string> */
+        $keys = $this->executeRedisCommand(fn () => $this->redis->hKeys($key));
 
         if (empty($keys)) {
             return [];
@@ -102,30 +149,22 @@ class Redis implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string  $hash optional
-     * @return bool
+     * @param  string  $hash  optional
      */
     public function purge(string $key, string $hash = ''): bool
     {
         if (! empty($hash)) {
-            return (bool) $this->redis->hdel($key, $hash);
+            return (bool) $this->executeRedisCommand(fn () => $this->redis->hdel($key, $hash));
         }
 
-        return (bool) $this->redis->del($key);
+        return (bool) $this->executeRedisCommand(fn () => $this->redis->del($key));
     }
 
-    /**
-     * @return bool
-     */
     public function flush(): bool
     {
-        return $this->redis->flushAll();
+        return (bool) $this->executeRedisCommand(fn () => $this->redis->flushAll());
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         try {
@@ -139,18 +178,74 @@ class Redis implements Adapter
 
     /**
      * Returning total number of keys
-     *
-     * @return int
      */
     public function getSize(): int
     {
-        return $this->redis->dbSize();
+        /** @var int */
+        $size = $this->executeRedisCommand(fn () => $this->redis->dbSize());
+
+        return $size;
+    }
+
+    public function getMaxRetries(): int
+    {
+        return $this->maxRetries;
+    }
+
+    public function getRetryDelay(): int
+    {
+        return $this->retryDelay;
     }
 
     /**
-     * @param  string|null  $key
-     * @return string
+     * Execute a Redis command with retry logic
+     *
+     *
+     * @throws \RedisException
      */
+    private function executeRedisCommand(callable $callback): mixed
+    {
+        $attempts = 0;
+        $maxAttempts = max(1, $this->maxRetries);
+
+        while ($attempts < $maxAttempts) {
+            try {
+                return $callback();
+            } catch (\RedisException $th) {
+                $this->reconnect();
+                $attempts++;
+
+                if ($attempts >= $maxAttempts) {
+                    throw $th;
+                }
+
+                usleep($this->retryDelay * 1000); // Convert milliseconds to microseconds
+            }
+        }
+
+        return false;
+    }
+
+    private function reconnect(): void
+    {
+        $newRedis = new Client;
+
+        $newRedis->connect(
+            $this->host,
+            $this->port,
+            $this->timeout,
+            $this->persistentId,
+            0,
+            $this->readTimeout,
+        );
+
+        if (! empty($this->auth)) {
+            $newRedis->auth($this->auth);
+        }
+
+        $this->redis = $newRedis;
+    }
+
     public function getName(?string $key = null): string
     {
         return 'redis';
