@@ -5,6 +5,8 @@ namespace Utopia\Tests;
 use Utopia\Cache\Adapter\Filesystem;
 use Utopia\Cache\Adapter\Pool;
 use Utopia\Cache\Cache;
+use Utopia\Pools\Adapter\Stack;
+use Utopia\Pools\Pool as UtopiaPool;
 
 class PoolTest extends Base
 {
@@ -15,7 +17,7 @@ class PoolTest extends Base
             mkdir($path, 0777, true);
         }
 
-        $pool = new \Utopia\Pools\Pool('test', 10, function () use ($path) {
+        $pool = new UtopiaPool(new Stack(), 'test', 10, function () use ($path) {
             return new Filesystem($path);
         });
 
