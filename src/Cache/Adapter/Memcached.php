@@ -7,9 +7,6 @@ use Utopia\Cache\Adapter;
 
 class Memcached implements Adapter
 {
-    /**
-     * @var Client
-     */
     protected Client $memcached;
 
     private int $maxRetries = 0;
@@ -18,8 +15,6 @@ class Memcached implements Adapter
 
     /**
      * Memcached constructor.
-     *
-     * @param  Client  $memcached
      */
     public function __construct(Client $memcached)
     {
@@ -31,9 +26,6 @@ class Memcached implements Adapter
      *
      * The client will automatically retry the request if an connection error occurs.
      * If the request fails after the maximum number of retries, an exception will be thrown.
-     *
-     * @param  int  $maxRetries
-     * @return self
      */
     public function setMaxRetries(int $maxRetries): self
     {
@@ -44,9 +36,6 @@ class Memcached implements Adapter
 
     /**
      * Set the retry delay in milliseconds.
-     *
-     * @param  int  $retryDelay
-     * @return self
      */
     public function setRetryDelay(int $retryDelay): self
     {
@@ -56,10 +45,7 @@ class Memcached implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl
-     * @param  string  $hash optional
-     * @return mixed
+     * @param  string  $hash  optional
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
@@ -69,7 +55,7 @@ class Memcached implements Adapter
             return false;
         }
 
-        if ($cache['time'] + $ttl > time()) { // Cache is valid
+        if (time() < $cache['time'] + $ttl) { // Cache is valid
             return $cache['data'];
         }
 
@@ -77,9 +63,8 @@ class Memcached implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
-     * @param  string  $hash optional
+     * @param  string  $hash  optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
@@ -97,7 +82,6 @@ class Memcached implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -106,26 +90,18 @@ class Memcached implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string  $hash optional
-     * @return bool
+     * @param  string  $hash  optional
      */
     public function purge(string $key, string $hash = ''): bool
     {
         return (bool) $this->executeMemcachedCommand(fn () => $this->memcached->delete($key));
     }
 
-    /**
-     * @return bool
-     */
     public function flush(): bool
     {
         return (bool) $this->executeMemcachedCommand(fn () => $this->memcached->flush());
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         $statuses = $this->memcached->getStats();
@@ -135,44 +111,38 @@ class Memcached implements Adapter
 
     /**
      * Returning total number of keys
-     *
-     * @return int
      */
     public function getSize(): int
     {
         $size = 0;
         $servers = $this->memcached->getServerList();
-        if (! empty($servers)) {
+        if (! empty($servers) && is_array($servers[0])) {
             $stats = $this->memcached->getStats();
-            $key = $servers[0]['host'].':'.$servers[0]['port'];
-            if (isset($stats[$key])) {
-                $size = $stats[$key]['curr_items'] ?? 0;
+            if (is_array($stats) && isset($servers[0]['host'], $servers[0]['port'])) {
+                $host = $servers[0]['host'];
+                $port = $servers[0]['port'];
+                if (is_string($host) && (is_int($port) || is_string($port))) {
+                    $key = $host.':'.$port;
+                    if (isset($stats[$key]) && is_array($stats[$key]) && isset($stats[$key]['curr_items'])) {
+                        $size = (int) $stats[$key]['curr_items'];
+                    }
+                }
             }
         }
 
         return $size;
     }
 
-    /**
-     * @param  string|null  $key
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'memcached';
     }
 
-    /**
-     * @return int
-     */
     public function getMaxRetries(): int
     {
         return $this->maxRetries;
     }
 
-    /**
-     * @return int
-     */
     public function getRetryDelay(): int
     {
         return $this->retryDelay;
@@ -181,7 +151,7 @@ class Memcached implements Adapter
     /**
      * Execute a Memcached command with retry logic
      *
-     * @param  callable  $callback The Memcached operation to execute
+     * @param  callable  $callback  The Memcached operation to execute
      * @return mixed The result of the Memcached operation
      *
      * @throws \MemcachedException When all retry attempts fail

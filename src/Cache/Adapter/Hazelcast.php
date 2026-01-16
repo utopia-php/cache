@@ -7,9 +7,6 @@ use Utopia\Cache\Adapter;
 
 class Hazelcast implements Adapter
 {
-    /**
-     * @var Client
-     */
     protected Client $memcached;
 
     private int $maxRetries = 0;
@@ -26,9 +23,6 @@ class Hazelcast implements Adapter
      *
      * The client will automatically retry the request if an connection error occurs.
      * If the request fails after the maximum number of retries, an exception will be thrown.
-     *
-     * @param  int  $maxRetries
-     * @return self
      */
     public function setMaxRetries(int $maxRetries): self
     {
@@ -39,9 +33,6 @@ class Hazelcast implements Adapter
 
     /**
      * Set the retry delay in milliseconds.
-     *
-     * @param  int  $retryDelay
-     * @return self
      */
     public function setRetryDelay(int $retryDelay): self
     {
@@ -51,10 +42,8 @@ class Hazelcast implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
-     * @param  string  $hash optional
-     * @return mixed
+     * @param  int  $ttl  time in seconds
+     * @param  string  $hash  optional
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
@@ -63,11 +52,11 @@ class Hazelcast implements Adapter
             $cache = json_decode($cache, true);
         }
 
-        if (! is_array($cache)) {
+        if (! is_array($cache) || ! isset($cache['time'], $cache['data']) || ! is_int($cache['time'])) {
             return false;
         }
 
-        if (($cache['time'] + $ttl > time())) { // Cache is valid
+        if ((time() < $cache['time'] + $ttl)) { // Cache is valid
             return $cache['data'];
         }
 
@@ -75,9 +64,8 @@ class Hazelcast implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
-     * @param  string  $hash optional
+     * @param  string  $hash  optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
@@ -95,7 +83,6 @@ class Hazelcast implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -104,9 +91,7 @@ class Hazelcast implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string  $hash optional
-     * @return bool
+     * @param  string  $hash  optional
      */
     public function purge(string $key, string $hash = ''): bool
     {
@@ -115,16 +100,13 @@ class Hazelcast implements Adapter
 
     /**
      * @return bool
-     * currently hazelcast doesn't support flush functionality, so returning false in that case
+     *              currently hazelcast doesn't support flush functionality, so returning false in that case
      */
     public function flush(): bool
     {
         return false;
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         $statuses = $this->executeMemcachedCommand(fn () => $this->memcached->getServerList());
@@ -134,27 +116,28 @@ class Hazelcast implements Adapter
 
     /**
      * Returning total number of keys
-     *
-     * @return int
      */
     public function getSize(): int
     {
         $size = 0;
         $servers = $this->memcached->getServerList();
-        if (! empty($servers)) {
+        if (! empty($servers) && is_array($servers[0])) {
             $stats = $this->memcached->getStats();
-            $key = $servers[0]['host'].':'.$servers[0]['port'];
-            if (isset($stats[$key])) {
-                $size = $stats[$key]['total_items'] ?? 0;
+            if (is_array($stats) && isset($servers[0]['host'], $servers[0]['port'])) {
+                $host = $servers[0]['host'];
+                $port = $servers[0]['port'];
+                if (is_string($host) && (is_int($port) || is_string($port))) {
+                    $key = $host.':'.$port;
+                    if (isset($stats[$key]) && is_array($stats[$key]) && isset($stats[$key]['total_items'])) {
+                        $size = (int) $stats[$key]['total_items'];
+                    }
+                }
             }
         }
 
         return $size;
     }
 
-    /**
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'hazelcast';
@@ -168,9 +151,6 @@ class Hazelcast implements Adapter
         return $this->maxRetries;
     }
 
-    /**
-     * @return int
-     */
     public function getRetryDelay(): int
     {
         return $this->retryDelay;
@@ -179,7 +159,7 @@ class Hazelcast implements Adapter
     /**
      * Execute a Memcached command with retry logic
      *
-     * @param  callable  $callback The Memcached operation to execute
+     * @param  callable  $callback  The Memcached operation to execute
      * @return mixed The result of the Memcached operation
      *
      * @throws \MemcachedException When all retry attempts fail

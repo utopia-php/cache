@@ -18,9 +18,6 @@ class None implements Adapter
      *
      * The client will automatically retry the request if an connection error occurs.
      * If the request fails after the maximum number of retries, an exception will be thrown.
-     *
-     * @param  int  $maxRetries
-     * @return self
      */
     public function setMaxRetries(int $maxRetries): self
     {
@@ -29,9 +26,6 @@ class None implements Adapter
 
     /**
      * Set the retry delay in milliseconds.
-     *
-     * @param  int  $retryDelay
-     * @return self
      */
     public function setRetryDelay(int $retryDelay): self
     {
@@ -39,10 +33,7 @@ class None implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl
-     * @param  string  $hash optional
-     * @return mixed
+     * @param  string  $hash  optional
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
@@ -50,9 +41,8 @@ class None implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
-     * @param  string  $hash optional
+     * @param  string  $hash  optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
@@ -61,7 +51,6 @@ class None implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -70,59 +59,38 @@ class None implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string  $hash optional
-     * @return bool
+     * @param  string  $hash  optional
      */
     public function purge(string $key, string $hash = ''): bool
     {
         return true;
     }
 
-    /**
-     * @return bool
-     */
     public function flush(): bool
     {
         return true;
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         return true;
     }
 
-    /**
-     * @return int
-     */
     public function getSize(): int
     {
         return 0;
     }
 
-    /**
-     * @param  string|null  $key
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'none';
     }
 
-    /**
-     * @return int
-     */
     public function getMaxRetries(): int
     {
         return 0;
     }
 
-    /**
-     * @return int
-     */
     public function getRetryDelay(): int
     {
         return 0;

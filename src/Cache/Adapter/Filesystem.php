@@ -14,8 +14,6 @@ class Filesystem implements Adapter
 
     /**
      * Filesystem constructor.
-     *
-     * @param  string  $path
      */
     public function __construct(string $path)
     {
@@ -27,9 +25,6 @@ class Filesystem implements Adapter
      *
      * The client will automatically retry the request if an connection error occurs.
      * If the request fails after the maximum number of retries, an exception will be thrown.
-     *
-     * @param  int  $maxRetries
-     * @return self
      */
     public function setMaxRetries(int $maxRetries): self
     {
@@ -38,9 +33,6 @@ class Filesystem implements Adapter
 
     /**
      * Set the retry delay in milliseconds.
-     *
-     * @param  int  $retryDelay
-     * @return self
      */
     public function setRetryDelay(int $retryDelay): self
     {
@@ -48,10 +40,8 @@ class Filesystem implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
-     * @param  string  $hash optional
-     * @return mixed
+     * @param  int  $ttl  time in seconds
+     * @param  string  $hash  optional
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
@@ -65,9 +55,8 @@ class Filesystem implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
-     * @param  string  $hash optional
+     * @param  string  $hash  optional
      * @return bool|string|array<int|string, mixed>
      *
      * @throws Exception
@@ -94,7 +83,6 @@ class Filesystem implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -103,9 +91,7 @@ class Filesystem implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string  $hash optional
-     * @return bool
+     * @param  string  $hash  optional
      */
     public function purge(string $key, string $hash = ''): bool
     {
@@ -118,17 +104,11 @@ class Filesystem implements Adapter
         return false;
     }
 
-    /**
-     * @return bool
-     */
     public function flush(): bool
     {
         return $this->deleteDirectory($this->path);
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         return file_exists($this->path) && is_writable($this->path) && is_readable($this->path);
@@ -136,8 +116,6 @@ class Filesystem implements Adapter
 
     /**
      * Returning root directory size in bytes
-     *
-     * @return int
      */
     public function getSize(): int
     {
@@ -148,10 +126,6 @@ class Filesystem implements Adapter
         }
     }
 
-    /**
-     * @param  string  $dir
-     * @return int
-     */
     private function getDirectorySize(string $dir): int
     {
         $size = 0;
@@ -174,19 +148,12 @@ class Filesystem implements Adapter
         return $size;
     }
 
-    /**
-     * @param  string  $filename
-     * @return string
-     */
     public function getPath(string $filename): string
     {
         return $this->path.DIRECTORY_SEPARATOR.$filename;
     }
 
     /**
-     * @param  string  $path
-     * @return bool
-     *
      * @throws Exception
      */
     protected function deleteDirectory(string $path): bool
@@ -216,26 +183,16 @@ class Filesystem implements Adapter
         return rmdir($path);
     }
 
-    /**
-     * @param  string|null  $key
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'filesystem';
     }
 
-    /**
-     * @return int
-     */
     public function getMaxRetries(): int
     {
         return 0;
     }
 
-    /**
-     * @return int
-     */
     public function getRetryDelay(): int
     {
         return 1000;

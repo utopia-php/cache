@@ -9,9 +9,6 @@ use Utopia\Cache\Adapter;
 
 class Redis implements Adapter
 {
-    /**
-     * @var Client
-     */
     protected Client $redis;
 
     private int $maxRetries = 0;
@@ -28,22 +25,18 @@ class Redis implements Adapter
 
     private float $readTimeout;
 
-    /**
-     * @var array<string>|string
-     */
-    private array|string $auth;
+    private string $auth = '';
 
     /**
      * Redis constructor.
-     *
-     * @param  Client  $redis
      */
     public function __construct(Client $redis)
     {
         // On connection loss, RedisClient loses the connection info. So we need to store the connection info.
         $this->host = $redis->getHost();
         $this->port = $redis->getPort();
-        $this->timeout = ($redis->getTimeout()) ? $redis->getTimeout() : 0;
+        $timeout = $redis->getTimeout();
+        $this->timeout = ($timeout !== false) ? (float) $timeout : 0.0;
         $this->persistentId = $redis->getPersistentId();
         $this->readTimeout = $redis->getReadTimeout();
 
@@ -59,9 +52,6 @@ class Redis implements Adapter
      *
      * The client will automatically retry the request if an connection error occurs.
      * If the request fails after the maximum number of retries, an exception will be thrown.
-     *
-     * @param  int  $maxRetries
-     * @return self
      */
     public function setMaxRetries(int $maxRetries): self
     {
@@ -72,9 +62,6 @@ class Redis implements Adapter
 
     /**
      * Set the retry delay in milliseconds.
-     *
-     * @param  int  $retryDelay
-     * @return self
      */
     public function setRetryDelay(int $retryDelay): self
     {
@@ -84,10 +71,8 @@ class Redis implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
-     * @param  string  $hash optional
-     * @return mixed
+     * @param  int  $ttl  time in seconds
+     * @param  string  $hash  optional
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
@@ -108,7 +93,7 @@ class Redis implements Adapter
         /** @var array{time: int, data: string} */
         $cache = json_decode($redis_string, true);
 
-        if ($cache['time'] + $ttl > time()) { // Cache is valid
+        if (time() < $cache['time'] + $ttl) { // Cache is valid
             return $cache['data'];
         }
 
@@ -116,9 +101,8 @@ class Redis implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
-     * @param  string  $hash optional
+     * @param  string  $hash  optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
@@ -136,7 +120,7 @@ class Redis implements Adapter
                 'time' => \time(),
                 'data' => $data,
             ], flags: JSON_THROW_ON_ERROR);
-        } catch(Throwable $th) {
+        } catch (Throwable $th) {
             return false;
         }
 
@@ -150,7 +134,6 @@ class Redis implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -166,9 +149,7 @@ class Redis implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string  $hash optional
-     * @return bool
+     * @param  string  $hash  optional
      */
     public function purge(string $key, string $hash = ''): bool
     {
@@ -179,17 +160,11 @@ class Redis implements Adapter
         return (bool) $this->executeRedisCommand(fn () => $this->redis->del($key));
     }
 
-    /**
-     * @return bool
-     */
     public function flush(): bool
     {
         return (bool) $this->executeRedisCommand(fn () => $this->redis->flushAll());
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         try {
@@ -203,8 +178,6 @@ class Redis implements Adapter
 
     /**
      * Returning total number of keys
-     *
-     * @return int
      */
     public function getSize(): int
     {
@@ -214,17 +187,11 @@ class Redis implements Adapter
         return $size;
     }
 
-    /**
-     * @return int
-     */
     public function getMaxRetries(): int
     {
         return $this->maxRetries;
     }
 
-    /**
-     * @return int
-     */
     public function getRetryDelay(): int
     {
         return $this->retryDelay;
@@ -233,8 +200,6 @@ class Redis implements Adapter
     /**
      * Execute a Redis command with retry logic
      *
-     * @param  callable  $callback
-     * @return mixed
      *
      * @throws \RedisException
      */
@@ -263,7 +228,7 @@ class Redis implements Adapter
 
     private function reconnect(): void
     {
-        $newRedis = new Client();
+        $newRedis = new Client;
 
         $newRedis->connect(
             $this->host,
@@ -281,10 +246,6 @@ class Redis implements Adapter
         $this->redis = $newRedis;
     }
 
-    /**
-     * @param  string|null  $key
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'redis';
