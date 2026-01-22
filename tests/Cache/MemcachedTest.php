@@ -2,7 +2,7 @@
 
 namespace Utopia\Tests;
 
-use Memcached;
+use Memcached as Memcached;
 use Utopia\Cache\Adapter\Memcached as MemcachedAdapter;
 use Utopia\Cache\Cache;
 

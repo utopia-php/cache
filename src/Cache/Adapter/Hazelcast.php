@@ -160,7 +160,7 @@ class Hazelcast implements Adapter
         return 'hazelcast';
     }
 
-    /*
+    /**
      * @return int
      */
     public function getMaxRetries(): int

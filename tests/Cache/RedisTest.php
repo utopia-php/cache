@@ -2,7 +2,7 @@
 
 namespace Utopia\Tests;
 
-use Redis;
+use Redis as Redis;
 use Utopia\Cache\Adapter\Redis as RedisAdapter;
 use Utopia\Cache\Cache;
 

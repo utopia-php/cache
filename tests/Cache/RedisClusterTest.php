@@ -2,7 +2,7 @@
 
 namespace Utopia\Tests;
 
-use RedisCluster;
+use RedisCluster as RedisCluster;
 use Utopia\Cache\Adapter\RedisCluster as RedisAdapter;
 use Utopia\Cache\Cache;
 
