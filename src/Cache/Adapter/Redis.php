@@ -29,9 +29,14 @@ class Redis implements Adapter
     private float $readTimeout;
 
     /**
-     * @var array<string>|string
+     * @var string|array<string>|null
      */
-    private array|string $auth;
+    private string|array|null $auth = null;
+
+    /**
+     * Whether the original connection was persistent (pconnect)
+     */
+    private bool $persistent = false;
 
     /**
      * Redis constructor.
@@ -43,9 +48,13 @@ class Redis implements Adapter
         // On connection loss, RedisClient loses the connection info. So we need to store the connection info.
         $this->host = $redis->getHost();
         $this->port = $redis->getPort();
-        $this->timeout = ($redis->getTimeout()) ? $redis->getTimeout() : 0;
+        $timeout = $redis->getTimeout();
+        $this->timeout = ($timeout !== false) ? (float) $timeout : 0.0;
         $this->persistentId = $redis->getPersistentId();
         $this->readTimeout = $redis->getReadTimeout();
+
+        // Detect if the connection was persistent (pconnect sets a persistentId)
+        $this->persistent = $this->persistentId !== null;
 
         if (! empty($redis->getAuth())) {
             $this->auth = $redis->getAuth();
@@ -247,7 +256,10 @@ class Redis implements Adapter
             try {
                 return $callback();
             } catch (\RedisException $th) {
-                $this->reconnect();
+                if (! $this->isConnectionError($th)) {
+                    throw $th;
+                }
+
                 $attempts++;
 
                 if ($attempts >= $maxAttempts) {
@@ -255,6 +267,41 @@ class Redis implements Adapter
                 }
 
                 usleep($this->retryDelay * 1000); // Convert milliseconds to microseconds
+
+                try {
+                    $this->reconnect();
+                } catch (\RedisException $e) {
+                    // Reconnect failed, will retry on next iteration
+                }
+            }
+        }
+
+        // This line is unreachable but required for PHPStan
+        throw new \RedisException('Failed to execute Redis command');
+    }
+
+    /**
+     * Check if the exception is a connection-related error that should trigger reconnect.
+     *
+     * RedisException always returns error code 0 with no subclasses for different error types.
+     * The only way to differentiate connection errors from command errors is by message matching.
+     *
+     * @param  Exception  $e
+     * @return bool
+     */
+    private function isConnectionError(Exception $e): bool
+    {
+        $connectionErrors = [
+            'went away',
+            'socket',
+            'read error on connection',
+            'connection lost',
+        ];
+
+        $message = strtolower($e->getMessage());
+        foreach ($connectionErrors as $needle) {
+            if (str_contains($message, $needle)) {
+                return true;
             }
         }
 
@@ -265,14 +312,25 @@ class Redis implements Adapter
     {
         $newRedis = new Client();
 
-        $newRedis->connect(
-            $this->host,
-            $this->port,
-            $this->timeout,
-            $this->persistentId,
-            0,
-            $this->readTimeout,
-        );
+        if ($this->persistent) {
+            $newRedis->pconnect(
+                $this->host,
+                $this->port,
+                $this->timeout,
+                $this->persistentId,
+                0,
+                $this->readTimeout,
+            );
+        } else {
+            $newRedis->connect(
+                $this->host,
+                $this->port,
+                $this->timeout,
+                $this->persistentId,
+                0,
+                $this->readTimeout,
+            );
+        }
 
         if (! empty($this->auth)) {
             $newRedis->auth($this->auth);

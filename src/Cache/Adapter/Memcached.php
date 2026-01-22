@@ -203,6 +203,8 @@ class Memcached implements Adapter
                 \Memcached::RES_CONNECTION_SOCKET_CREATE_FAILURE,
                 \Memcached::RES_CONNECTION_FAILURE,
                 \Memcached::RES_SERVER_TEMPORARILY_DISABLED,
+                \Memcached::RES_SERVER_MARKED_DEAD,
+                \Memcached::RES_TIMEOUT,
             ])) {
                 $attempts++;
 

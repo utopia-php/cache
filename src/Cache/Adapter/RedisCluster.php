@@ -28,17 +28,42 @@ class RedisCluster implements Adapter
 
     private int $retryDelay = 1000; // milliseconds
 
+    private float $timeout;
+
+    private float $readTimeout;
+
+    private bool $persistent;
+
     /**
-     * Redis constructor.
-     *
+     * @var string|array<string>|null
+     */
+    private string|array|null $auth;
+
+    /**
      * @param  Client  $redis
      * @param  array<string>  $seeds
+     * @param  string|null  $name
+     * @param  float  $timeout
+     * @param  float  $readTimeout
+     * @param  bool  $persistent
+     * @param  string|array<string>|null  $auth  Password string or ['username', 'password'] array for ACL
      */
-    public function __construct(Client $redis, array $seeds, ?string $name = null)
-    {
+    public function __construct(
+        Client $redis,
+        array $seeds,
+        ?string $name = null,
+        float $timeout = 1.5,
+        float $readTimeout = 1.5,
+        bool $persistent = false,
+        string|array|null $auth = null
+    ) {
         $this->redis = $redis;
         $this->seeds = $seeds;
         $this->name = $name;
+        $this->timeout = $timeout;
+        $this->readTimeout = $readTimeout;
+        $this->persistent = $persistent;
+        $this->auth = $auth;
     }
 
     /**
@@ -223,7 +248,7 @@ class RedisCluster implements Adapter
      */
     public function getMaxRetries(): int
     {
-        return 0;
+        return $this->maxRetries;
     }
 
     /**
@@ -231,13 +256,13 @@ class RedisCluster implements Adapter
      */
     public function getRetryDelay(): int
     {
-        return 1000;
+        return $this->retryDelay;
     }
 
     /**
      * @return ?string
      */
-    public function getName(): ?string
+    public function getClusterName(): ?string
     {
         return $this->name;
     }
@@ -256,7 +281,7 @@ class RedisCluster implements Adapter
      * @param  callable  $callback
      * @return mixed
      *
-     * @throws \RedisException
+     * @throws \RedisClusterException
      */
     private function executeRedisCommand(callable $callback): mixed
     {
@@ -267,7 +292,10 @@ class RedisCluster implements Adapter
             try {
                 return $callback();
             } catch (\RedisClusterException $th) {
-                $this->reconnect();
+                if (! $this->isConnectionError($th)) {
+                    throw $th;
+                }
+
                 $attempts++;
 
                 if ($attempts >= $maxAttempts) {
@@ -275,6 +303,46 @@ class RedisCluster implements Adapter
                 }
 
                 usleep($this->retryDelay * 1000); // Convert milliseconds to microseconds
+
+                try {
+                    $this->reconnect();
+                } catch (\RedisClusterException $e) {
+                    // Reconnect failed, will retry on next iteration
+                }
+            }
+        }
+
+        // This line is unreachable but required for PHPStan
+        throw new \RedisClusterException('Failed to execute Redis command');
+    }
+
+    /**
+     * Check if the exception is a connection-related error that should trigger reconnect.
+     *
+     * RedisClusterException always returns error code 0 with no subclasses for different error types.
+     * The only way to differentiate connection errors from command errors is by message matching.
+     *
+     * @param  Exception  $e
+     * @return bool
+     */
+    private function isConnectionError(Exception $e): bool
+    {
+        $connectionErrors = [
+            'went away',
+            'socket',
+            'read error on connection',
+            'connection lost',
+            // Redis Cluster specific
+            "couldn't map cluster keyspace",
+            "can't communicate with any node",
+            'clusterdown',
+            'is not covered by any node',
+        ];
+
+        $message = strtolower($e->getMessage());
+        foreach ($connectionErrors as $needle) {
+            if (str_contains($message, $needle)) {
+                return true;
             }
         }
 
@@ -283,7 +351,14 @@ class RedisCluster implements Adapter
 
     private function reconnect(): void
     {
-        $newRedis = new Client($this->name, $this->seeds);
+        $newRedis = new Client(
+            $this->name,
+            $this->seeds,
+            $this->timeout,
+            $this->readTimeout,
+            $this->persistent,
+            $this->auth
+        );
 
         $this->redis = $newRedis;
     }
