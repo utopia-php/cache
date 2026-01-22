@@ -2,10 +2,9 @@
 
 namespace Utopia\Tests;
 
-use Memcached as Memcached;
+use Memcached;
 use Utopia\Cache\Adapter\Memcached as MemcachedAdapter;
 use Utopia\Cache\Cache;
-use Utopia\CLI\Console;
 
 class MemcachedTest extends Base
 {
@@ -30,9 +29,9 @@ class MemcachedTest extends Base
         self::$cache = new Cache((new MemcachedAdapter($mc))->setMaxRetries(3));
         self::$cache->save('test:reconnect', 'reconnect');
 
-        $stdout = '';
-        $stderr = '';
-        Console::execute('docker ps -a --filter "name=memcached" --format "{{.Names}}" | xargs -r docker stop', '', $stdout, $stderr);
+        $stopCmd = 'docker ps -a --filter "name=memcached" --format "{{.Names}}" | xargs -r docker stop';
+        exec($stopCmd.' 2>&1', $output, $exitCode);
+        $this->assertEquals(0, $exitCode, "Docker stop failed: $stopCmd\nOutput: ".implode("\n", $output));
         sleep(3);
 
         try {
@@ -41,17 +40,13 @@ class MemcachedTest extends Base
         } catch (\MemcachedException $e) {
         }
 
-        Console::execute('docker ps -a --filter "name=memcached" --format "{{.Names}}" | xargs -r docker start', '', $stdout, $stderr);
+        $output = [];
+        $startCmd = 'docker ps -a --filter "name=memcached" --format "{{.Names}}" | xargs -r docker start';
+        exec($startCmd.' 2>&1', $output, $exitCode);
+        $this->assertEquals(0, $exitCode, "Docker start failed: $startCmd\nOutput: ".implode("\n", $output));
         sleep(3);
 
         $this->assertEquals('reconnect', self::$cache->save('test:reconnect', 'reconnect', 'test:reconnect'));
         $this->assertEquals('reconnect', self::$cache->load('test:reconnect', 5));
-    }
-
-    public static function tearDownAfterClass(): void
-    {
-        self::$cache::setCaseSensitivity(false);
-        // @phpstan-ignore-next-line
-        self::$cache = null;
     }
 }
