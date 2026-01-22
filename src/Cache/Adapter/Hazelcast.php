@@ -127,9 +127,13 @@ class Hazelcast implements Adapter
      */
     public function ping(): bool
     {
-        $statuses = $this->executeMemcachedCommand(fn () => $this->memcached->getServerList());
+        try {
+            $statuses = $this->executeMemcachedCommand(fn () => $this->memcached->getServerList());
 
-        return ! empty($statuses);
+            return ! empty($statuses);
+        } catch (\MemcachedException $e) {
+            return false;
+        }
     }
 
     /**
