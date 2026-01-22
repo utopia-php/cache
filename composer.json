@@ -22,14 +22,13 @@
         "ext-redis": "*",
         "ext-memcached": "*",
         "utopia-php/telemetry": "*",
-        "utopia-php/pools": "0.8.*"
+        "utopia-php/pools": "1.*"
     },
     "require-dev": {
         "phpunit/phpunit": "^9.3",
         "vimeo/psalm": "4.13.1",
         "phpstan/phpstan": "^1.12",
-        "laravel/pint": "1.2.*",
-        "utopia-php/cli": "0.14.*"
+        "laravel/pint": "1.2.*"
     },
     "config": {
         "allow-plugins": {
