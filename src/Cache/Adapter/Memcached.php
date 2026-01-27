@@ -64,7 +64,7 @@ class Memcached implements Adapter
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
         /** @var array{time: int, data: string}|false */
-        $cache = $this->executeMemcachedCommand(fn () => $this->memcached->get($key));
+        $cache = $this->execute(fn () => $this->memcached->get($key));
         if ($cache === false) {
             return false;
         }
@@ -93,7 +93,7 @@ class Memcached implements Adapter
             'data' => $data,
         ];
 
-        return $this->executeMemcachedCommand(fn () => $this->memcached->set($key, $cache)) ? $data : false;
+        return $this->execute(fn () => $this->memcached->set($key, $cache)) ? $data : false;
     }
 
     /**
@@ -112,7 +112,7 @@ class Memcached implements Adapter
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        return (bool) $this->executeMemcachedCommand(fn () => $this->memcached->delete($key));
+        return (bool) $this->execute(fn () => $this->memcached->delete($key));
     }
 
     /**
@@ -120,7 +120,7 @@ class Memcached implements Adapter
      */
     public function flush(): bool
     {
-        return (bool) $this->executeMemcachedCommand(fn () => $this->memcached->flush());
+        return (bool) $this->execute(fn () => $this->memcached->flush());
     }
 
     /**
@@ -190,7 +190,7 @@ class Memcached implements Adapter
      *
      * @throws \MemcachedException When all retry attempts fail
      */
-    private function executeMemcachedCommand(callable $callback): mixed
+    private function execute(callable $callback): mixed
     {
         $attempts = 0;
         $maxAttempts = max(1, $this->maxRetries);

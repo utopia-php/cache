@@ -108,7 +108,7 @@ class RedisCluster implements Adapter
         }
 
         /** @var string|false */
-        $redis_string = $this->executeRedisCommand(fn () => $this->redis->hGet($key, $hash));
+        $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
 
         if ($redis_string === false) {
             return false;
@@ -150,7 +150,7 @@ class RedisCluster implements Adapter
         }
 
         try {
-            $this->executeRedisCommand(fn () => $this->redis->hSet($key, $hash, $value));
+            $this->execute(fn () => $this->redis->hSet($key, $hash, $value));
 
             return $data;
         } catch (Throwable $th) {
@@ -165,7 +165,7 @@ class RedisCluster implements Adapter
     public function list(string $key): array
     {
         /** @var array<string> */
-        $keys = (array) $this->executeRedisCommand(fn () => $this->redis->hKeys($key));
+        $keys = (array) $this->execute(fn () => $this->redis->hKeys($key));
 
         if (empty($keys)) {
             return [];
@@ -182,10 +182,10 @@ class RedisCluster implements Adapter
     public function purge(string $key, string $hash = ''): bool
     {
         if (! empty($hash)) {
-            return (bool) $this->executeRedisCommand(fn () => $this->redis->hdel($key, $hash));
+            return (bool) $this->execute(fn () => $this->redis->hdel($key, $hash));
         }
 
-        return (bool) $this->executeRedisCommand(fn () => $this->redis->del($key));
+        return (bool) $this->execute(fn () => $this->redis->del($key));
     }
 
     /**
@@ -193,7 +193,7 @@ class RedisCluster implements Adapter
      */
     public function flush(): bool
     {
-        return (bool) $this->executeRedisCommand(function () {
+        return (bool) $this->execute(function () {
             foreach ($this->redis->_masters() as $master) {
                 $this->redis->flushAll($master);
             }
@@ -208,7 +208,7 @@ class RedisCluster implements Adapter
     public function ping(): bool
     {
         try {
-            return (bool) $this->executeRedisCommand(function () {
+            return (bool) $this->execute(function () {
                 foreach ($this->redis->_masters() as $master) {
                     $this->redis->ping($master);
                 }
@@ -227,7 +227,7 @@ class RedisCluster implements Adapter
      */
     public function getSize(): int
     {
-        $size = $this->executeRedisCommand(function () {
+        $size = $this->execute(function () {
             $size = 0;
             foreach ($this->redis->_masters() as $master) {
                 $size += $this->redis->dbSize($master);
@@ -283,7 +283,7 @@ class RedisCluster implements Adapter
      *
      * @throws \RedisClusterException
      */
-    private function executeRedisCommand(callable $callback): mixed
+    private function execute(callable $callback): mixed
     {
         $attempts = 0;
         $maxAttempts = max(1, $this->maxRetries);

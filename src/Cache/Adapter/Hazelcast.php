@@ -58,7 +58,7 @@ class Hazelcast implements Adapter
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        $cache = $this->executeMemcachedCommand(fn () => $this->memcached->get($key));
+        $cache = $this->execute(fn () => $this->memcached->get($key));
         if (is_string($cache)) {
             $cache = json_decode($cache, true);
         }
@@ -91,7 +91,7 @@ class Hazelcast implements Adapter
             'data' => $data,
         ];
 
-        return ($this->executeMemcachedCommand(fn () => $this->memcached->set($key, json_encode($cache)))) ? $data : false;
+        return ($this->execute(fn () => $this->memcached->set($key, json_encode($cache)))) ? $data : false;
     }
 
     /**
@@ -110,7 +110,7 @@ class Hazelcast implements Adapter
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        return (bool) $this->executeMemcachedCommand(fn () => $this->memcached->delete($key));
+        return (bool) $this->execute(fn () => $this->memcached->delete($key));
     }
 
     /**
@@ -128,7 +128,7 @@ class Hazelcast implements Adapter
     public function ping(): bool
     {
         try {
-            $statuses = $this->executeMemcachedCommand(fn () => $this->memcached->getServerList());
+            $statuses = $this->execute(fn () => $this->memcached->getServerList());
 
             return ! empty($statuses);
         } catch (\MemcachedException $e) {
@@ -188,7 +188,7 @@ class Hazelcast implements Adapter
      *
      * @throws \MemcachedException When all retry attempts fail
      */
-    private function executeMemcachedCommand(callable $callback): mixed
+    private function execute(callable $callback): mixed
     {
         $attempts = 0;
         $maxAttempts = max(1, $this->maxRetries);

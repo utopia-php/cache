@@ -104,7 +104,7 @@ class Redis implements Adapter
             $hash = $key;
         }
 
-        $redis_string = $this->executeRedisCommand(fn () => $this->redis->hGet($key, $hash));
+        $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
 
         if ($redis_string === false || $redis_string === null) {
             return false;
@@ -150,7 +150,7 @@ class Redis implements Adapter
         }
 
         try {
-            $this->executeRedisCommand(fn () => $this->redis->hSet($key, $hash, $value));
+            $this->execute(fn () => $this->redis->hSet($key, $hash, $value));
 
             return $data;
         } catch (Throwable $th) {
@@ -165,7 +165,7 @@ class Redis implements Adapter
     public function list(string $key): array
     {
         /** @var array<string> */
-        $keys = $this->executeRedisCommand(fn () => $this->redis->hKeys($key));
+        $keys = $this->execute(fn () => $this->redis->hKeys($key));
 
         if (empty($keys)) {
             return [];
@@ -182,10 +182,10 @@ class Redis implements Adapter
     public function purge(string $key, string $hash = ''): bool
     {
         if (! empty($hash)) {
-            return (bool) $this->executeRedisCommand(fn () => $this->redis->hdel($key, $hash));
+            return (bool) $this->execute(fn () => $this->redis->hdel($key, $hash));
         }
 
-        return (bool) $this->executeRedisCommand(fn () => $this->redis->del($key));
+        return (bool) $this->execute(fn () => $this->redis->del($key));
     }
 
     /**
@@ -193,7 +193,7 @@ class Redis implements Adapter
      */
     public function flush(): bool
     {
-        return (bool) $this->executeRedisCommand(fn () => $this->redis->flushAll());
+        return (bool) $this->execute(fn () => $this->redis->flushAll());
     }
 
     /**
@@ -218,7 +218,7 @@ class Redis implements Adapter
     public function getSize(): int
     {
         /** @var int */
-        $size = $this->executeRedisCommand(fn () => $this->redis->dbSize());
+        $size = $this->execute(fn () => $this->redis->dbSize());
 
         return $size;
     }
@@ -247,7 +247,7 @@ class Redis implements Adapter
      *
      * @throws \RedisException
      */
-    private function executeRedisCommand(callable $callback): mixed
+    private function execute(callable $callback): mixed
     {
         $attempts = 0;
         $maxAttempts = max(1, $this->maxRetries);
