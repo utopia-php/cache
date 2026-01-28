@@ -45,6 +45,32 @@ class Sharding implements Adapter
     }
 
     /**
+     * @param  int  $maxRetries (0-10)
+     * @return self
+     */
+    public function setMaxRetries(int $maxRetries): self
+    {
+        foreach ($this->adapters as $adapter) {
+            $adapter->setMaxRetries($maxRetries);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @param  int  $retryDelay time in milliseconds
+     * @return self
+     */
+    public function setRetryDelay(int $retryDelay): self
+    {
+        foreach ($this->adapters as $adapter) {
+            $adapter->setRetryDelay($retryDelay);
+        }
+
+        return $this;
+    }
+
+    /**
      * @param  string  $key
      * @param  int  $ttl time in seconds
      * @param  string  $hash optional
@@ -149,5 +175,21 @@ class Sharding implements Adapter
         $index = $hash % $this->count;
 
         return $this->adapters[$index];
+    }
+
+    /**
+     * @return int
+     */
+    public function getMaxRetries(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @return int
+     */
+    public function getRetryDelay(): int
+    {
+        return 0;
     }
 }

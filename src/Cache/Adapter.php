@@ -4,6 +4,10 @@ namespace Utopia\Cache;
 
 interface Adapter
 {
+    const MIN_RETRIES = 0;
+
+    const MAX_RETRIES = 10;
+
     /**
      * @param  string  $key
      * @param  int  $ttl time in seconds
@@ -53,4 +57,26 @@ interface Adapter
      * @return string
      */
     public function getName(?string $key = null): string;
+
+    /**
+     * @param  int  $maxRetries (0-10)
+     * @return self
+     */
+    public function setMaxRetries(int $maxRetries): self;
+
+    /**
+     * @param  int  $retryDelay time in milliseconds
+     * @return self
+     */
+    public function setRetryDelay(int $retryDelay): self;
+
+    /**
+     * @return int
+     */
+    public function getMaxRetries(): int;
+
+    /**
+     * @return int
+     */
+    public function getRetryDelay(): int;
 }

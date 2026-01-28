@@ -118,4 +118,38 @@ class Pool implements Adapter
 
         return $result;
     }
+
+    public function setMaxRetries(int $maxRetries): self
+    {
+        $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $this;
+    }
+
+    public function setRetryDelay(int $retryDelay): self
+    {
+        $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $this;
+    }
+
+    public function getMaxRetries(): int
+    {
+        /**
+         * @var int $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
+    }
+
+    public function getRetryDelay(): int
+    {
+        /**
+         * @var int $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
+    }
 }

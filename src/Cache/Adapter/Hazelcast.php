@@ -12,9 +12,35 @@ class Hazelcast implements Adapter
      */
     protected Client $memcached;
 
+    private int $maxRetries = 0;
+
+    private int $retryDelay = 1000; // milliseconds
+
     public function __construct(Client $memcached)
     {
         $this->memcached = $memcached;
+    }
+
+    /**
+     * @param  int  $maxRetries (0-10)
+     * @return self
+     */
+    public function setMaxRetries(int $maxRetries): self
+    {
+        $this->maxRetries = max(self::MIN_RETRIES, min($maxRetries, self::MAX_RETRIES));
+
+        return $this;
+    }
+
+    /**
+     * @param  int  $retryDelay time in milliseconds
+     * @return self
+     */
+    public function setRetryDelay(int $retryDelay): self
+    {
+        $this->retryDelay = $retryDelay;
+
+        return $this;
     }
 
     /**
@@ -25,7 +51,7 @@ class Hazelcast implements Adapter
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        $cache = $this->memcached->get($key);
+        $cache = $this->execute(fn () => $this->memcached->get($key));
         if (is_string($cache)) {
             $cache = json_decode($cache, true);
         }
@@ -58,7 +84,7 @@ class Hazelcast implements Adapter
             'data' => $data,
         ];
 
-        return ($this->memcached->set($key, json_encode($cache))) ? $data : false;
+        return ($this->execute(fn () => $this->memcached->set($key, json_encode($cache)))) ? $data : false;
     }
 
     /**
@@ -77,7 +103,7 @@ class Hazelcast implements Adapter
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        return $this->memcached->delete($key);
+        return (bool) $this->execute(fn () => $this->memcached->delete($key));
     }
 
     /**
@@ -94,9 +120,13 @@ class Hazelcast implements Adapter
      */
     public function ping(): bool
     {
-        $statuses = $this->memcached->getServerList();
+        try {
+            $statuses = $this->execute(fn () => $this->memcached->getServerList());
 
-        return ! empty($statuses);
+            return ! empty($statuses);
+        } catch (\MemcachedException $e) {
+            return false;
+        }
     }
 
     /**
@@ -125,5 +155,66 @@ class Hazelcast implements Adapter
     public function getName(?string $key = null): string
     {
         return 'hazelcast';
+    }
+
+    /**
+     * @return int
+     */
+    public function getMaxRetries(): int
+    {
+        return $this->maxRetries;
+    }
+
+    /**
+     * @return int
+     */
+    public function getRetryDelay(): int
+    {
+        return $this->retryDelay;
+    }
+
+    /**
+     * Execute a Memcached command with retry logic
+     *
+     * @param  callable  $callback The Memcached operation to execute
+     * @return mixed The result of the Memcached operation
+     *
+     * @throws \MemcachedException When all retry attempts fail
+     */
+    private function execute(callable $callback): mixed
+    {
+        $attempts = 0;
+        $maxAttempts = 1 + $this->maxRetries;
+
+        while ($attempts < $maxAttempts) {
+            $result = $callback();
+
+            if ($result === false && in_array($this->memcached->getResultCode(), [
+                \Memcached::RES_HOST_LOOKUP_FAILURE,
+                \Memcached::RES_UNKNOWN_READ_FAILURE,
+                \Memcached::RES_WRITE_FAILURE,
+                \Memcached::RES_PROTOCOL_ERROR,
+                \Memcached::RES_INVALID_HOST_PROTOCOL,
+                \Memcached::RES_CONNECTION_SOCKET_CREATE_FAILURE,
+                \Memcached::RES_CONNECTION_FAILURE,
+                \Memcached::RES_SERVER_TEMPORARILY_DISABLED,
+                \Memcached::RES_SERVER_MARKED_DEAD,
+                \Memcached::RES_TIMEOUT,
+            ])) {
+                $attempts++;
+
+                if ($attempts >= $maxAttempts) {
+                    throw new \MemcachedException('Hazelcast connection failed after '.$attempts.' attempts. Error: '.$this->memcached->getResultMessage());
+                }
+
+                usleep($this->retryDelay * 1000);
+
+                continue;
+            }
+
+            return $result;
+        }
+
+        return false;
     }
 }

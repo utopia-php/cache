@@ -23,6 +23,24 @@ class Filesystem implements Adapter
     }
 
     /**
+     * @param  int  $maxRetries (0-10)
+     * @return self
+     */
+    public function setMaxRetries(int $maxRetries): self
+    {
+        return $this;
+    }
+
+    /**
+     * @param  int  $retryDelay time in milliseconds
+     * @return self
+     */
+    public function setRetryDelay(int $retryDelay): self
+    {
+        return $this;
+    }
+
+    /**
      * @param  string  $key
      * @param  int  $ttl time in seconds
      * @param  string  $hash optional
@@ -198,5 +216,21 @@ class Filesystem implements Adapter
     public function getName(?string $key = null): string
     {
         return 'filesystem';
+    }
+
+    /**
+     * @return int
+     */
+    public function getMaxRetries(): int
+    {
+        return 0;
+    }
+
+    /**
+     * @return int
+     */
+    public function getRetryDelay(): int
+    {
+        return 1000;
     }
 }
