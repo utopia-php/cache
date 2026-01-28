@@ -4,6 +4,9 @@ namespace Utopia\Cache;
 
 interface Adapter
 {
+    const MIN_RETRIES = 0;
+
+    const MAX_RETRIES = 10;
     /**
      * @param  string  $key
      * @param  int  $ttl time in seconds

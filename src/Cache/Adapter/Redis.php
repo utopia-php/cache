@@ -74,7 +74,7 @@ class Redis implements Adapter
      */
     public function setMaxRetries(int $maxRetries): self
     {
-        $this->maxRetries = $maxRetries;
+        $this->maxRetries = max(self::MIN_RETRIES, min($maxRetries, self::MAX_RETRIES));
 
         return $this;
     }
@@ -250,7 +250,7 @@ class Redis implements Adapter
     private function execute(callable $callback): mixed
     {
         $attempts = 0;
-        $maxAttempts = max(1, $this->maxRetries);
+        $maxAttempts = 1 + $this->maxRetries;
 
         while ($attempts < $maxAttempts) {
             try {
