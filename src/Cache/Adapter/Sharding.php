@@ -45,12 +45,7 @@ class Sharding implements Adapter
     }
 
     /**
-     * Set the maximum number of retries.
-     *
-     * The client will automatically retry the request if an connection error occurs.
-     * If the request fails after the maximum number of retries, an exception will be thrown.
-     *
-     * @param  int  $maxRetries
+     * @param  int  $maxRetries (0-10)
      * @return self
      */
     public function setMaxRetries(int $maxRetries): self
@@ -63,9 +58,7 @@ class Sharding implements Adapter
     }
 
     /**
-     * Set the retry delay in milliseconds.
-     *
-     * @param  int  $retryDelay
+     * @param  int  $retryDelay time in milliseconds
      * @return self
      */
     public function setRetryDelay(int $retryDelay): self
