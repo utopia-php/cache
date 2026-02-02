@@ -12,7 +12,7 @@ const SEEDS = [
     'redis-cluster:7002',
 ];
 
-const TIMEOUT = 1.5;
+const TIMEOUT = -1;
 
 class RedisClusterTest extends Base
 {

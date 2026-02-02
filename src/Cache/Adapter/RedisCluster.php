@@ -52,8 +52,8 @@ class RedisCluster implements Adapter
         Client $redis,
         array $seeds,
         ?string $name = null,
-        float $timeout = 1.5,
-        float $readTimeout = 1.5,
+        float $timeout = -1,
+        float $readTimeout = -1,
         bool $persistent = false,
         string|array|null $auth = null
     ) {
