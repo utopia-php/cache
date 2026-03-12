@@ -24,5 +24,18 @@ jobs:
           docker compose up -d
           sleep 10
 
+      - name: Wait for Hazelcast
+        run: |
+          for i in $(seq 1 30); do
+            if docker compose exec -T tests php -r "\$m = new Memcached(); \$m->addServer('hazelcast', 5701); \$s = \$m->getStats(); exit(empty(\$s) ? 1 : 0);" 2>/dev/null; then
+              echo "Hazelcast is ready"
+              exit 0
+            fi
+            echo "Waiting for Hazelcast... ($i/30)"
+            sleep 2
+          done
+          echo "Hazelcast did not become ready in time"
+          exit 1
+
       - name: Run Tests
         run: docker compose exec tests vendor/bin/phpunit --configuration phpunit.xml tests
