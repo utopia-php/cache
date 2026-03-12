@@ -38,6 +38,8 @@ class Redis implements Adapter
      */
     private bool $persistent = false;
 
+    private int $dbIndex = 0;
+
     /**
      * Redis constructor.
      *
@@ -45,7 +47,6 @@ class Redis implements Adapter
      */
     public function __construct(Client $redis)
     {
-        // On connection loss, RedisClient loses the connection info. So we need to store the connection info.
         $this->host = $redis->getHost();
         $this->port = $redis->getPort();
         $timeout = $redis->getTimeout();
@@ -53,8 +54,8 @@ class Redis implements Adapter
         $this->persistentId = $redis->getPersistentId();
         $this->readTimeout = $redis->getReadTimeout();
 
-        // Detect if the connection was persistent (pconnect sets a persistentId)
         $this->persistent = $this->persistentId !== null;
+        $this->dbIndex = $redis->getDbNum();
 
         if (! empty($redis->getAuth())) {
             $this->auth = $redis->getAuth();
@@ -186,7 +187,7 @@ class Redis implements Adapter
      */
     public function flush(): bool
     {
-        return (bool) $this->execute(fn () => $this->redis->flushAll());
+        return (bool) $this->execute(fn () => $this->redis->flushDB());
     }
 
     /**
@@ -329,13 +330,13 @@ class Redis implements Adapter
             $newRedis->auth($this->auth);
         }
 
+        if ($this->dbIndex !== 0) {
+            $newRedis->select($this->dbIndex);
+        }
+
         $this->redis = $newRedis;
     }
 
-    /**
-     * @param  string|null  $key
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'redis';
