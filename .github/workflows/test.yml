@@ -26,29 +26,21 @@ jobs:
 
       - name: Wait for Hazelcast
         run: |
-          echo "=== Hazelcast container status ==="
-          docker compose ps hazelcast
-          echo "=== Hazelcast container logs ==="
-          docker compose logs hazelcast 2>&1 | tail -50
-          echo "=== Attempting connection ==="
           for i in $(seq 1 30); do
             if docker compose exec -T tests php -r "
               \$m = new Memcached();
               \$m->addServer('hazelcast', 5701);
               \$m->set('__healthcheck', '1');
-              \$rc = \$m->getResultCode();
-              echo 'ResultCode: ' . \$rc . ' Message: ' . \$m->getResultMessage() . PHP_EOL;
-              exit(\$rc === Memcached::RES_SUCCESS ? 0 : 1);
-            "; then
+              exit(\$m->getResultCode() === Memcached::RES_SUCCESS ? 0 : 1);
+            " 2>/dev/null; then
               echo "Hazelcast is ready"
               exit 0
             fi
             echo "Waiting for Hazelcast... ($i/30)"
             sleep 2
           done
-          echo "=== Final Hazelcast logs ==="
-          docker compose logs hazelcast 2>&1 | tail -30
           echo "Hazelcast did not become ready in time"
+          docker compose logs hazelcast 2>&1 | tail -20
           exit 1
 
       - name: Run Tests
