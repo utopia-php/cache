@@ -187,8 +187,10 @@ class RedisCluster implements Adapter
     public function flush(): bool
     {
         return (bool) $this->execute(function () {
-            foreach ($this->redis->_masters() as $master) {
-                $this->redis->flushAll($master);
+            /** @var array<string> $masters */
+            $masters = $this->redis->_masters();
+            foreach ($masters as $master) {
+                $this->redis->flushDB($master);
             }
 
             return true;
