@@ -7,9 +7,6 @@ use Utopia\Cache\Adapter;
 
 class Hazelcast implements Adapter
 {
-    /**
-     * @var Client
-     */
     protected Client $memcached;
 
     private int $maxRetries = 0;
@@ -21,17 +18,13 @@ class Hazelcast implements Adapter
         $this->memcached = $memcached;
     }
 
-    /**
-     * @return Client
-     */
     public function getClient(): Client
     {
         return $this->memcached;
     }
 
     /**
-     * @param  int  $maxRetries (0-10)
-     * @return self
+     * @param  int  $maxRetries  (0-10)
      */
     public function setMaxRetries(int $maxRetries): self
     {
@@ -41,8 +34,7 @@ class Hazelcast implements Adapter
     }
 
     /**
-     * @param  int  $retryDelay time in milliseconds
-     * @return self
+     * @param  int  $retryDelay  time in milliseconds
      */
     public function setRetryDelay(int $retryDelay): self
     {
@@ -52,10 +44,8 @@ class Hazelcast implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
-     * @param  string  $hash optional
-     * @return mixed
+     * @param  int  $ttl  time in seconds
+     * @param  string  $hash  optional
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
@@ -68,7 +58,7 @@ class Hazelcast implements Adapter
             return false;
         }
 
-        if (($cache['time'] + $ttl > time())) { // Cache is valid
+        if ((time() < $cache['time'] + $ttl)) { // Cache is valid
             return $cache['data'];
         }
 
@@ -76,9 +66,8 @@ class Hazelcast implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
-     * @param  string  $hash optional
+     * @param  string  $hash  optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
@@ -96,7 +85,6 @@ class Hazelcast implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -105,9 +93,7 @@ class Hazelcast implements Adapter
     }
 
     /**
-     * @param  string  $key
-     * @param  string  $hash optional
-     * @return bool
+     * @param  string  $hash  optional
      */
     public function purge(string $key, string $hash = ''): bool
     {
@@ -116,16 +102,13 @@ class Hazelcast implements Adapter
 
     /**
      * @return bool
-     * currently hazelcast doesn't support flush functionality, so returning false in that case
+     *              currently hazelcast doesn't support flush functionality, so returning false in that case
      */
     public function flush(): bool
     {
         return false;
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         try {
@@ -139,8 +122,6 @@ class Hazelcast implements Adapter
 
     /**
      * Returning total number of keys
-     *
-     * @return int
      */
     public function getSize(): int
     {
@@ -157,25 +138,16 @@ class Hazelcast implements Adapter
         return $size;
     }
 
-    /**
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'hazelcast';
     }
 
-    /**
-     * @return int
-     */
     public function getMaxRetries(): int
     {
         return $this->maxRetries;
     }
 
-    /**
-     * @return int
-     */
     public function getRetryDelay(): int
     {
         return $this->retryDelay;
@@ -184,7 +156,7 @@ class Hazelcast implements Adapter
     /**
      * Execute a Memcached command with retry logic
      *
-     * @param  callable  $callback The Memcached operation to execute
+     * @param  callable  $callback  The Memcached operation to execute
      * @return mixed The result of the Memcached operation
      *
      * @throws \MemcachedException When all retry attempts fail
@@ -198,16 +170,16 @@ class Hazelcast implements Adapter
             $result = $callback();
 
             if ($result === false && in_array($this->memcached->getResultCode(), [
-                \Memcached::RES_HOST_LOOKUP_FAILURE,
-                \Memcached::RES_UNKNOWN_READ_FAILURE,
-                \Memcached::RES_WRITE_FAILURE,
-                \Memcached::RES_PROTOCOL_ERROR,
-                \Memcached::RES_INVALID_HOST_PROTOCOL,
-                \Memcached::RES_CONNECTION_SOCKET_CREATE_FAILURE,
-                \Memcached::RES_CONNECTION_FAILURE,
-                \Memcached::RES_SERVER_TEMPORARILY_DISABLED,
-                \Memcached::RES_SERVER_MARKED_DEAD,
-                \Memcached::RES_TIMEOUT,
+                Client::RES_HOST_LOOKUP_FAILURE,
+                Client::RES_UNKNOWN_READ_FAILURE,
+                Client::RES_WRITE_FAILURE,
+                Client::RES_PROTOCOL_ERROR,
+                Client::RES_INVALID_HOST_PROTOCOL,
+                Client::RES_CONNECTION_SOCKET_CREATE_FAILURE,
+                Client::RES_CONNECTION_FAILURE,
+                Client::RES_SERVER_TEMPORARILY_DISABLED,
+                Client::RES_SERVER_MARKED_DEAD,
+                Client::RES_TIMEOUT,
             ])) {
                 $attempts++;
 

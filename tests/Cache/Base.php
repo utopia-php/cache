@@ -22,7 +22,7 @@ abstract class Base extends TestCase
      * General tests
      * Can be overwritten in a specific adapter if required, such as None cache
      */
-    public function testCacheSave(): void
+    public function test_cache_save(): void
     {
         // test $data array
         $result = self::$cache->save($this->key, $this->dataArray, $this->key);
@@ -35,14 +35,14 @@ abstract class Base extends TestCase
         $this->assertEquals($this->data, $result);
     }
 
-    public function testNotEmptyCacheKey(): void
+    public function test_not_empty_cache_key(): void
     {
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */, $this->key);
 
         $this->assertEquals($this->data, $data);
     }
 
-    public function testCachePurge(): void
+    public function test_cache_purge(): void
     {
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */, $this->key);
 
@@ -57,7 +57,7 @@ abstract class Base extends TestCase
         $this->assertEquals(false, $data);
     }
 
-    public function testCaseInsensitivity(): void
+    public function test_case_insensitivity(): void
     {
         // Ensure case in-sensitivity first (configured in adapter's setUp)
         $data = self::$cache->save('planet', 'Earth', 'planet');
@@ -92,12 +92,12 @@ abstract class Base extends TestCase
         $this->assertEquals(true, $result);
     }
 
-    public function testPing(): void
+    public function test_ping(): void
     {
         $this->assertEquals(true, self::$cache->ping());
     }
 
-    public function testFlush(): void
+    public function test_flush(): void
     {
         $result1 = self::$cache->save('x', 'x', 'x');
         $result2 = self::$cache->save('y', 'y', 'y');

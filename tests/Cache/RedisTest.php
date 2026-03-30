@@ -2,7 +2,7 @@
 
 namespace Utopia\Tests;
 
-use Redis as Redis;
+use Redis;
 use Utopia\Cache\Adapter\Redis as RedisAdapter;
 use Utopia\Cache\Cache;
 
@@ -10,12 +10,12 @@ class RedisTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
-        $redis = new Redis();
+        $redis = new Redis;
         $redis->connect('redis', 6379);
         self::$cache = new Cache(new RedisAdapter($redis));
     }
 
-    public function testGetSize(): void
+    public function test_get_size(): void
     {
         self::$cache->save('test:file33', 'file33', 'test:file33');
         self::$cache->save('test:file34', 'file34', 'test:file34');
@@ -24,11 +24,11 @@ class RedisTest extends Base
     }
 
     /**
-     * @depends testGetSize
+     * @depends test_get_size
      */
-    public function testCacheReconnect(): void
+    public function test_cache_reconnect(): void
     {
-        $redis = new Redis();
+        $redis = new Redis;
         $redis->connect('redis', 6379);
         self::$cache = new Cache((new RedisAdapter($redis))->setMaxRetries(3));
 
@@ -56,11 +56,11 @@ class RedisTest extends Base
     }
 
     /**
-     * @depends testCacheReconnect
+     * @depends test_cache_reconnect
      */
-    public function testCacheReconnectPersistent(): void
+    public function test_cache_reconnect_persistent(): void
     {
-        $redis = new Redis();
+        $redis = new Redis;
         $redis->pconnect('redis', 6379);
         self::$cache = new Cache((new RedisAdapter($redis))->setMaxRetries(3));
 

@@ -2,7 +2,7 @@
 
 namespace Utopia\Tests;
 
-use RedisCluster as RedisCluster;
+use RedisCluster;
 use Utopia\Cache\Adapter\RedisCluster as RedisAdapter;
 use Utopia\Cache\Cache;
 
@@ -24,7 +24,7 @@ class RedisClusterTest extends Base
         self::$cache = new Cache(new RedisAdapter(self::$redis, SEEDS));
     }
 
-    public function testGetSize(): void
+    public function test_get_size(): void
     {
         for ($i = 0; $i < 20; $i++) {
             self::$cache->save("test:file$i", "file$i", "test:file$i");
@@ -34,9 +34,9 @@ class RedisClusterTest extends Base
     }
 
     /**
-     * @depends testGetSize
+     * @depends test_get_size
      */
-    public function testCacheReconnect(): void
+    public function test_cache_reconnect(): void
     {
         self::$redis = new RedisCluster(null, SEEDS, TIMEOUT, TIMEOUT);
         self::$cache = new Cache((new RedisAdapter(self::$redis, SEEDS))->setMaxRetries(3));

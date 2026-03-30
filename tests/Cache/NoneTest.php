@@ -9,15 +9,15 @@ class NoneTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
-        self::$cache = new Cache(new None());
+        self::$cache = new Cache(new None);
     }
 
-    public function testGetSize(): void
+    public function test_get_size(): void
     {
         $this->assertEquals(0, self::$cache->getSize());
     }
 
-    public function testEmptyCacheKey(): void
+    public function test_empty_cache_key(): void
     {
         self::$cache->purge($this->key);
 
@@ -26,7 +26,7 @@ class NoneTest extends Base
         $this->assertEquals(false, $data);
     }
 
-    public function testCacheSave(): void
+    public function test_cache_save(): void
     {
         $result = self::$cache->save($this->key, $this->data);
 
@@ -34,9 +34,9 @@ class NoneTest extends Base
     }
 
     /**
-     * @depends testCacheSave
+     * @depends test_cache_save
      */
-    public function testCacheLoad(): void
+    public function test_cache_load(): void
     {
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
@@ -44,23 +44,23 @@ class NoneTest extends Base
     }
 
     /**
-     * @depends testCacheLoad
+     * @depends test_cache_load
      */
-    public function testNotEmptyCacheKey(): void
+    public function test_not_empty_cache_key(): void
     {
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
 
         $this->assertEquals(false, $data);
     }
 
-    public function testCachePurge(): void
+    public function test_cache_purge(): void
     {
         $result = self::$cache->purge($this->key);
 
         $this->assertEquals(true, $result);
     }
 
-    public function testCaseInsensitivity(): void
+    public function test_case_insensitivity(): void
     {
         // None adapter does not expect case sensitivity/insensitivy
         $this->assertEquals(true, true);

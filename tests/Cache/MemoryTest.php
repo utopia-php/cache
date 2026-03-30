@@ -9,10 +9,10 @@ class MemoryTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
-        self::$cache = new Cache(new Memory());
+        self::$cache = new Cache(new Memory);
     }
 
-    public function testGetSize(): void
+    public function test_get_size(): void
     {
         self::$cache->save('test:file33', 'file33');
         self::$cache->save('test:file34', 'file34');

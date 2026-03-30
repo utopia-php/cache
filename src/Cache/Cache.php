@@ -15,15 +15,10 @@ class Cache
      */
     public bool $caseSensitive = false;
 
-    /**
-     * @var Histogram|null
-     */
     protected ?Histogram $operationDuration = null;
 
     /**
      * Set telemetry adapter and create histograms for cache operations.
-     *
-     * @param  Telemetry  $telemetry
      */
     public function setTelemetry(Telemetry $telemetry): void
     {
@@ -37,20 +32,17 @@ class Cache
 
     /**
      * Initialize with a no-op telemetry adapter by default.
-     *
-     * @param  Adapter  $adapter
      */
     public function __construct(Adapter $adapter)
     {
         $this->adapter = $adapter;
-        $this->setTelemetry(new NoTelemetry());
+        $this->setTelemetry(new NoTelemetry);
     }
 
     /**
      * Toggle case sensitivity of keys inside cache
      *
-     * @param  bool  $value if true, cache keys will be case-sensitive
-     * @return bool
+     * @param  bool  $value  if true, cache keys will be case-sensitive
      */
     public function setCaseSensitivity(bool $value): bool
     {
@@ -60,10 +52,8 @@ class Cache
     /**
      * Load cached data. return false in no valid cache.
      *
-     * @param  string  $key
-     * @param  int  $ttl time in seconds
-     * @param  string  $hash optional
-     * @return mixed
+     * @param  int  $ttl  time in seconds
+     * @param  string  $hash  optional
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
@@ -84,9 +74,8 @@ class Cache
     /**
      * Save data to cache. Returns data on success of false on failure.
      *
-     * @param  string  $key
      * @param  string|array<int|string, mixed>  $data
-     * @param  string  $hash optional
+     * @param  string  $hash  optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, mixed $data, string $hash = ''): bool|string|array
@@ -109,7 +98,6 @@ class Cache
     /**
      * Returns a list of keys.
      *
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -130,9 +118,7 @@ class Cache
     /**
      * Removes data from cache. Returns true on success of false on failure.
      *
-     * @param  string  $key
-     * @param  string  $hash optional
-     * @return bool
+     * @param  string  $hash  optional
      */
     public function purge(string $key, string $hash = ''): bool
     {
@@ -152,8 +138,6 @@ class Cache
 
     /**
      * Removes all data from cache. Returns true on success of false on failure.
-     *
-     * @return bool
      */
     public function flush(): bool
     {
@@ -170,8 +154,6 @@ class Cache
 
     /**
      * Check Cache Connecitivity
-     *
-     * @return bool
      */
     public function ping(): bool
     {
@@ -180,8 +162,6 @@ class Cache
 
     /**
      * Get db size.
-     *
-     * @return int
      */
     public function getSize(): int
     {
