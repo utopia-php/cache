@@ -65,6 +65,14 @@ class Redis implements Adapter
     }
 
     /**
+     * @return Client
+     */
+    public function getClient(): Client
+    {
+        return $this->redis;
+    }
+
+    /**
      * @param  int  $maxRetries (0-10)
      * @return self
      */

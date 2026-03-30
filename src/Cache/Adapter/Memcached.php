@@ -27,6 +27,14 @@ class Memcached implements Adapter
     }
 
     /**
+     * @return Client
+     */
+    public function getClient(): Client
+    {
+        return $this->memcached;
+    }
+
+    /**
      * @param  int  $maxRetries (0-10)
      * @return self
      */

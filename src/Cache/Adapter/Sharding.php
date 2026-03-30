@@ -45,6 +45,14 @@ class Sharding implements Adapter
     }
 
     /**
+     * @return Adapter[]
+     */
+    public function getAdapters(): array
+    {
+        return $this->adapters;
+    }
+
+    /**
      * @param  int  $maxRetries (0-10)
      * @return self
      */

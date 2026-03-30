@@ -23,6 +23,14 @@ class Filesystem implements Adapter
     }
 
     /**
+     * @return string
+     */
+    public function getPath(): string
+    {
+        return $this->path;
+    }
+
+    /**
      * @param  int  $maxRetries (0-10)
      * @return self
      */

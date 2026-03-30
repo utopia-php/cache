@@ -29,6 +29,14 @@ class Pool implements Adapter
     }
 
     /**
+     * @return UtopiaPool<covariant Adapter>
+     */
+    public function getPool(): UtopiaPool
+    {
+        return $this->pool;
+    }
+
+    /**
      * Forward method calls to the internal adapter instance via the pool.
      *
      * Required because __call() can't be used to implement abstract methods.
