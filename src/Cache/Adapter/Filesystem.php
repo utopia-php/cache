@@ -20,7 +20,7 @@ class Filesystem implements Adapter
         $this->path = $path;
     }
 
-    public function getPath(): string
+    public function getBasePath(): string
     {
         return $this->path;
     }
