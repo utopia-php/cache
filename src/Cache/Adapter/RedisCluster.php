@@ -327,6 +327,11 @@ class RedisCluster implements Adapter
             'socket',
             'read error on connection',
             'connection lost',
+            'timed out',
+            'timeout',
+            'connection refused',
+            'no connection',
+            'broken pipe',
             // Redis Cluster specific
             "couldn't map cluster keyspace",
             "can't communicate with any node",
