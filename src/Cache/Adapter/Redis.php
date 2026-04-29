@@ -139,7 +139,7 @@ class Redis implements Adapter
                 'time' => \time(),
                 'data' => $data,
             ], flags: JSON_THROW_ON_ERROR);
-        } catch(Throwable $th) {
+        } catch (Throwable $th) {
             return false;
         }
 
@@ -290,6 +290,11 @@ class Redis implements Adapter
             'socket',
             'read error on connection',
             'connection lost',
+            'timed out',
+            'timeout',
+            'connection refused',
+            'no connection',
+            'broken pipe',
         ];
 
         $message = strtolower($e->getMessage());
