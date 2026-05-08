@@ -62,8 +62,11 @@ abstract class Base extends TestCase
         $result = self::$cache->save('touch-key', 'touch data', 'touch-key');
         $this->assertEquals('touch data', $result);
 
+        sleep(2);
+
+        $this->assertEquals(false, self::$cache->load('touch-key', 1, 'touch-key'));
         $this->assertEquals(true, self::$cache->touch('touch-key', 'touch-key'));
-        $this->assertEquals('touch data', self::$cache->load('touch-key', 60, 'touch-key'));
+        $this->assertEquals('touch data', self::$cache->load('touch-key', 1, 'touch-key'));
         $this->assertEquals(false, self::$cache->touch('missing-touch-key', 'missing-touch-key'));
 
         self::$cache->purge('touch-key');
