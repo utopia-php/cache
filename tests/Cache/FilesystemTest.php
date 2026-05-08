@@ -22,4 +22,34 @@ class FilesystemTest extends Base
         self::$cache->save('test', 'test');
         $this->assertEquals(4, self::$cache->getSize());
     }
+
+    public function testStreamingLoad(): void
+    {
+        $path = __DIR__.'/tests/stream-data';
+        if (! file_exists($path)) {
+            mkdir($path, 0777, true);
+        }
+
+        $cache = new Cache(new Filesystem($path, true));
+        $cache->save('stream-test', 'stream data');
+
+        $stream = $cache->load('stream-test', 60);
+
+        $this->assertTrue(is_resource($stream));
+        $this->assertEquals('stream data', stream_get_contents($stream));
+
+        fclose($stream);
+    }
+
+    public function testStreamingLoadMissingKey(): void
+    {
+        $path = __DIR__.'/tests/stream-missing-data';
+        if (! file_exists($path)) {
+            mkdir($path, 0777, true);
+        }
+
+        $cache = new Cache(new Filesystem($path, true));
+
+        $this->assertEquals(false, $cache->load('missing-stream-test', 60));
+    }
 }
