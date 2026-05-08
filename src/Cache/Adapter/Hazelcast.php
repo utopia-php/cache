@@ -94,16 +94,18 @@ class Hazelcast implements Adapter
      */
     public function touch(string $key, string $hash = ''): bool
     {
-        $data = $this->load($key, PHP_INT_MAX, $hash);
-        if ($data === false) {
+        $cache = $this->execute(fn () => $this->memcached->get($key));
+        if (is_string($cache)) {
+            $cache = json_decode($cache, true);
+        }
+
+        if (! is_array($cache)) {
             return false;
         }
 
-        if (! is_string($data) && ! is_array($data)) {
-            return false;
-        }
+        $cache['time'] = time();
 
-        return $this->save($key, $data, $hash) !== false;
+        return (bool) $this->execute(fn () => $this->memcached->set($key, json_encode($cache)));
     }
 
     /**

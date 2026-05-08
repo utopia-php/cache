@@ -96,16 +96,15 @@ class Memcached implements Adapter
      */
     public function touch(string $key, string $hash = ''): bool
     {
-        $data = $this->load($key, PHP_INT_MAX, $hash);
-        if ($data === false) {
+        /** @var array{time: int, data: string|array<int|string, mixed>}|false */
+        $cache = $this->execute(fn () => $this->memcached->get($key));
+        if ($cache === false) {
             return false;
         }
 
-        if (! is_string($data) && ! is_array($data)) {
-            return false;
-        }
+        $cache['time'] = time();
 
-        return $this->save($key, $data, $hash) !== false;
+        return (bool) $this->execute(fn () => $this->memcached->set($key, $cache));
     }
 
     /**

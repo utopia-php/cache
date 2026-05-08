@@ -158,16 +158,27 @@ class RedisCluster implements Adapter
      */
     public function touch(string $key, string $hash = ''): bool
     {
-        $data = $this->load($key, PHP_INT_MAX, $hash);
-        if ($data === false) {
+        if (empty($hash)) {
+            $hash = $key;
+        }
+
+        /** @var string|false */
+        $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
+
+        if ($redis_string === false || ! is_string($redis_string)) {
             return false;
         }
 
-        if (! is_string($data) && ! is_array($data)) {
+        try {
+            /** @var array{time: int, data: mixed} $cache */
+            $cache = json_decode($redis_string, true, flags: JSON_THROW_ON_ERROR);
+            $cache['time'] = time();
+            $value = json_encode($cache, flags: JSON_THROW_ON_ERROR);
+        } catch (Throwable $th) {
             return false;
         }
 
-        return $this->save($key, $data, $hash) !== false;
+        return $this->execute(fn () => $this->redis->hSet($key, $hash, $value)) !== false;
     }
 
     /**

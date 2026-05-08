@@ -83,16 +83,16 @@ class Memory implements Adapter
      */
     public function touch(string $key, string $hash = ''): bool
     {
-        $data = $this->load($key, PHP_INT_MAX, $hash);
-        if ($data === false) {
+        if (empty($key) || ! isset($this->store[$key])) {
             return false;
         }
 
-        if (! is_string($data) && ! is_array($data)) {
-            return false;
-        }
+        /** @var array{time: int, data: string|array<int|string, mixed>} $saved */
+        $saved = $this->store[$key];
+        $saved['time'] = time();
+        $this->store[$key] = $saved;
 
-        return $this->save($key, $data, $hash) !== false;
+        return true;
     }
 
     /**
