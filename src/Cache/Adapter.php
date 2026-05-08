@@ -26,6 +26,13 @@ interface Adapter
 
     /**
      * @param  string  $key
+     * @param  string  $hash optional
+     * @return bool
+     */
+    public function touch(string $key, string $hash = ''): bool;
+
+    /**
+     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array;

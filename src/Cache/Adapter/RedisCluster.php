@@ -103,7 +103,7 @@ class RedisCluster implements Adapter
         /** @var string|false */
         $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
 
-        if ($redis_string === false) {
+        if ($redis_string === false || ! is_string($redis_string)) {
             return false;
         }
 
@@ -149,6 +149,25 @@ class RedisCluster implements Adapter
         } catch (Throwable $th) {
             return false;
         }
+    }
+
+    /**
+     * @param  string  $key
+     * @param  string  $hash optional
+     * @return bool
+     */
+    public function touch(string $key, string $hash = ''): bool
+    {
+        $data = $this->load($key, PHP_INT_MAX, $hash);
+        if ($data === false) {
+            return false;
+        }
+
+        if (! is_string($data) && ! is_array($data)) {
+            return false;
+        }
+
+        return $this->save($key, $data, $hash) !== false;
     }
 
     /**

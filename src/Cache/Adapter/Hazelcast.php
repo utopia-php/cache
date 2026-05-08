@@ -89,6 +89,25 @@ class Hazelcast implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string  $hash optional
+     * @return bool
+     */
+    public function touch(string $key, string $hash = ''): bool
+    {
+        $data = $this->load($key, PHP_INT_MAX, $hash);
+        if ($data === false) {
+            return false;
+        }
+
+        if (! is_string($data) && ! is_array($data)) {
+            return false;
+        }
+
+        return $this->save($key, $data, $hash) !== false;
+    }
+
+    /**
+     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
