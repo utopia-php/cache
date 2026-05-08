@@ -13,13 +13,20 @@ class Filesystem implements Adapter
     protected $path = '';
 
     /**
+     * @var bool
+     */
+    protected bool $streaming = false;
+
+    /**
      * Filesystem constructor.
      *
      * @param  string  $path
+     * @param  bool  $streaming
      */
-    public function __construct(string $path)
+    public function __construct(string $path, bool $streaming = false)
     {
         $this->path = $path;
+        $this->streaming = $streaming;
     }
 
     /**
@@ -51,6 +58,10 @@ class Filesystem implements Adapter
         $file = $this->getPath($key);
 
         if (\file_exists($file) && (\filemtime($file) + $ttl > \time())) { // Cache is valid
+            if ($this->streaming) {
+                return \fopen($file, 'rb');
+            }
+
             return \file_get_contents($file);
         }
 
