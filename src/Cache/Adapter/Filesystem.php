@@ -106,7 +106,13 @@ class Filesystem implements Adapter
     {
         $file = $this->getPath($key);
 
-        return file_exists($file) && touch($file);
+        if (! file_exists($file) || ! touch($file)) {
+            return false;
+        }
+
+        clearstatcache(true, $file);
+
+        return true;
     }
 
     /**
