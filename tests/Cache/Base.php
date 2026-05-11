@@ -57,6 +57,21 @@ abstract class Base extends TestCase
         $this->assertEquals(false, $data);
     }
 
+    public function testCacheTouch(): void
+    {
+        $result = self::$cache->save('touch-key', 'touch data', 'touch-key');
+        $this->assertEquals('touch data', $result);
+
+        sleep(3);
+
+        $this->assertEquals(false, self::$cache->load('touch-key', 2, 'touch-key'));
+        $this->assertEquals(true, self::$cache->touch('touch-key', 'touch-key'));
+        $this->assertEquals('touch data', self::$cache->load('touch-key', 2, 'touch-key'));
+        $this->assertEquals(false, self::$cache->touch('missing-touch-key', 'missing-touch-key'));
+
+        self::$cache->purge('touch-key');
+    }
+
     public function testCaseInsensitivity(): void
     {
         // Ensure case in-sensitivity first (configured in adapter's setUp)

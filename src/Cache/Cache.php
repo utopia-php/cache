@@ -107,6 +107,29 @@ class Cache
     }
 
     /**
+     * Refresh a cache entry timestamp without replacing its data.
+     *
+     * @param  string  $key
+     * @param  string  $hash optional
+     * @return bool
+     */
+    public function touch(string $key, string $hash = ''): bool
+    {
+        $key = $this->caseSensitive ? $key : strtolower($key);
+        $hash = $this->caseSensitive ? $hash : strtolower($hash);
+
+        $start = microtime(true);
+        $result = $this->adapter->touch($key, $hash);
+        $duration = microtime(true) - $start;
+        $this->operationDuration?->record($duration, [
+            'operation' => 'touch',
+            'adapter' => $this->adapter->getName($key),
+        ]);
+
+        return $result;
+    }
+
+    /**
      * Returns a list of keys.
      *
      * @param  string  $key

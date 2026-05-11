@@ -59,6 +59,16 @@ class Pool implements Adapter
         return $result;
     }
 
+    public function touch(string $key, string $hash = ''): bool
+    {
+        /**
+         * @var bool $result
+         */
+        $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
+    }
+
     public function list(string $key): array
     {
         /**

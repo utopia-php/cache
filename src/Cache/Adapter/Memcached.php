@@ -91,6 +91,24 @@ class Memcached implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string  $hash optional
+     * @return bool
+     */
+    public function touch(string $key, string $hash = ''): bool
+    {
+        /** @var array{time: int, data: string|array<int|string, mixed>}|false */
+        $cache = $this->execute(fn () => $this->memcached->get($key));
+        if ($cache === false) {
+            return false;
+        }
+
+        $cache['time'] = time();
+
+        return (bool) $this->execute(fn () => $this->memcached->set($key, $cache));
+    }
+
+    /**
+     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array

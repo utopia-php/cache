@@ -60,6 +60,11 @@ class NoneTest extends Base
         $this->assertEquals(true, $result);
     }
 
+    public function testCacheTouch(): void
+    {
+        $this->assertEquals(false, self::$cache->touch($this->key));
+    }
+
     public function testCaseInsensitivity(): void
     {
         // None adapter does not expect case sensitivity/insensitivy

@@ -154,6 +154,35 @@ class Redis implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string  $hash optional
+     * @return bool
+     */
+    public function touch(string $key, string $hash = ''): bool
+    {
+        if (empty($hash)) {
+            $hash = $key;
+        }
+
+        $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
+
+        if ($redis_string === false || $redis_string === null || ! is_string($redis_string)) {
+            return false;
+        }
+
+        try {
+            /** @var array{time: int, data: mixed} $cache */
+            $cache = json_decode($redis_string, true, flags: JSON_THROW_ON_ERROR);
+            $cache['time'] = time();
+            $value = json_encode($cache, flags: JSON_THROW_ON_ERROR);
+        } catch (Throwable $th) {
+            return false;
+        }
+
+        return $this->execute(fn () => $this->redis->hSet($key, $hash, $value)) !== false;
+    }
+
+    /**
+     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array

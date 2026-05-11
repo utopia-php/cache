@@ -99,6 +99,24 @@ class Filesystem implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string  $hash optional
+     * @return bool
+     */
+    public function touch(string $key, string $hash = ''): bool
+    {
+        $file = $this->getPath($key);
+
+        if (! file_exists($file) || ! touch($file)) {
+            return false;
+        }
+
+        clearstatcache(true, $file);
+
+        return true;
+    }
+
+    /**
+     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array

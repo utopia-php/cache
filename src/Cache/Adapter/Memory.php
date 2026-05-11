@@ -78,6 +78,25 @@ class Memory implements Adapter
 
     /**
      * @param  string  $key
+     * @param  string  $hash optional
+     * @return bool
+     */
+    public function touch(string $key, string $hash = ''): bool
+    {
+        if (empty($key) || ! isset($this->store[$key])) {
+            return false;
+        }
+
+        /** @var array{time: int, data: string|array<int|string, mixed>} $saved */
+        $saved = $this->store[$key];
+        $saved['time'] = time();
+        $this->store[$key] = $saved;
+
+        return true;
+    }
+
+    /**
+     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
