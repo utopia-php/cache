@@ -16,7 +16,7 @@ use Utopia\Telemetry\Adapter\Test as TestTelemetry;
 
 class CircuitBreakerTest extends TestCase
 {
-    public function test_passes_through_healthy_cache_operations(): void
+    public function testPassesThroughHealthyCacheOperations(): void
     {
         $adapter = new Memory();
         $cache = new CircuitBreaker($adapter, new UtopiaCircuitBreaker());
@@ -30,7 +30,7 @@ class CircuitBreakerTest extends TestCase
         $this->assertFalse($cache->load('key', 60));
     }
 
-    public function test_returns_fallbacks_when_cache_operations_fail(): void
+    public function testReturnsFallbacksWhenCacheOperationsFail(): void
     {
         $this->assertFalse($this->failingCache()->load('key', 60));
         $this->assertFalse($this->failingCache()->save('key', 'value'));
@@ -42,7 +42,7 @@ class CircuitBreakerTest extends TestCase
         $this->assertSame(0, $this->failingCache()->getSize());
     }
 
-    public function test_breaker_short_circuits_after_failure(): void
+    public function testBreakerShortCircuitsAfterFailure(): void
     {
         $adapter = new CountingFailingAdapter();
         $cache = new CircuitBreaker($adapter, new UtopiaCircuitBreaker(threshold: 1));
@@ -52,7 +52,7 @@ class CircuitBreakerTest extends TestCase
         $this->assertSame(1, $adapter->loads);
     }
 
-    public function test_telemetry_can_be_attached_after_construction(): void
+    public function testTelemetryCanBeAttachedAfterConstruction(): void
     {
         $telemetry = new TestTelemetry();
         $cache = new CircuitBreaker(new Memory(), new UtopiaCircuitBreaker());
@@ -65,7 +65,7 @@ class CircuitBreakerTest extends TestCase
         $this->assertSame([1], $calls->values);
     }
 
-    public function test_telemetry_propagates_to_inner_adapter(): void
+    public function testTelemetryPropagatesToInnerAdapter(): void
     {
         $telemetry = new TestTelemetry();
         $adapter = new class extends Memory implements Feature\Telemetry
@@ -84,7 +84,7 @@ class CircuitBreakerTest extends TestCase
         $this->assertSame($telemetry, $adapter->telemetry);
     }
 
-    public function test_cache_telemetry_does_not_propagate_through_sharding(): void
+    public function testCacheTelemetryDoesNotPropagateThroughSharding(): void
     {
         $telemetry = new TestTelemetry();
         $cache = new Cache(new Sharding([
