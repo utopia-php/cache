@@ -70,7 +70,7 @@ Per-request resync would add significant complexity for little gain.
 ## Telemetry
 
 Implements `Cache\Feature\Telemetry`. Emits a
-`redis_multiplexing.pending.depth` gauge after each enqueue — non-zero
+`cache.redis_multiplexing.pending.depth` gauge after each enqueue — non-zero
 steady-state means callers are queueing faster than Redis is replying. Wire
 up via `Cache::setTelemetry()`.
 

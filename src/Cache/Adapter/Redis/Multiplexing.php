@@ -79,7 +79,7 @@ class Multiplexing implements Adapter, TelemetryFeature
     public function setTelemetry(Telemetry $telemetry): void
     {
         $this->pendingDepth = $telemetry->createGauge(
-            'redis_multiplexing.pending.depth',
+            'cache.redis_multiplexing.pending.depth',
             description: 'Pending response channels awaiting RESP frames on the multiplexed connection.',
         );
     }
