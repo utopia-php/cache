@@ -1,6 +1,6 @@
 <?php
 
-namespace Utopia\Tests;
+namespace Utopia\Tests\E2E;
 
 use Memcached as Memcached;
 use Utopia\Cache\Adapter\Memcached as MemcachedAdapter;

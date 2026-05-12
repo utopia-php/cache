@@ -1,10 +1,11 @@
 <?php
 
-namespace Utopia\Tests;
+namespace Utopia\Tests\E2E\Redis;
 
 use Redis as Redis;
 use Utopia\Cache\Adapter\Redis as RedisAdapter;
 use Utopia\Cache\Cache;
+use Utopia\Tests\E2E\Base;
 
 class RedisTest extends Base
 {

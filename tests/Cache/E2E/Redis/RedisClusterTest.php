@@ -1,10 +1,11 @@
 <?php
 
-namespace Utopia\Tests;
+namespace Utopia\Tests\E2E\Redis;
 
 use RedisCluster as RedisCluster;
 use Utopia\Cache\Adapter\RedisCluster as RedisAdapter;
 use Utopia\Cache\Cache;
+use Utopia\Tests\E2E\Base;
 
 const SEEDS = [
     'redis-cluster:7000',
