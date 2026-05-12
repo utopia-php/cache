@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d33703ed3a1dc42fb598493d1eae8d90",
+    "content-hash": "1d0ace4df177cb2519358831ae65ec36",
     "packages": [
         {
             "name": "brick/math",
@@ -1866,6 +1866,68 @@
                 "source": "https://github.com/Nevay/spi/tree/v1.0.5"
             },
             "time": "2025-06-29T15:42:06+00:00"
+        },
+        {
+            "name": "utopia-php/circuit-breaker",
+            "version": "0.3.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/utopia-php/circuit-breaker.git",
+                "reference": "064243c1667778c00abf027ff53a735a228776de"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/utopia-php/circuit-breaker/zipball/064243c1667778c00abf027ff53a735a228776de",
+                "reference": "064243c1667778c00abf027ff53a735a228776de",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "laravel/pint": "^1.29",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^10.0",
+                "utopia-php/telemetry": "0.2.*"
+            },
+            "suggest": {
+                "ext-opentelemetry": "Required by utopia-php/telemetry when using OpenTelemetry metrics.",
+                "ext-protobuf": "Required by utopia-php/telemetry when using OpenTelemetry metrics.",
+                "ext-redis": "Required when using Utopia\\CircuitBreaker\\Adapter\\Redis with the phpredis extension.",
+                "ext-swoole": "Required when using Utopia\\CircuitBreaker\\Adapter\\SwooleTable.",
+                "utopia-php/telemetry": "Required when passing telemetry adapters or running the local telemetry demo."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Utopia\\CircuitBreaker\\": "src/CircuitBreaker"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Team Appwrite",
+                    "email": "team@appwrite.io"
+                }
+            ],
+            "description": "Light & simple Circuit Breaker for PHP to prevent cascading failures in distributed systems.",
+            "keywords": [
+                "circuit-breaker",
+                "fault-tolerance",
+                "framework",
+                "php",
+                "resilience",
+                "upf",
+                "utopia"
+            ],
+            "support": {
+                "issues": "https://github.com/utopia-php/circuit-breaker/issues",
+                "source": "https://github.com/utopia-php/circuit-breaker/tree/0.3.0"
+            },
+            "time": "2026-05-12T04:27:08+00:00"
         },
         {
             "name": "utopia-php/pools",
@@ -5419,15 +5481,15 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
-        "php": ">=8.0",
+        "php": ">=8.2",
         "ext-json": "*",
         "ext-redis": "*",
         "ext-memcached": "*"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.6.0"
+    "plugin-api-version": "2.9.0"
 }
