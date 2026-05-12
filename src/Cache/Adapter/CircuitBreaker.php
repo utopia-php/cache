@@ -15,21 +15,32 @@ class CircuitBreaker implements Adapter, TelemetryAware
     ) {
     }
 
-    public function load(string $key, int $ttl, string $hash = ''): mixed
+    /**
+     * Forward method calls to the internal adapter through the circuit breaker.
+     *
+     * Required because __call() can't be used to implement abstract methods.
+     *
+     * @param  string  $method
+     * @param  array<mixed>  $args
+     * @return mixed
+     */
+    public function delegate(string $method, array $args, mixed $fallback): mixed
     {
         return $this->breaker->call(
-            open: fn (): bool => false,
-            close: fn (): mixed => $this->adapter->load($key, $ttl, $hash),
+            open: fn (): mixed => $fallback,
+            close: fn (): mixed => $this->adapter->{$method}(...$args),
         );
+    }
+
+    public function load(string $key, int $ttl, string $hash = ''): mixed
+    {
+        return $this->delegate(__FUNCTION__, \func_get_args(), false);
     }
 
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
         /** @var bool|string|array<int|string, mixed> $result */
-        $result = $this->breaker->call(
-            open: fn (): bool => false,
-            close: fn (): bool|string|array => $this->adapter->save($key, $data, $hash),
-        );
+        $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
 
         return $result;
     }
@@ -37,10 +48,7 @@ class CircuitBreaker implements Adapter, TelemetryAware
     public function touch(string $key, string $hash = ''): bool
     {
         /** @var bool $result */
-        $result = $this->breaker->call(
-            open: fn (): bool => false,
-            close: fn (): bool => $this->adapter->touch($key, $hash),
-        );
+        $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
 
         return $result;
     }
@@ -48,10 +56,7 @@ class CircuitBreaker implements Adapter, TelemetryAware
     public function list(string $key): array
     {
         /** @var string[] $result */
-        $result = $this->breaker->call(
-            open: fn (): array => [],
-            close: fn (): array => $this->adapter->list($key),
-        );
+        $result = $this->delegate(__FUNCTION__, \func_get_args(), []);
 
         return $result;
     }
@@ -59,10 +64,7 @@ class CircuitBreaker implements Adapter, TelemetryAware
     public function purge(string $key, string $hash = ''): bool
     {
         /** @var bool $result */
-        $result = $this->breaker->call(
-            open: fn (): bool => false,
-            close: fn (): bool => $this->adapter->purge($key, $hash),
-        );
+        $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
 
         return $result;
     }
@@ -70,10 +72,7 @@ class CircuitBreaker implements Adapter, TelemetryAware
     public function flush(): bool
     {
         /** @var bool $result */
-        $result = $this->breaker->call(
-            open: fn (): bool => false,
-            close: fn (): bool => $this->adapter->flush(),
-        );
+        $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
 
         return $result;
     }
@@ -81,10 +80,7 @@ class CircuitBreaker implements Adapter, TelemetryAware
     public function ping(): bool
     {
         /** @var bool $result */
-        $result = $this->breaker->call(
-            open: fn (): bool => false,
-            close: fn (): bool => $this->adapter->ping(),
-        );
+        $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
 
         return $result;
     }
@@ -92,10 +88,7 @@ class CircuitBreaker implements Adapter, TelemetryAware
     public function getSize(): int
     {
         /** @var int $result */
-        $result = $this->breaker->call(
-            open: fn (): int => 0,
-            close: fn (): int => $this->adapter->getSize(),
-        );
+        $result = $this->delegate(__FUNCTION__, \func_get_args(), 0);
 
         return $result;
     }
