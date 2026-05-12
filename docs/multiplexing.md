@@ -32,7 +32,7 @@ composer require utopia-php/cache
 
 The adapter requires:
 
-- PHP 8.4+
+- PHP 8.3+
 - The Swoole extension (with coroutine support)
 - A reachable Redis server
 

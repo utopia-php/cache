@@ -17,7 +17,7 @@
         "psr-4": {"Utopia\\Tests\\": "tests/Cache"}
     },
     "require": {
-        "php": ">=8.4",
+        "php": ">=8.3",
         "ext-json": "*",
         "ext-memcached": "*",
         "ext-redis": "*",
