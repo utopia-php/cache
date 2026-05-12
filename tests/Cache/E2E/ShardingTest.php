@@ -1,6 +1,6 @@
 <?php
 
-namespace Utopia\Tests;
+namespace Utopia\Tests\E2E;
 
 use Redis as Redis;
 use Throwable;

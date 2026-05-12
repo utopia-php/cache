@@ -1,6 +1,6 @@
 <?php
 
-namespace Utopia\Tests;
+namespace Utopia\Tests\E2E;
 
 use Utopia\Cache\Adapter\None;
 use Utopia\Cache\Cache;

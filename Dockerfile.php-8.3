@@ -1,4 +1,4 @@
-FROM composer:2.0 as step0
+FROM composer:2.7 as step0
 
 ARG TESTING=false
 ENV TESTING=$TESTING
@@ -10,10 +10,10 @@ COPY composer.json /usr/local/src/
 
 RUN composer update --ignore-platform-reqs --optimize-autoloader \
     --no-plugins --no-scripts --prefer-dist
-    
-FROM appwrite/utopia-base:php-8.3-0.1.2 as final
 
-ENV PHP_MEMCACHED_VERSION=v3.2.0
+FROM appwrite/utopia-base:php-8.3-2.0.0 as final
+
+ENV PHP_MEMCACHED_VERSION=v3.4.0
 
 LABEL maintainer="team@appwrite.io"
 
@@ -23,10 +23,6 @@ RUN \
   apk update \
   && apk add --no-cache make automake autoconf g++ gcc zlib-dev libmemcached-dev docker-cli \
   && rm -rf /var/cache/apk/*
-    
-
-RUN echo extension=redis.so >> /usr/local/etc/php/conf.d/redis.ini
-
 
 RUN \
   # Memcached Extension
@@ -41,7 +37,6 @@ RUN echo extension=memcached.so >> /usr/local/etc/php/conf.d/memcached.ini
 
 WORKDIR /usr/src/code
 
-# Add Source Code
 COPY ./ /usr/src/code
 
 COPY --from=step0 /usr/local/src/vendor /usr/src/code/vendor

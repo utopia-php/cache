@@ -6,6 +6,7 @@ use Exception;
 use Redis as Client;
 use Throwable;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Adapter\Redis\Envelope;
 
 class Redis implements Adapter
 {
@@ -57,8 +58,9 @@ class Redis implements Adapter
         $this->persistent = $this->persistentId !== null;
         $this->dbIndex = $redis->getDbNum();
 
-        if (! empty($redis->getAuth())) {
-            $this->auth = $redis->getAuth();
+        $auth = $redis->getAuth();
+        if ($auth !== null && $auth !== false) {
+            $this->auth = $auth;
         }
 
         $this->redis = $redis;
@@ -100,22 +102,11 @@ class Redis implements Adapter
 
         $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
 
-        if ($redis_string === false || $redis_string === null) {
+        if (! is_string($redis_string)) {
             return false;
         }
 
-        if (gettype($redis_string) !== 'string') {
-            return false;
-        }
-
-        /** @var array{time: int, data: string} */
-        $cache = json_decode($redis_string, true);
-
-        if ($cache['time'] + $ttl > time()) { // Cache is valid
-            return $cache['data'];
-        }
-
-        return false;
+        return Envelope::decode($redis_string, $ttl, time());
     }
 
     /**
@@ -135,15 +126,7 @@ class Redis implements Adapter
         }
 
         try {
-            $value = json_encode([
-                'time' => \time(),
-                'data' => $data,
-            ], flags: JSON_THROW_ON_ERROR);
-        } catch (Throwable $th) {
-            return false;
-        }
-
-        try {
+            $value = Envelope::encode($data, time());
             $this->execute(fn () => $this->redis->hSet($key, $hash, $value));
 
             return $data;
@@ -165,16 +148,12 @@ class Redis implements Adapter
 
         $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
 
-        if ($redis_string === false || $redis_string === null || ! is_string($redis_string)) {
+        if (! is_string($redis_string)) {
             return false;
         }
 
-        try {
-            /** @var array{time: int, data: mixed} $cache */
-            $cache = json_decode($redis_string, true, flags: JSON_THROW_ON_ERROR);
-            $cache['time'] = time();
-            $value = json_encode($cache, flags: JSON_THROW_ON_ERROR);
-        } catch (Throwable $th) {
+        $value = Envelope::touch($redis_string, time());
+        if ($value === false) {
             return false;
         }
 
@@ -360,7 +339,7 @@ class Redis implements Adapter
             );
         }
 
-        if (! empty($this->auth)) {
+        if ($this->auth !== null) {
             $newRedis->auth($this->auth);
         }
 

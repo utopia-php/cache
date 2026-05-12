@@ -9,14 +9,11 @@
          stopOnFailure="false"
         >
     <testsuites>
-        <testsuite name="Application Test Suite">
-            <file>./tests/Cache/FilesystemTest.php</file>
-            <file>./tests/Cache/MemoryTest.php</file>
-            <file>./tests/Cache/NoneTest.php</file>
-            <file>./tests/Cache/RedisTest.php</file>
-            <file>./tests/Cache/ShardingTest.php</file>
-            <file>./tests/Cache/HazelcastTest.php</file>
-            <file>./tests/Cache/MemcachedTest.php</file>
+        <testsuite name="unit">
+            <directory>./tests/Cache/Unit</directory>
+        </testsuite>
+        <testsuite name="e2e">
+            <directory>./tests/Cache/E2E</directory>
         </testsuite>
     </testsuites>
 </phpunit>
