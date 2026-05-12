@@ -9,7 +9,7 @@ use Utopia\Cache\Adapter\CircuitBreaker;
 use Utopia\Cache\Adapter\Memory;
 use Utopia\Cache\Adapter\Sharding;
 use Utopia\Cache\Cache;
-use Utopia\Cache\TelemetryAware;
+use Utopia\Cache\Feature;
 use Utopia\CircuitBreaker\CircuitBreaker as UtopiaCircuitBreaker;
 use Utopia\Telemetry\Adapter as Telemetry;
 use Utopia\Telemetry\Adapter\Test as TestTelemetry;
@@ -68,7 +68,7 @@ class CircuitBreakerTest extends TestCase
     public function test_telemetry_propagates_to_inner_adapter(): void
     {
         $telemetry = new TestTelemetry();
-        $adapter = new class extends Memory implements TelemetryAware
+        $adapter = new class extends Memory implements Feature\Telemetry
         {
             public ?Telemetry $telemetry = null;
 

@@ -3,11 +3,11 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
-use Utopia\Cache\TelemetryAware;
+use Utopia\Cache\Feature;
 use Utopia\CircuitBreaker\CircuitBreaker as UtopiaCircuitBreaker;
 use Utopia\Telemetry\Adapter as Telemetry;
 
-class CircuitBreaker implements Adapter, TelemetryAware
+class CircuitBreaker implements Adapter, Feature\Telemetry
 {
     public function __construct(
         private readonly Adapter $adapter,
@@ -106,7 +106,7 @@ class CircuitBreaker implements Adapter, TelemetryAware
     {
         $this->breaker->setTelemetry($telemetry);
 
-        if ($this->adapter instanceof TelemetryAware) {
+        if ($this->adapter instanceof Feature\Telemetry) {
             $this->adapter->setTelemetry($telemetry);
         }
     }
