@@ -17,7 +17,7 @@
         "psr-4": {"Utopia\\Tests\\": "tests/Cache"}
     },
     "require": {
-        "php": ">=8.2",
+        "php": ">=8.4",
         "ext-json": "*",
         "ext-memcached": "*",
         "ext-redis": "*",
@@ -29,6 +29,7 @@
         "laravel/pint": "1.2.*",
         "phpstan/phpstan": "^1.12",
         "phpunit/phpunit": "^9.3",
+        "swoole/ide-helper": "^6.0",
         "vimeo/psalm": "4.13.1"
     },
     "config": {
