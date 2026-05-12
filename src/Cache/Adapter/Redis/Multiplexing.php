@@ -56,8 +56,11 @@ class Multiplexing implements Adapter, TelemetryFeature
         private string|array|null $auth = null,
         private int $dbIndex = 0,
     ) {
+        if ($this->timeout <= 0) {
+            throw new \InvalidArgumentException('timeout must be greater than 0');
+        }
         if ($this->readTimeout <= 0) {
-            $this->readTimeout = 0.25;
+            throw new \InvalidArgumentException('readTimeout must be greater than 0');
         }
         $this->sendLock = new Lock();
         $this->setTelemetry(new NoTelemetry());
