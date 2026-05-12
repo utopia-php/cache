@@ -46,7 +46,7 @@ Construct once at worker start, share across requests, `disconnect()` on
 new Multiplexing(
     host:        'redis',
     port:        6379,
-    timeout:     0.0,    // connect timeout (s; 0 = ~1s)
+    timeout:     1.0,    // connect timeout (s)
     readTimeout: 0.25,   // per-command response timeout (s)
     auth:        null,   // string password, [user, password], or null
     dbIndex:     0,

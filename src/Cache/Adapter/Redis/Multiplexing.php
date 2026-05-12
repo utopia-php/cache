@@ -51,7 +51,7 @@ class Multiplexing implements Adapter, TelemetryFeature
     public function __construct(
         private string $host,
         private int $port = 6379,
-        private float $timeout = 0.0,
+        private float $timeout = 1.0,
         private float $readTimeout = 0.25,
         private string|array|null $auth = null,
         private int $dbIndex = 0,

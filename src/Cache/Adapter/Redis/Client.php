@@ -32,7 +32,7 @@ class Client
             'open_tcp_nodelay' => true,
         ]);
 
-        if (! $this->client->connect($host, $port, $timeout > 0 ? $timeout : 1.0)) {
+        if (! $this->client->connect($host, $port, $timeout)) {
             $errMsg = $this->client->errMsg;
             $this->close();
 
