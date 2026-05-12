@@ -3,10 +3,8 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
-use Utopia\Cache\TelemetryAware;
-use Utopia\Telemetry\Adapter as Telemetry;
 
-class Sharding implements Adapter, TelemetryAware
+class Sharding implements Adapter
 {
     /**
      * @var Adapter[]
@@ -70,15 +68,6 @@ class Sharding implements Adapter, TelemetryAware
         }
 
         return $this;
-    }
-
-    public function setTelemetry(Telemetry $telemetry): void
-    {
-        foreach ($this->adapters as $adapter) {
-            if ($adapter instanceof TelemetryAware) {
-                $adapter->setTelemetry($telemetry);
-            }
-        }
     }
 
     /**

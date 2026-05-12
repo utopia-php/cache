@@ -84,7 +84,7 @@ class CircuitBreakerTest extends TestCase
         $this->assertSame($telemetry, $adapter->telemetry);
     }
 
-    public function test_cache_telemetry_propagates_to_circuit_breaker_adapters(): void
+    public function test_cache_telemetry_does_not_propagate_through_sharding(): void
     {
         $telemetry = new TestTelemetry();
         $cache = new Cache(new Sharding([
@@ -94,11 +94,9 @@ class CircuitBreakerTest extends TestCase
         $cache->setTelemetry($telemetry);
 
         $this->assertSame('value', $cache->save('key', 'value'));
-        /** @var object{values: list<int|float>} $calls */
-        $calls = $telemetry->counters['breaker.calls'];
         /** @var object{values: list<int|float>} $operationDuration */
         $operationDuration = $telemetry->histograms['cache.operation.duration'];
-        $this->assertSame([1], $calls->values);
+        $this->assertArrayNotHasKey('breaker.calls', $telemetry->counters);
         $this->assertCount(1, $operationDuration->values);
     }
 
