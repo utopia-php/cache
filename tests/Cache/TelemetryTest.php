@@ -11,7 +11,7 @@ use Utopia\Telemetry\Adapter\None;
 
 class TelemetryTest extends TestCase
 {
-    public function test_cache_propagates_telemetry_to_adapter(): void
+    public function testCachePropagatesTelemetryToAdapter(): void
     {
         $adapter = new class extends Memory implements Feature\Telemetry
         {
