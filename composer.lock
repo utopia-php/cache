@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "98407f18aba0717c2718b0ca54cf8fe8",
+    "content-hash": "acd3850b4ddd76841507a3a77c7192c7",
     "packages": [
         {
             "name": "brick/math",
@@ -1869,16 +1869,16 @@
         },
         {
             "name": "utopia-php/circuit-breaker",
-            "version": "0.1.0",
+            "version": "0.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/utopia-php/circuit-breaker.git",
-                "reference": "a1647f71b95aa55b137d9667b316e3dffba60d2d"
+                "reference": "064243c1667778c00abf027ff53a735a228776de"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/utopia-php/circuit-breaker/zipball/a1647f71b95aa55b137d9667b316e3dffba60d2d",
-                "reference": "a1647f71b95aa55b137d9667b316e3dffba60d2d",
+                "url": "https://api.github.com/repos/utopia-php/circuit-breaker/zipball/064243c1667778c00abf027ff53a735a228776de",
+                "reference": "064243c1667778c00abf027ff53a735a228776de",
                 "shasum": ""
             },
             "require": {
@@ -1925,9 +1925,9 @@
             ],
             "support": {
                 "issues": "https://github.com/utopia-php/circuit-breaker/issues",
-                "source": "https://github.com/utopia-php/circuit-breaker/tree/0.1.0"
+                "source": "https://github.com/utopia-php/circuit-breaker/tree/0.3.0"
             },
-            "time": "2026-04-22T06:36:27+00:00"
+            "time": "2026-05-12T04:27:08+00:00"
         },
         {
             "name": "utopia-php/pools",
