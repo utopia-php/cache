@@ -128,5 +128,4 @@ class Pool implements Adapter
 
         return $result;
     }
-
 }

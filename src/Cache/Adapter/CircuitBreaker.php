@@ -110,5 +110,4 @@ class CircuitBreaker implements Adapter, Feature\Telemetry
             $this->adapter->setTelemetry($telemetry);
         }
     }
-
 }
