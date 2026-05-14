@@ -111,27 +111,4 @@ class CircuitBreaker implements Adapter, Feature\Telemetry
         }
     }
 
-    public function setMaxRetries(int $maxRetries): self
-    {
-        $this->adapter->setMaxRetries($maxRetries);
-
-        return $this;
-    }
-
-    public function setRetryDelay(int $retryDelay): self
-    {
-        $this->adapter->setRetryDelay($retryDelay);
-
-        return $this;
-    }
-
-    public function getMaxRetries(): int
-    {
-        return $this->adapter->getMaxRetries();
-    }
-
-    public function getRetryDelay(): int
-    {
-        return $this->adapter->getRetryDelay();
-    }
 }

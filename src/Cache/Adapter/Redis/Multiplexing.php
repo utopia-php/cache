@@ -25,10 +25,6 @@ use Utopia\Telemetry\Gauge;
  */
 class Multiplexing implements Adapter, TelemetryFeature
 {
-    private int $maxRetries = 0;
-
-    private int $retryDelay = 1000; // milliseconds
-
     private ?ConnectionContext $connection = null;
 
     /**
@@ -96,30 +92,6 @@ class Multiplexing implements Adapter, TelemetryFeature
         $this->shutdown();
     }
 
-    public function setMaxRetries(int $maxRetries): self
-    {
-        $this->maxRetries = max(self::MIN_RETRIES, min($maxRetries, self::MAX_RETRIES));
-
-        return $this;
-    }
-
-    public function setRetryDelay(int $retryDelay): self
-    {
-        $this->retryDelay = $retryDelay;
-
-        return $this;
-    }
-
-    public function getMaxRetries(): int
-    {
-        return $this->maxRetries;
-    }
-
-    public function getRetryDelay(): int
-    {
-        return $this->retryDelay;
-    }
-
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
         if (empty($hash)) {
@@ -145,14 +117,10 @@ class Multiplexing implements Adapter, TelemetryFeature
             $hash = $key;
         }
 
-        try {
-            $value = Envelope::encode($data, time());
-            $this->command(['HSET', $key, $hash, $value]);
+        $value = Envelope::encode($data, time());
+        $this->command(['HSET', $key, $hash, $value]);
 
-            return $data;
-        } catch (Throwable $th) {
-            return false;
-        }
+        return $data;
     }
 
     public function touch(string $key, string $hash = ''): bool
@@ -225,36 +193,21 @@ class Multiplexing implements Adapter, TelemetryFeature
 
     /**
      * Send a Redis command and block the calling coroutine until the response arrives.
+     * On a connection error, transparently reconnects once and retries — multiplexed
+     * connections drop all in-flight callers when they fail, so the only sensible
+     * recovery is to rebuild the connection before failing the call.
      *
      * @param  array<int|string>  $args
      */
     private function command(array $args): mixed
     {
-        $attempts = 0;
-        $maxAttempts = 1 + $this->maxRetries;
+        try {
+            return $this->dispatch($args);
+        } catch (ConnectionException $th) {
+            $this->ensureConnected();
 
-        while (true) {
-            try {
-                return $this->dispatch($args);
-            } catch (ConnectionException $th) {
-                if (++$attempts >= $maxAttempts) {
-                    throw $th;
-                }
-
-                Coroutine::sleep($this->retryDelaySeconds());
-                $this->ensureConnected();
-            }
+            return $this->dispatch($args);
         }
-    }
-
-    private function retryDelaySeconds(): float
-    {
-        $baseDelay = max(0, $this->retryDelay) / 1000;
-        if ($baseDelay === 0.0) {
-            return 0.0;
-        }
-
-        return $baseDelay + mt_rand(0, 100) / 1000;
     }
 
     /**
@@ -294,6 +247,18 @@ class Multiplexing implements Adapter, TelemetryFeature
         return $this->awaitResponse($context, $response);
     }
 
+    private function ensureConnected(): void
+    {
+        $locked = $this->lockSend();
+        try {
+            if ($this->connection === null) {
+                $this->connect();
+            }
+        } finally {
+            $this->unlockSend($locked);
+        }
+    }
+
     /**
      * @param  Channel<mixed>  $response
      */
@@ -308,18 +273,6 @@ class Multiplexing implements Adapter, TelemetryFeature
         }
 
         return Client::unwrap($result);
-    }
-
-    private function ensureConnected(): void
-    {
-        $locked = $this->lockSend();
-        try {
-            if ($this->connection === null) {
-                $this->connect();
-            }
-        } finally {
-            $this->unlockSend($locked);
-        }
     }
 
     /**

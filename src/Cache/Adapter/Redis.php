@@ -7,8 +7,9 @@ use Redis as Client;
 use Throwable;
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Adapter\Redis\Envelope;
+use Utopia\Cache\Feature\Retryable;
 
-class Redis implements Adapter
+class Redis implements Adapter, Retryable
 {
     /**
      * @var Client
@@ -72,7 +73,7 @@ class Redis implements Adapter
      */
     public function setMaxRetries(int $maxRetries): self
     {
-        $this->maxRetries = max(self::MIN_RETRIES, min($maxRetries, self::MAX_RETRIES));
+        $this->maxRetries = max(Retryable::MIN_RETRIES, min($maxRetries, Retryable::MAX_RETRIES));
 
         return $this;
     }
