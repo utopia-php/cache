@@ -4,8 +4,9 @@ namespace Utopia\Cache\Adapter;
 
 use Memcached as Client;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\Retryable;
 
-class Hazelcast implements Adapter
+class Hazelcast implements Adapter, Retryable
 {
     /**
      * @var Client
@@ -27,7 +28,7 @@ class Hazelcast implements Adapter
      */
     public function setMaxRetries(int $maxRetries): self
     {
-        $this->maxRetries = max(self::MIN_RETRIES, min($maxRetries, self::MAX_RETRIES));
+        $this->maxRetries = max(Retryable::MIN_RETRIES, min($maxRetries, Retryable::MAX_RETRIES));
 
         return $this;
     }

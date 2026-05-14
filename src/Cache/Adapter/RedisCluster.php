@@ -6,8 +6,9 @@ use Exception;
 use RedisCluster as Client;
 use Throwable;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\Retryable;
 
-class RedisCluster implements Adapter
+class RedisCluster implements Adapter, Retryable
 {
     /**
      * @var Client
@@ -72,7 +73,7 @@ class RedisCluster implements Adapter
      */
     public function setMaxRetries(int $maxRetries): self
     {
-        $this->maxRetries = max(self::MIN_RETRIES, min($maxRetries, self::MAX_RETRIES));
+        $this->maxRetries = max(Retryable::MIN_RETRIES, min($maxRetries, Retryable::MAX_RETRIES));
 
         return $this;
     }

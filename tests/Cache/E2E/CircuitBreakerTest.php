@@ -152,26 +152,6 @@ class FailingAdapter implements Adapter
     {
         return 'failing';
     }
-
-    public function setMaxRetries(int $maxRetries): self
-    {
-        return $this;
-    }
-
-    public function setRetryDelay(int $retryDelay): self
-    {
-        return $this;
-    }
-
-    public function getMaxRetries(): int
-    {
-        return 0;
-    }
-
-    public function getRetryDelay(): int
-    {
-        return 0;
-    }
 }
 
 class CountingFailingAdapter extends FailingAdapter
