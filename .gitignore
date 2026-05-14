@@ -1,4 +1,4 @@
 /vendor/
 /.idea/
 .phpunit.result.cache
-tests/data
+tests/data.DS_Store
