@@ -33,6 +33,8 @@ class Multiplexing implements Adapter, TelemetryFeature
      */
     private Lock $sendLock;
 
+    private Telemetry $telemetry;
+
     private ?UpDownCounter $pendingDepth = null;
 
     /**
@@ -77,7 +79,13 @@ class Multiplexing implements Adapter, TelemetryFeature
      */
     public function setTelemetry(Telemetry $telemetry): void
     {
-        $this->pendingDepth = $telemetry->createUpDownCounter(
+        $this->telemetry = $telemetry;
+        $this->pendingDepth = null;
+    }
+
+    private function getPendingDepth(): UpDownCounter
+    {
+        return $this->pendingDepth ??= $this->telemetry->createUpDownCounter(
             'cache.redis_multiplexing.pending.depth',
             description: 'Pending response channels awaiting RESP frames on the multiplexed connection.',
         );
@@ -228,7 +236,7 @@ class Multiplexing implements Adapter, TelemetryFeature
             $error = null;
 
             $context->pending->enqueue($response);
-            $this->pendingDepth?->add(1);
+            $this->getPendingDepth()->add(1);
             try {
                 $context->client->send(Client::encode($args));
             } catch (ConnectionException $sendError) {
@@ -340,7 +348,7 @@ class Multiplexing implements Adapter, TelemetryFeature
         while (! $context->pending->isEmpty()) {
             $ch = $context->pending->dequeue();
             if ($ch instanceof Channel) {
-                $this->pendingDepth?->add(-1);
+                $this->getPendingDepth()->add(-1);
                 $ch->push(new ConnectionError($error));
             }
         }
@@ -412,7 +420,7 @@ class Multiplexing implements Adapter, TelemetryFeature
                 // A complete frame implies a prior pending enqueue.
                 $waiting = $context->pending->isEmpty() ? null : $context->pending->dequeue();
                 if ($waiting instanceof Channel) {
-                    $this->pendingDepth?->add(-1);
+                    $this->getPendingDepth()->add(-1);
                     $waiting->push($value);
                 } else {
                     // Should never happen given the send-lock invariant. Log
