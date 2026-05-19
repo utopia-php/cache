@@ -21,6 +21,7 @@ class LoadResultsTelemetryTest extends TestCase
         $cache->load('present', 60);
 
         $this->assertArrayHasKey('cache.load.total', $telemetry->counters);
+        /** @phpstan-ignore-next-line property.notFound */
         $this->assertCount(3, $telemetry->counters['cache.load.total']->values);
     }
 
@@ -29,11 +30,14 @@ class LoadResultsTelemetryTest extends TestCase
         $captured = [];
 
         $cache = new Cache(new Memory());
-        $telemetry = new class ($captured) extends TestTelemetry {
+        $telemetry = new class($captured) extends TestTelemetry
+        {
             /**
              * @param  array<int, array<string, mixed>>  $captured
              */
-            public function __construct(public array &$captured) {}
+            public function __construct(public array &$captured)
+            {
+            }
 
             public function createCounter(string $name, ?string $unit = null, ?string $description = null, array $advisory = []): \Utopia\Telemetry\Counter
             {
@@ -41,11 +45,15 @@ class LoadResultsTelemetryTest extends TestCase
                     return parent::createCounter($name, $unit, $description, $advisory);
                 }
                 $captured = &$this->captured;
-                return $this->counters[$name] = new class ($captured) extends \Utopia\Telemetry\Counter {
+
+                return $this->counters[$name] = new class($captured) extends \Utopia\Telemetry\Counter
+                {
                     /**
                      * @param  array<int, array<string, mixed>>  $captured
                      */
-                    public function __construct(public array &$captured) {}
+                    public function __construct(public array &$captured)
+                    {
+                    }
 
                     public function add(float|int $amount, iterable $attributes = []): void
                     {
@@ -68,7 +76,8 @@ class LoadResultsTelemetryTest extends TestCase
     {
         $captured = [];
 
-        $adapter = new class extends Memory {
+        $adapter = new class extends Memory
+        {
             public function load(string $key, int $ttl, string $hash = ''): mixed
             {
                 return null;
@@ -76,11 +85,14 @@ class LoadResultsTelemetryTest extends TestCase
         };
 
         $cache = new Cache($adapter);
-        $telemetry = new class ($captured) extends TestTelemetry {
+        $telemetry = new class($captured) extends TestTelemetry
+        {
             /**
              * @param  array<int, array<string, mixed>>  $captured
              */
-            public function __construct(public array &$captured) {}
+            public function __construct(public array &$captured)
+            {
+            }
 
             public function createCounter(string $name, ?string $unit = null, ?string $description = null, array $advisory = []): \Utopia\Telemetry\Counter
             {
@@ -88,11 +100,15 @@ class LoadResultsTelemetryTest extends TestCase
                     return parent::createCounter($name, $unit, $description, $advisory);
                 }
                 $captured = &$this->captured;
-                return $this->counters[$name] = new class ($captured) extends \Utopia\Telemetry\Counter {
+
+                return $this->counters[$name] = new class($captured) extends \Utopia\Telemetry\Counter
+                {
                     /**
                      * @param  array<int, array<string, mixed>>  $captured
                      */
-                    public function __construct(public array &$captured) {}
+                    public function __construct(public array &$captured)
+                    {
+                    }
 
                     public function add(float|int $amount, iterable $attributes = []): void
                     {
