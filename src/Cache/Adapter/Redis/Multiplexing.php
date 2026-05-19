@@ -11,7 +11,7 @@ use Utopia\Cache\Adapter;
 use Utopia\Cache\Feature\Telemetry as TelemetryFeature;
 use Utopia\Telemetry\Adapter as Telemetry;
 use Utopia\Telemetry\Adapter\None as NoTelemetry;
-use Utopia\Telemetry\Gauge;
+use Utopia\Telemetry\UpDownCounter;
 
 /**
  * Redis\Multiplexing adapter.
@@ -33,7 +33,7 @@ class Multiplexing implements Adapter, TelemetryFeature
      */
     private Lock $sendLock;
 
-    private ?Gauge $pendingDepth = null;
+    private ?UpDownCounter $pendingDepth = null;
 
     /**
      * @param  string  $host
@@ -70,14 +70,14 @@ class Multiplexing implements Adapter, TelemetryFeature
     }
 
     /**
-     * Wire a telemetry adapter for connection-level metrics. The current
-     * pending-queue depth is recorded after each enqueue — a steady-state
-     * non-zero value means callers are queueing faster than Redis is
-     * replying.
+     * Wire a telemetry adapter for connection-level metrics. The pending-queue
+     * depth is tracked as an up/down counter — incremented on enqueue and
+     * decremented on dequeue — so a steady-state non-zero value means callers
+     * are queueing faster than Redis is replying.
      */
     public function setTelemetry(Telemetry $telemetry): void
     {
-        $this->pendingDepth = $telemetry->createGauge(
+        $this->pendingDepth = $telemetry->createUpDownCounter(
             'cache.redis_multiplexing.pending.depth',
             description: 'Pending response channels awaiting RESP frames on the multiplexed connection.',
         );
@@ -228,7 +228,7 @@ class Multiplexing implements Adapter, TelemetryFeature
             $error = null;
 
             $context->pending->enqueue($response);
-            $this->pendingDepth?->record($context->pending->count());
+            $this->pendingDepth?->add(1);
             try {
                 $context->client->send(Client::encode($args));
             } catch (ConnectionException $sendError) {
@@ -340,6 +340,7 @@ class Multiplexing implements Adapter, TelemetryFeature
         while (! $context->pending->isEmpty()) {
             $ch = $context->pending->dequeue();
             if ($ch instanceof Channel) {
+                $this->pendingDepth?->add(-1);
                 $ch->push(new ConnectionError($error));
             }
         }
@@ -411,6 +412,7 @@ class Multiplexing implements Adapter, TelemetryFeature
                 // A complete frame implies a prior pending enqueue.
                 $waiting = $context->pending->isEmpty() ? null : $context->pending->dequeue();
                 if ($waiting instanceof Channel) {
+                    $this->pendingDepth?->add(-1);
                     $waiting->push($value);
                 } else {
                     // Should never happen given the send-lock invariant. Log
