@@ -16,6 +16,8 @@ class Cache
      */
     public bool $caseSensitive = false;
 
+    protected Telemetry $telemetry;
+
     /**
      * @var Histogram|null
      */
@@ -27,27 +29,39 @@ class Cache
     protected ?Counter $loadResults = null;
 
     /**
-     * Set telemetry adapter and create histograms for cache operations.
+     * Set telemetry adapter. Instruments are created lazily on first use to
+     * avoid emitting empty data point streams on every export interval.
      *
      * @param  Telemetry  $telemetry
      */
     public function setTelemetry(Telemetry $telemetry): void
     {
-        $this->operationDuration = $telemetry->createHistogram(
+        $this->telemetry = $telemetry;
+        $this->operationDuration = null;
+        $this->loadResults = null;
+
+        if ($this->adapter instanceof Feature\Telemetry) {
+            $this->adapter->setTelemetry($telemetry);
+        }
+    }
+
+    private function getOperationDuration(): Histogram
+    {
+        return $this->operationDuration ??= $this->telemetry->createHistogram(
             'cache.operation.duration',
             's',
             null,
             ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
         );
-        $this->loadResults = $telemetry->createCounter(
+    }
+
+    private function getLoadResults(): Counter
+    {
+        return $this->loadResults ??= $this->telemetry->createCounter(
             'cache.load.total',
             null,
             'Cache load operations broken down by hit/miss result.',
         );
-
-        if ($this->adapter instanceof Feature\Telemetry) {
-            $this->adapter->setTelemetry($telemetry);
-        }
     }
 
     /**
@@ -58,7 +72,7 @@ class Cache
     public function __construct(Adapter $adapter)
     {
         $this->adapter = $adapter;
-        $this->setTelemetry(new NoTelemetry());
+        $this->telemetry = new NoTelemetry();
     }
 
     /**
@@ -89,11 +103,11 @@ class Cache
         $result = $this->adapter->load($key, $ttl, $hash);
         $duration = microtime(true) - $start;
         $adapterName = $this->adapter->getName($key);
-        $this->operationDuration?->record($duration, [
+        $this->getOperationDuration()->record($duration, [
             'operation' => 'load',
             'adapter' => $adapterName,
         ]);
-        $this->loadResults?->add(1, [
+        $this->getLoadResults()->add(1, [
             'adapter' => $adapterName,
             'result' => $result === false ? 'miss' : 'hit',
         ]);
@@ -119,7 +133,7 @@ class Cache
             return $this->adapter->save($key, $data, $hash);
         } finally {
             $duration = microtime(true) - $start;
-            $this->operationDuration?->record($duration, [
+            $this->getOperationDuration()->record($duration, [
                 'operation' => 'save',
                 'adapter' => $this->adapter->getName($key),
             ]);
@@ -141,7 +155,7 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->touch($key, $hash);
         $duration = microtime(true) - $start;
-        $this->operationDuration?->record($duration, [
+        $this->getOperationDuration()->record($duration, [
             'operation' => 'touch',
             'adapter' => $this->adapter->getName($key),
         ]);
@@ -162,7 +176,7 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->list($key);
         $duration = microtime(true) - $start;
-        $this->operationDuration?->record($duration, [
+        $this->getOperationDuration()->record($duration, [
             'operation' => 'list',
             'adapter' => $this->adapter->getName($key),
         ]);
@@ -185,7 +199,7 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->purge($key, $hash);
         $duration = microtime(true) - $start;
-        $this->operationDuration?->record($duration, [
+        $this->getOperationDuration()->record($duration, [
             'operation' => 'purge',
             'adapter' => $this->adapter->getName($key),
         ]);
@@ -203,7 +217,7 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->flush();
         $duration = microtime(true) - $start;
-        $this->operationDuration?->record($duration, [
+        $this->getOperationDuration()->record($duration, [
             'operation' => 'flush',
             'adapter' => $this->adapter->getName(),
         ]);
@@ -231,7 +245,7 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->getSize();
         $duration = microtime(true) - $start;
-        $this->operationDuration?->record($duration, [
+        $this->getOperationDuration()->record($duration, [
             'operation' => 'size',
             'adapter' => $this->adapter->getName(),
         ]);

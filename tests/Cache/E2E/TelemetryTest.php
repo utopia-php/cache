@@ -32,6 +32,6 @@ class TelemetryTest extends TestCase
         $cache->setTelemetry($telemetry);
 
         $this->assertSame($telemetry, $adapter->telemetry);
-        $this->assertEquals(2, $adapter->calls);
+        $this->assertEquals(1, $adapter->calls);
     }
 }
