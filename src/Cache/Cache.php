@@ -4,6 +4,7 @@ namespace Utopia\Cache;
 
 use Utopia\Telemetry\Adapter as Telemetry;
 use Utopia\Telemetry\Adapter\None as NoTelemetry;
+use Utopia\Telemetry\Counter;
 use Utopia\Telemetry\Histogram;
 
 class Cache
@@ -21,6 +22,11 @@ class Cache
     protected ?Histogram $operationDuration = null;
 
     /**
+     * @var Counter|null
+     */
+    protected ?Counter $loadResults = null;
+
+    /**
      * Set telemetry adapter and create histograms for cache operations.
      *
      * @param  Telemetry  $telemetry
@@ -32,6 +38,11 @@ class Cache
             's',
             null,
             ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
+        );
+        $this->loadResults = $telemetry->createCounter(
+            'cache.load.total',
+            null,
+            'Cache load operations broken down by hit/miss result.',
         );
 
         if ($this->adapter instanceof Feature\Telemetry) {
@@ -77,9 +88,14 @@ class Cache
         $start = microtime(true);
         $result = $this->adapter->load($key, $ttl, $hash);
         $duration = microtime(true) - $start;
+        $adapterName = $this->adapter->getName($key);
         $this->operationDuration?->record($duration, [
             'operation' => 'load',
-            'adapter' => $this->adapter->getName($key),
+            'adapter' => $adapterName,
+        ]);
+        $this->loadResults?->add(1, [
+            'adapter' => $adapterName,
+            'result' => $result === false ? 'miss' : 'hit',
         ]);
 
         return $result;
