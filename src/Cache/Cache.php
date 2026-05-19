@@ -95,7 +95,7 @@ class Cache
         ]);
         $this->loadResults?->add(1, [
             'adapter' => $adapterName,
-            'result' => $result ? 'hit' : 'miss',
+            'result' => $result === false ? 'miss' : 'hit',
         ]);
 
         return $result;
