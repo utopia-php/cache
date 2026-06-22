@@ -107,14 +107,14 @@ class RedisCluster implements Adapter, Retryable
         $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
 
         if ($redis_string === false || ! is_string($redis_string)) {
-            $token = $this->purge($key, $hash);
+            $token = $this->reserve($key, $hash);
 
             return $token === false ? false : new Token($token);
         }
 
         $decoded = Envelope::decode($redis_string, $ttl, time());
         if ($decoded === false && Envelope::isToken($redis_string)) {
-            $token = $this->purge($key, $hash);
+            $token = $this->reserve($key, $hash);
 
             return $token === false ? false : new Token($token);
         }
@@ -219,20 +219,38 @@ LUA;
      */
     public function purge(string $key, string $hash = ''): string|false
     {
+        $token = $this->createToken();
+        if ($token === false) {
+            return false;
+        }
+
+        if (! empty($hash)) {
+            return $this->execute(fn () => $this->redis->hDel($key, $hash)) !== false ? $token : false;
+        }
+
+        return $this->execute(fn () => $this->redis->del($key)) !== false ? $token : false;
+    }
+
+    private function reserve(string $key, string $hash): string|false
+    {
+        $token = $this->createToken();
+        if ($token === false) {
+            return false;
+        }
+
+        return $this->execute(fn () => $this->redis->hSet($key, $hash, $token)) !== false ? $token : false;
+    }
+
+    private function createToken(): string|false
+    {
         try {
-            $token = json_encode([
+            return json_encode([
                 'time' => \time(),
                 'token' => \bin2hex(\random_bytes(16)),
             ], flags: JSON_THROW_ON_ERROR);
         } catch (Throwable) {
             return false;
         }
-
-        if (! empty($hash)) {
-            return $this->execute(fn () => $this->redis->hSet($key, $hash, $token)) !== false ? $token : false;
-        }
-
-        return $this->execute(fn () => $this->redis->del($key)) !== false ? $token : false;
     }
 
     /**

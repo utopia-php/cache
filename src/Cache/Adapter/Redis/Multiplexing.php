@@ -110,14 +110,14 @@ class Multiplexing implements Adapter, TelemetryFeature
         $value = $this->command(['HGET', $key, $hash]);
 
         if (! is_string($value)) {
-            $token = $this->purge($key, $hash);
+            $token = $this->reserve($key, $hash);
 
             return $token === false ? false : new Token($token);
         }
 
         $decoded = Envelope::decode($value, $ttl, time());
         if ($decoded === false && Envelope::isToken($value)) {
-            $token = $this->purge($key, $hash);
+            $token = $this->reserve($key, $hash);
 
             return $token === false ? false : new Token($token);
         }
@@ -202,20 +202,38 @@ LUA;
 
     public function purge(string $key, string $hash = ''): string|false
     {
+        $token = $this->createToken();
+        if ($token === false) {
+            return false;
+        }
+
+        if (! empty($hash)) {
+            return $this->command(['HDEL', $key, $hash]) !== false ? $token : false;
+        }
+
+        return $this->command(['DEL', $key]) !== false ? $token : false;
+    }
+
+    private function reserve(string $key, string $hash): string|false
+    {
+        $token = $this->createToken();
+        if ($token === false) {
+            return false;
+        }
+
+        return $this->command(['HSET', $key, $hash, $token]) !== false ? $token : false;
+    }
+
+    private function createToken(): string|false
+    {
         try {
-            $token = json_encode([
+            return json_encode([
                 'time' => \time(),
                 'token' => \bin2hex(\random_bytes(16)),
             ], flags: JSON_THROW_ON_ERROR);
         } catch (Throwable) {
             return false;
         }
-
-        if (! empty($hash)) {
-            return $this->command(['HSET', $key, $hash, $token]) !== false ? $token : false;
-        }
-
-        return $this->command(['DEL', $key]) !== false ? $token : false;
     }
 
     public function flush(): bool
