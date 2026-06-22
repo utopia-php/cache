@@ -134,12 +134,16 @@ class Memcached implements Adapter, FencedFill, Retryable
             return $this->withLock($key, fn () => $this->saveWithToken($key, $data, $cache, $token));
         }
 
-        $saved = $this->execute(fn () => $this->memcached->set($key, $cache));
-        if ($saved) {
-            $tombstoneKey = $this->getTombstoneKey($key);
-            $this->execute(fn () => $this->memcached->delete($tombstoneKey));
-            unset($this->tokenExpirations[$tombstoneKey]);
-        }
+        $saved = $this->withLock($key, function () use ($key, $cache): bool {
+            $saved = (bool) $this->execute(fn () => $this->memcached->set($key, $cache));
+            if ($saved) {
+                $tombstoneKey = $this->getTombstoneKey($key);
+                $this->execute(fn () => $this->memcached->delete($tombstoneKey));
+                unset($this->tokenExpirations[$tombstoneKey]);
+            }
+
+            return $saved;
+        });
 
         return $saved ? $data : false;
     }
