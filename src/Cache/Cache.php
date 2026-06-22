@@ -2,6 +2,7 @@
 
 namespace Utopia\Cache;
 
+use Utopia\Cache\Feature\Leasable;
 use Utopia\Telemetry\Adapter as Telemetry;
 use Utopia\Telemetry\Adapter\None as NoTelemetry;
 use Utopia\Telemetry\Counter;
@@ -135,6 +136,57 @@ class Cache
             $duration = microtime(true) - $start;
             $this->getOperationDuration()->record($duration, [
                 'operation' => 'save',
+                'adapter' => $this->adapter->getName($key),
+            ]);
+        }
+    }
+
+    /**
+     * Current generation token for $key (advances on each purge). Returns '0'
+     * when the underlying adapter does not support leasing.
+     *
+     * @param  string  $key
+     * @return string
+     */
+    public function getGeneration(string $key): string
+    {
+        if (! $this->adapter instanceof Leasable) {
+            return '0';
+        }
+
+        $key = $this->caseSensitive ? $key : \strtolower($key);
+
+        return $this->adapter->getGeneration($key);
+    }
+
+    /**
+     * Save $data only if the key's generation still equals $generation (i.e. no
+     * purge happened since the caller captured it via getGeneration). Closes the
+     * cache-aside read-after-write race. Falls back to an unconditional save when
+     * the adapter does not support leasing.
+     *
+     * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
+     * @param  string  $hash
+     * @param  string  $generation
+     * @return bool|string|array<int|string, mixed>
+     */
+    public function saveWithLease(string $key, mixed $data, string $hash, string $generation): bool|string|array
+    {
+        $key = $this->caseSensitive ? $key : \strtolower($key);
+        $hash = $this->caseSensitive ? $hash : \strtolower($hash);
+        $start = microtime(true);
+
+        try {
+            if (! $this->adapter instanceof Leasable) {
+                return $this->adapter->save($key, $data, $hash);
+            }
+
+            return $this->adapter->saveWithLease($key, $data, $hash, $generation);
+        } finally {
+            $duration = microtime(true) - $start;
+            $this->getOperationDuration()->record($duration, [
+                'operation' => 'saveWithLease',
                 'adapter' => $this->adapter->getName($key),
             ]);
         }

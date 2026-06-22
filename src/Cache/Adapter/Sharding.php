@@ -3,8 +3,9 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\Leasable;
 
-class Sharding implements Adapter
+class Sharding implements Adapter, Leasable
 {
     /**
      * @var Adapter[]
@@ -64,6 +65,22 @@ class Sharding implements Adapter
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
         return $this->getAdapter($key)->save($key, $data, $hash);
+    }
+
+    public function getGeneration(string $key): string
+    {
+        $adapter = $this->getAdapter($key);
+
+        return $adapter instanceof Leasable ? $adapter->getGeneration($key) : '0';
+    }
+
+    public function saveWithLease(string $key, array|string $data, string $hash, string $generation): bool|string|array
+    {
+        $adapter = $this->getAdapter($key);
+
+        return $adapter instanceof Leasable
+            ? $adapter->saveWithLease($key, $data, $hash, $generation)
+            : $adapter->save($key, $data, $hash);
     }
 
     /**

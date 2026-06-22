@@ -7,10 +7,40 @@ use Redis as Client;
 use Throwable;
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Adapter\Redis\Envelope;
+use Utopia\Cache\Feature\Leasable;
 use Utopia\Cache\Feature\Retryable;
 
-class Redis implements Adapter, Retryable
+class Redis implements Adapter, Leasable, Retryable
 {
+    private const GENERATION_SUFFIX = ':__gen';
+
+    /**
+     * Save $hash field into hash $key only when generation key still equals the
+     * caller's token. KEYS[1]=key, KEYS[2]=generationKey; ARGV[1]=hash,
+     * ARGV[2]=value, ARGV[3]=expected generation, ARGV[4]=generation ttl seconds.
+     */
+    private const LUA_SAVE_WITH_LEASE = <<<'LUA'
+        local current = redis.call('GET', KEYS[2])
+        if current == false then current = '0' end
+        if current ~= ARGV[3] then return 0 end
+        redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+        return 1
+        LUA;
+
+    /**
+     * Atomically drop $key and advance its generation so any in-flight reader
+     * that read the previous generation cannot re-cache stale data.
+     * KEYS[1]=key, KEYS[2]=generationKey; ARGV[1]=generation ttl seconds.
+     */
+    private const LUA_PURGE_BUMP = <<<'LUA'
+        redis.call('DEL', KEYS[1])
+        local gen = redis.call('INCR', KEYS[2])
+        redis.call('EXPIRE', KEYS[2], ARGV[1])
+        return gen
+        LUA;
+
+    private const GENERATION_TTL = 86400;
+
     /**
      * @var Client
      */
@@ -136,6 +166,37 @@ class Redis implements Adapter, Retryable
         }
     }
 
+    public function getGeneration(string $key): string
+    {
+        $gen = $this->execute(fn () => $this->redis->get($key.self::GENERATION_SUFFIX));
+
+        return \is_string($gen) ? $gen : '0';
+    }
+
+    public function saveWithLease(string $key, array|string $data, string $hash, string $generation): bool|string|array
+    {
+        if (empty($key) || empty($data)) {
+            return false;
+        }
+
+        if (empty($hash)) {
+            $hash = $key;
+        }
+
+        try {
+            $value = Envelope::encode($data, time());
+            $stored = $this->execute(fn () => $this->redis->eval(
+                self::LUA_SAVE_WITH_LEASE,
+                [$key, $key.self::GENERATION_SUFFIX, $hash, $value, $generation],
+                2
+            ));
+
+            return $stored ? $data : false;
+        } catch (Throwable $th) {
+            return false;
+        }
+    }
+
     /**
      * @param  string  $key
      * @param  string  $hash optional
@@ -188,7 +249,14 @@ class Redis implements Adapter, Retryable
             return (bool) $this->execute(fn () => $this->redis->hdel($key, $hash));
         }
 
-        return (bool) $this->execute(fn () => $this->redis->del($key));
+        // Drop the key and advance its generation in one atomic step (Redis Lua)
+        // so an in-flight reader holding the previous generation cannot re-cache
+        // stale data after this purge.
+        return (bool) $this->execute(fn () => $this->redis->eval(
+            self::LUA_PURGE_BUMP,
+            [$key, $key.self::GENERATION_SUFFIX, (string) self::GENERATION_TTL],
+            2
+        ));
     }
 
     /**
