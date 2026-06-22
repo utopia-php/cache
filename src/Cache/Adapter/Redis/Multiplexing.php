@@ -250,14 +250,43 @@ LUA;
         }
 
         if (! empty($hash)) {
-            $this->command(['HDEL', $key, $hash]);
+            $script = <<<'LUA'
+redis.call('HDEL', KEYS[1], ARGV[1])
+redis.call('SETEX', KEYS[2], ARGV[2], ARGV[3])
+return 1
+LUA;
 
-            return $this->command(['SET', $this->getTombstoneKey($key, $hash), $token->value, 'EX', (string) self::TOKEN_TTL]) === 'OK' ? $token : false;
+            $result = $this->command([
+                'EVAL',
+                $script,
+                '2',
+                $key,
+                $this->getTombstoneKey($key, $hash),
+                $hash,
+                (string) self::TOKEN_TTL,
+                $token->value,
+            ]);
+
+            return (\is_int($result) || \is_string($result)) && (int) $result === 1 ? $token : false;
         }
 
-        $this->command(['DEL', $key]);
+        $script = <<<'LUA'
+redis.call('DEL', KEYS[1])
+redis.call('SETEX', KEYS[2], ARGV[1], ARGV[2])
+return 1
+LUA;
 
-        return $this->command(['SET', $this->getTombstoneKey($key, '*'), $token->value, 'EX', (string) self::TOKEN_TTL]) === 'OK' ? $token : false;
+        $result = $this->command([
+            'EVAL',
+            $script,
+            '2',
+            $key,
+            $this->getTombstoneKey($key, '*'),
+            (string) self::TOKEN_TTL,
+            $token->value,
+        ]);
+
+        return (\is_int($result) || \is_string($result)) && (int) $result === 1 ? $token : false;
     }
 
     /**
