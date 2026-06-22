@@ -11,7 +11,15 @@ class Hazelcast implements Adapter, Retryable
 {
     private const ABSENT_TOKEN_PREFIX = 'absent:';
 
-    private const CAS_TOKEN_PREFIX = 'cas:';
+    private const DATA_TOKEN_PREFIX = 'data:';
+
+    private const LOCK_PREFIX = '__utopia_cache_lock__:';
+
+    private const LOCK_TTL = 5;
+
+    private const LOCK_RETRIES = 100;
+
+    private const LOCK_RETRY_DELAY = 10000;
 
     private const TOKEN_TTL = 60;
 
@@ -85,7 +93,7 @@ class Hazelcast implements Adapter, Retryable
             return $cache['data'];
         }
 
-        return new Token(self::CAS_TOKEN_PREFIX.(string) $existing['cas']);
+        return new Token($this->dataToken($existing['value']));
     }
 
     /**
@@ -109,29 +117,18 @@ class Hazelcast implements Adapter, Retryable
             return false;
         }
 
-        if ($token !== null) {
-            if ($this->isAbsentToken($token)) {
-                return ($this->execute(fn () => $this->memcached->add($key, $payload))) ? $data : false;
+        $saved = $this->withLock($key, function () use ($key, $payload, $token): bool {
+            if ($token !== null) {
+                $existing = $this->execute(fn () => $this->memcached->get($key));
+                if (! $this->matchesToken($existing, $token)) {
+                    return false;
+                }
             }
 
-            $existing = $this->getWithCas($key);
-            if ($existing === false || ! \is_string($existing['value'])) {
-                return false;
-            }
+            return (bool) $this->execute(fn () => $this->memcached->set($key, $payload));
+        });
 
-            $value = json_decode($existing['value'], true);
-            if (! \is_array($value) || ! $this->matchesToken($value, $existing['cas'], $token)) {
-                return false;
-            }
-
-            if ($existing['cas'] <= 0) {
-                return false;
-            }
-
-            return ($this->execute(fn () => $this->memcached->cas($existing['cas'], $key, $payload))) ? $data : false;
-        }
-
-        return ($this->execute(fn () => $this->memcached->set($key, $payload))) ? $data : false;
+        return $saved ? $data : false;
     }
 
     /**
@@ -177,7 +174,9 @@ class Hazelcast implements Adapter, Retryable
             'token' => $token->value,
         ];
 
-        return (bool) $this->execute(fn () => $this->memcached->set($key, json_encode($cache), self::TOKEN_TTL)) ? $token : false;
+        $purged = $this->withLock($key, fn (): bool => (bool) $this->execute(fn () => $this->memcached->set($key, json_encode($cache), self::TOKEN_TTL)));
+
+        return $purged ? $token : false;
     }
 
     /**
@@ -269,16 +268,22 @@ class Hazelcast implements Adapter, Retryable
         ];
     }
 
-    /**
-     * @param  array{time?: int, data?: mixed, token?: string}  $value
-     */
-    private function matchesToken(array $value, float $cas, Token $token): bool
+    private function matchesToken(mixed $value, Token $token): bool
     {
-        if (($value['token'] ?? null) === $token->value) {
+        if ($this->isAbsentToken($token)) {
+            return $value === false;
+        }
+
+        if (! \is_string($value)) {
+            return false;
+        }
+
+        $decoded = json_decode($value, true);
+        if (\is_array($decoded) && ($decoded['token'] ?? null) === $token->value) {
             return true;
         }
 
-        return $token->value === self::CAS_TOKEN_PREFIX.(string) $cas;
+        return $this->dataToken($value) === $token->value;
     }
 
     private function createAbsentToken(): Token
@@ -289,6 +294,39 @@ class Hazelcast implements Adapter, Retryable
     private function isAbsentToken(Token $token): bool
     {
         return \str_starts_with($token->value, self::ABSENT_TOKEN_PREFIX);
+    }
+
+    private function dataToken(string $value): string
+    {
+        return self::DATA_TOKEN_PREFIX.\hash('sha256', $value);
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T|false
+     */
+    private function withLock(string $key, callable $callback): mixed
+    {
+        $lockKey = self::LOCK_PREFIX.\hash('sha256', $key);
+        $lockValue = \bin2hex(\random_bytes(16));
+
+        for ($attempt = 0; $attempt < self::LOCK_RETRIES; $attempt++) {
+            if ($this->execute(fn () => $this->memcached->add($lockKey, $lockValue, self::LOCK_TTL))) {
+                try {
+                    return $callback();
+                } finally {
+                    if ($this->execute(fn () => $this->memcached->get($lockKey)) === $lockValue) {
+                        $this->execute(fn () => $this->memcached->delete($lockKey));
+                    }
+                }
+            }
+
+            \usleep(self::LOCK_RETRY_DELAY);
+        }
+
+        return false;
     }
 
     /**

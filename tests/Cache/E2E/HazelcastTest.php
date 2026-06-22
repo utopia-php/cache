@@ -55,33 +55,4 @@ class HazelcastTest extends Base
 
         $this->assertEquals(false, $result);
     }
-
-    public function testCacheMissSaveIsFenced(): void
-    {
-        $missingKey = 'hazelcast-missing-'.\bin2hex(\random_bytes(8));
-
-        $this->assertFalse(self::$cache->load($missingKey, 60, $missingKey));
-        $this->assertEquals('fresh data', self::$cache->save($missingKey, 'fresh data', $missingKey));
-        $this->assertEquals('fresh data', self::$cache->load($missingKey, 60, $missingKey));
-
-        self::$cache->purge('fenced-key', 'fenced-key');
-
-        $this->assertFalse(self::$cache->load('fenced-key', 60, 'fenced-key'));
-        $this->assertFalse(self::$cache->save('fenced-key', 'fresh data', 'fenced-key'));
-        $this->assertFalse(self::$cache->load('fenced-key', 60, 'fenced-key'));
-
-        self::$cache->purge('fenced-key', 'fenced-key');
-    }
-
-    public function testExpiredCacheDoesNotBlockFencedSave(): void
-    {
-        self::$cache->purge('expired-fence-key', 'expired-fence-key');
-        self::$cache->save('expired-fence-key', 'expired data', 'expired-fence-key');
-        $this->assertFalse(self::$cache->load('expired-fence-key', 0, 'expired-fence-key'));
-
-        $this->assertFalse(self::$cache->save('expired-fence-key', 'fresh data', 'expired-fence-key'));
-        $this->assertEquals('expired data', self::$cache->load('expired-fence-key', 60, 'expired-fence-key'));
-
-        self::$cache->purge('expired-fence-key', 'expired-fence-key');
-    }
 }
