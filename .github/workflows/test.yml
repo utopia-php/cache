@@ -21,7 +21,18 @@ jobs:
         run: |
           export PHP_VERSION=${{ matrix.php-versions }}
           docker compose build
-          docker compose up -d
+          for attempt in 1 2 3; do
+            if docker compose up -d; then
+              break
+            fi
+
+            if [ "$attempt" = "3" ]; then
+              exit 1
+            fi
+
+            docker compose down --remove-orphans || true
+            sleep 10
+          done
           sleep 10
 
       - name: Run Tests
