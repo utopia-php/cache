@@ -80,7 +80,7 @@ class MultiplexingTest extends TestCase
             $loaded = $cache->load($this->key, 60, $this->key);
             $this->assertEquals($this->data, $loaded);
 
-            $this->assertTrue($cache->purge($this->key));
+            $this->assertNotFalse($cache->purge($this->key));
             $this->assertFalse($cache->load($this->key, 60, $this->key));
         });
     }

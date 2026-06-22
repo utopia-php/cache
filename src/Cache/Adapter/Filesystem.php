@@ -58,9 +58,9 @@ class Filesystem implements Adapter
      *
      * @throws Exception
      */
-    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
-        if (empty($data)) {
+        if (empty($data) || $token !== null) {
             return false;
         }
 
@@ -109,14 +109,16 @@ class Filesystem implements Adapter
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
+     * @return string|false
      */
-    public function purge(string $key, string $hash = ''): bool
+    public function purge(string $key, string $hash = ''): string|false
     {
         $file = $this->getPath($key);
 
         if (\file_exists($file)) {
-            return \unlink($file);
+            $token = \bin2hex(\random_bytes(16));
+
+            return \unlink($file) ? $token : false;
         }
 
         return false;

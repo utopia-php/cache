@@ -3,12 +3,10 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
-use Utopia\Cache\Feature;
+use Utopia\Cache\Token;
 
-class Memory implements Adapter, Feature\Lease
+class Memory implements Adapter
 {
-    private const LEASE_TTL = 30;
-
     /**
      * @var array<string, mixed>
      */
@@ -30,17 +28,21 @@ class Memory implements Adapter, Feature\Lease
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
         if (! empty($key) && isset($this->store[$key])) {
-            /** @var array{time: int, data?: string|array<int|string, mixed>, lease?: string} */
+            /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string} */
             $saved = $this->store[$key];
 
             if (! isset($saved['data'])) {
-                return false;
+                $token = $this->purge($key, $hash);
+
+                return $token === false ? false : new Token($token);
             }
 
             return ($saved['time'] + $ttl > time()) ? $saved['data'] : false; // return data if cache is valid
         }
 
-        return false;
+        $token = $this->purge($key, $hash);
+
+        return $token === false ? false : new Token($token);
     }
 
     /**
@@ -49,10 +51,18 @@ class Memory implements Adapter, Feature\Lease
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
+        }
+
+        if ($token !== null) {
+            /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string}|null $saved */
+            $saved = $this->store[$key] ?? null;
+            if (($saved['token'] ?? null) !== $token) {
+                return false;
+            }
         }
 
         $saved = [
@@ -61,51 +71,6 @@ class Memory implements Adapter, Feature\Lease
         ];
 
         $this->store[$key] = $saved;
-
-        return $data;
-    }
-
-    public function lease(string $key, string $hash = '', ?int $ttl = null): string|false
-    {
-        if (empty($key)) {
-            return false;
-        }
-
-        if (isset($this->store[$key])) {
-            /** @var array{time: int, data?: string|array<int|string, mixed>, lease?: string} $saved */
-            $saved = $this->store[$key];
-            $expiredLease = isset($saved['lease']) && $saved['time'] + self::LEASE_TTL <= \time();
-            $expiredData = $ttl !== null && isset($saved['data']) && $saved['time'] + $ttl <= \time();
-            if (! $expiredLease && ! $expiredData) {
-                return false;
-            }
-        }
-
-        $token = \bin2hex(\random_bytes(16));
-        $this->store[$key] = [
-            'time' => \time(),
-            'lease' => $token,
-        ];
-
-        return $token;
-    }
-
-    public function saveLease(string $key, array|string $data, string $token, string $hash = ''): bool|string|array
-    {
-        if (empty($key) || empty($data) || ! isset($this->store[$key])) {
-            return false;
-        }
-
-        /** @var array{time: int, data?: string|array<int|string, mixed>, lease?: string} $saved */
-        $saved = $this->store[$key];
-        if (($saved['lease'] ?? null) !== $token) {
-            return false;
-        }
-
-        $this->store[$key] = [
-            'time' => \time(),
-            'data' => $data,
-        ];
 
         return $data;
     }
@@ -141,14 +106,18 @@ class Memory implements Adapter, Feature\Lease
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
+     * @return string|false
      */
-    public function purge(string $key, string $hash = ''): bool
+    public function purge(string $key, string $hash = ''): string|false
     {
-        if (! empty($key) && isset($this->store[$key])) { // if a key is passed and it exists in cache
-            unset($this->store[$key]);
+        if (! empty($key)) {
+            $token = \bin2hex(\random_bytes(16));
+            $this->store[$key] = [
+                'time' => \time(),
+                'token' => $token,
+            ];
 
-            return true;
+            return $token;
         }
 
         return false;

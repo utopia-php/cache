@@ -50,7 +50,7 @@ abstract class Base extends TestCase
 
         $result = self::$cache->purge($this->key);
 
-        $this->assertEquals(true, $result);
+        $this->assertNotFalse($result);
 
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */, $this->key);
 
@@ -72,61 +72,38 @@ abstract class Base extends TestCase
         self::$cache->purge('touch-key');
     }
 
-    public function testCacheLease(): void
+    public function testCacheMissSaveIsFenced(): void
     {
-        self::$cache->purge('lease-key', 'lease-key');
+        self::$cache->purge('fenced-key', 'fenced-key');
 
-        $token = self::$cache->lease('lease-key', 'lease-key');
-        if ($token === false) {
-            $this->assertFalse(self::$cache->saveLease('lease-key', 'leased data', 'missing-token', 'lease-key'));
+        $this->assertFalse(self::$cache->load('fenced-key', 60, 'fenced-key'));
+        $this->assertEquals('fresh data', self::$cache->save('fenced-key', 'fresh data', 'fenced-key'));
+        $this->assertEquals('fresh data', self::$cache->load('fenced-key', 60, 'fenced-key'));
 
-            return;
-        }
-
-        $this->assertFalse(self::$cache->load('lease-key', 60, 'lease-key'));
-        $this->assertFalse(self::$cache->lease('lease-key', 'lease-key'));
-        $this->assertFalse(self::$cache->saveLease('lease-key', 'leased data', 'missing-token', 'lease-key'));
-        $this->assertEquals('leased data', self::$cache->saveLease('lease-key', 'leased data', $token, 'lease-key'));
-        $this->assertEquals('leased data', self::$cache->load('lease-key', 60, 'lease-key'));
-        $this->assertFalse(self::$cache->lease('lease-key', 'lease-key'));
-
-        self::$cache->purge('lease-key', 'lease-key');
+        self::$cache->purge('fenced-key', 'fenced-key');
     }
 
-    public function testPurgedCacheLeaseDoesNotSave(): void
+    public function testPurgedCacheMissDoesNotSave(): void
     {
-        self::$cache->purge('purged-lease-key', 'purged-lease-key');
+        self::$cache->purge('purged-miss-key', 'purged-miss-key');
 
-        $token = self::$cache->lease('purged-lease-key', 'purged-lease-key');
-        if ($token === false) {
-            $this->assertFalse(self::$cache->saveLease('purged-lease-key', 'leased data', 'missing-token', 'purged-lease-key'));
+        $this->assertFalse(self::$cache->load('purged-miss-key', 60, 'purged-miss-key'));
+        self::$cache->purge('purged-miss-key', 'purged-miss-key');
 
-            return;
-        }
-
-        self::$cache->purge('purged-lease-key', 'purged-lease-key');
-
-        $this->assertFalse(self::$cache->saveLease('purged-lease-key', 'leased data', $token, 'purged-lease-key'));
-        $this->assertFalse(self::$cache->load('purged-lease-key', 60, 'purged-lease-key'));
+        $this->assertFalse(self::$cache->save('purged-miss-key', 'stale data', 'purged-miss-key'));
+        $this->assertFalse(self::$cache->load('purged-miss-key', 60, 'purged-miss-key'));
     }
 
-    public function testExpiredCacheDoesNotBlockLease(): void
+    public function testExpiredCacheDoesNotBlockFencedSave(): void
     {
-        self::$cache->purge('expired-lease-key', 'expired-lease-key');
-        self::$cache->save('expired-lease-key', 'expired data', 'expired-lease-key');
-        $this->assertFalse(self::$cache->load('expired-lease-key', 0, 'expired-lease-key'));
+        self::$cache->purge('expired-fence-key', 'expired-fence-key');
+        self::$cache->save('expired-fence-key', 'expired data', 'expired-fence-key');
+        $this->assertFalse(self::$cache->load('expired-fence-key', 0, 'expired-fence-key'));
 
-        $token = self::$cache->lease('expired-lease-key', 'expired-lease-key', 0);
-        if ($token === false) {
-            $this->assertFalse(self::$cache->saveLease('expired-lease-key', 'leased data', 'missing-token', 'expired-lease-key'));
+        $this->assertEquals('fresh data', self::$cache->save('expired-fence-key', 'fresh data', 'expired-fence-key'));
+        $this->assertEquals('fresh data', self::$cache->load('expired-fence-key', 60, 'expired-fence-key'));
 
-            return;
-        }
-
-        $this->assertEquals('leased data', self::$cache->saveLease('expired-lease-key', 'leased data', $token, 'expired-lease-key'));
-        $this->assertEquals('leased data', self::$cache->load('expired-lease-key', 60, 'expired-lease-key'));
-
-        self::$cache->purge('expired-lease-key', 'expired-lease-key');
+        self::$cache->purge('expired-fence-key', 'expired-fence-key');
     }
 
     public function testCaseInsensitivity(): void
@@ -143,7 +120,7 @@ abstract class Base extends TestCase
         $this->assertEquals('Earth', $data);
 
         $result = self::$cache->purge('PLaNEt');
-        $this->assertEquals(true, $result);
+        $this->assertNotFalse($result);
 
         $data = self::$cache->load('planet', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'planet');
         $this->assertEquals(false, $data);
@@ -161,7 +138,7 @@ abstract class Base extends TestCase
         $this->assertEquals(false, $data);
 
         $result = self::$cache->purge('color');
-        $this->assertEquals(true, $result);
+        $this->assertNotFalse($result);
     }
 
     public function testPing(): void

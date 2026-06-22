@@ -7,7 +7,7 @@ use Utopia\Cache\Feature;
 use Utopia\CircuitBreaker\CircuitBreaker as UtopiaCircuitBreaker;
 use Utopia\Telemetry\Adapter as Telemetry;
 
-class CircuitBreaker implements Adapter, Feature\Telemetry, Feature\Lease
+class CircuitBreaker implements Adapter, Feature\Telemetry
 {
     public function __construct(
         private readonly Adapter $adapter,
@@ -37,7 +37,7 @@ class CircuitBreaker implements Adapter, Feature\Telemetry, Feature\Lease
         return $this->delegate(__FUNCTION__, \func_get_args(), false);
     }
 
-    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
         /** @var bool|string|array<int|string, mixed> $result */
         $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
@@ -53,30 +53,6 @@ class CircuitBreaker implements Adapter, Feature\Telemetry, Feature\Lease
         return $result;
     }
 
-    public function lease(string $key, string $hash = '', ?int $ttl = null): string|false
-    {
-        if (! ($this->adapter instanceof Feature\Lease)) {
-            return false;
-        }
-
-        /** @var string|false $result */
-        $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
-
-        return $result;
-    }
-
-    public function saveLease(string $key, array|string $data, string $token, string $hash = ''): bool|string|array
-    {
-        if (! ($this->adapter instanceof Feature\Lease)) {
-            return false;
-        }
-
-        /** @var bool|string|array<int|string, mixed> $result */
-        $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
-
-        return $result;
-    }
-
     public function list(string $key): array
     {
         /** @var string[] $result */
@@ -85,9 +61,9 @@ class CircuitBreaker implements Adapter, Feature\Telemetry, Feature\Lease
         return $result;
     }
 
-    public function purge(string $key, string $hash = ''): bool
+    public function purge(string $key, string $hash = ''): string|false
     {
-        /** @var bool $result */
+        /** @var string|false $result */
         $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
 
         return $result;

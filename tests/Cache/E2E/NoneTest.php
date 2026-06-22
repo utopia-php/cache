@@ -57,7 +57,7 @@ class NoneTest extends Base
     {
         $result = self::$cache->purge($this->key);
 
-        $this->assertEquals(true, $result);
+        $this->assertNotFalse($result);
     }
 
     public function testCacheTouch(): void

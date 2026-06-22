@@ -3,9 +3,8 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
-use Utopia\Cache\Feature;
 
-class None implements Adapter, Feature\Lease
+class None implements Adapter
 {
     /**
      * None constructor.
@@ -31,17 +30,7 @@ class None implements Adapter, Feature\Lease
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
-    {
-        return false;
-    }
-
-    public function lease(string $key, string $hash = '', ?int $ttl = null): string|false
-    {
-        return false;
-    }
-
-    public function saveLease(string $key, array|string $data, string $token, string $hash = ''): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
         return false;
     }
@@ -68,11 +57,11 @@ class None implements Adapter, Feature\Lease
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
+     * @return string|false
      */
-    public function purge(string $key, string $hash = ''): bool
+    public function purge(string $key, string $hash = ''): string|false
     {
-        return true;
+        return \bin2hex(\random_bytes(16));
     }
 
     /**

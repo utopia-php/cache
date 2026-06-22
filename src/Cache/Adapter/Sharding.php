@@ -3,9 +3,8 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
-use Utopia\Cache\Feature;
 
-class Sharding implements Adapter, Feature\Lease
+class Sharding implements Adapter
 {
     /**
      * @var Adapter[]
@@ -62,9 +61,9 @@ class Sharding implements Adapter, Feature\Lease
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
-        return $this->getAdapter($key)->save($key, $data, $hash);
+        return $this->getAdapter($key)->save($key, $data, $hash, $token);
     }
 
     /**
@@ -75,26 +74,6 @@ class Sharding implements Adapter, Feature\Lease
     public function touch(string $key, string $hash = ''): bool
     {
         return $this->getAdapter($key)->touch($key, $hash);
-    }
-
-    public function lease(string $key, string $hash = '', ?int $ttl = null): string|false
-    {
-        $adapter = $this->getAdapter($key);
-        if (! ($adapter instanceof Feature\Lease)) {
-            return false;
-        }
-
-        return $adapter->lease($key, $hash, $ttl);
-    }
-
-    public function saveLease(string $key, array|string $data, string $token, string $hash = ''): bool|string|array
-    {
-        $adapter = $this->getAdapter($key);
-        if (! ($adapter instanceof Feature\Lease)) {
-            return false;
-        }
-
-        return $adapter->saveLease($key, $data, $token, $hash);
     }
 
     /**
@@ -109,9 +88,9 @@ class Sharding implements Adapter, Feature\Lease
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
+     * @return string|false
      */
-    public function purge(string $key, string $hash = ''): bool
+    public function purge(string $key, string $hash = ''): string|false
     {
         return $this->getAdapter($key)->purge($key, $hash);
     }

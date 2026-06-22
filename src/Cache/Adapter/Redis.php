@@ -7,13 +7,11 @@ use Redis as Client;
 use Throwable;
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Adapter\Redis\Envelope;
-use Utopia\Cache\Feature;
 use Utopia\Cache\Feature\Retryable;
+use Utopia\Cache\Token;
 
-class Redis implements Adapter, Retryable, Feature\Lease
+class Redis implements Adapter, Retryable
 {
-    private const LEASE_TTL = 30;
-
     /**
      * @var Client
      */
@@ -107,10 +105,19 @@ class Redis implements Adapter, Retryable, Feature\Lease
         $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
 
         if (! is_string($redis_string)) {
-            return false;
+            $token = $this->purge($key, $hash);
+
+            return $token === false ? false : new Token($token);
         }
 
-        return Envelope::decode($redis_string, $ttl, time());
+        $decoded = Envelope::decode($redis_string, $ttl, time());
+        if ($decoded === false && Envelope::isToken($redis_string)) {
+            $token = $this->purge($key, $hash);
+
+            return $token === false ? false : new Token($token);
+        }
+
+        return $decoded;
     }
 
     /**
@@ -119,7 +126,7 @@ class Redis implements Adapter, Retryable, Feature\Lease
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -131,84 +138,8 @@ class Redis implements Adapter, Retryable, Feature\Lease
 
         try {
             $value = Envelope::encode($data, time());
-            $this->execute(fn () => $this->redis->hSet($key, $hash, $value));
-
-            return $data;
-        } catch (Throwable $th) {
-            return false;
-        }
-    }
-
-    public function lease(string $key, string $hash = '', ?int $ttl = null): string|false
-    {
-        if (empty($key)) {
-            return false;
-        }
-
-        if (empty($hash)) {
-            $hash = $key;
-        }
-
-        try {
-            $token = \bin2hex(\random_bytes(16));
-            $value = json_encode([
-                'time' => \time(),
-                'lease' => $token,
-            ], flags: JSON_THROW_ON_ERROR);
-        } catch (Throwable) {
-            return false;
-        }
-
-        $script = <<<'LUA'
-local existing = redis.call('HGET', KEYS[1], ARGV[1])
-if existing == false then
-    redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
-    return 1
-end
-
-local ok, decoded = pcall(cjson.decode, existing)
-if ok and decoded['lease'] ~= nil and decoded['time'] + tonumber(ARGV[3]) <= tonumber(ARGV[5]) then
-    redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
-    return 1
-end
-
-if ok and decoded['data'] ~= nil and ARGV[4] ~= '' and decoded['time'] + tonumber(ARGV[4]) <= tonumber(ARGV[5]) then
-    redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
-    return 1
-end
-
-return 0
-LUA;
-
-        try {
-            $result = $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $value, (string) self::LEASE_TTL, $ttl === null ? '' : (string) $ttl, (string) \time()], 1));
-            if (! \is_int($result) && ! \is_string($result)) {
-                return false;
-            }
-
-            return ((int) $result === 1) ? $value : false;
-        } catch (Throwable) {
-            return false;
-        }
-    }
-
-    public function saveLease(string $key, array|string $data, string $token, string $hash = ''): bool|string|array
-    {
-        if (empty($key) || empty($data) || empty($token)) {
-            return false;
-        }
-
-        if (empty($hash)) {
-            $hash = $key;
-        }
-
-        try {
-            $value = Envelope::encode($data, time());
-        } catch (Throwable) {
-            return false;
-        }
-
-        $script = <<<'LUA'
+            if ($token !== null) {
+                $script = <<<'LUA'
 if redis.call('HGET', KEYS[1], ARGV[1]) == ARGV[2] then
     redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
     return 1
@@ -216,14 +147,18 @@ end
 return 0
 LUA;
 
-        try {
-            $result = $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $token, $value], 1));
-            if (! \is_int($result) && ! \is_string($result)) {
-                return false;
+                $result = $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $token, $value], 1));
+                if ((! \is_int($result) && ! \is_string($result)) || (int) $result !== 1) {
+                    return false;
+                }
+
+                return $data;
             }
 
-            return ((int) $result === 1) ? $data : false;
-        } catch (Throwable) {
+            $this->execute(fn () => $this->redis->hSet($key, $hash, $value));
+
+            return $data;
+        } catch (Throwable $th) {
             return false;
         }
     }
@@ -272,15 +207,24 @@ LUA;
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
+     * @return string|false
      */
-    public function purge(string $key, string $hash = ''): bool
+    public function purge(string $key, string $hash = ''): string|false
     {
-        if (! empty($hash)) {
-            return (bool) $this->execute(fn () => $this->redis->hdel($key, $hash));
+        try {
+            $token = json_encode([
+                'time' => \time(),
+                'token' => \bin2hex(\random_bytes(16)),
+            ], flags: JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return false;
         }
 
-        return (bool) $this->execute(fn () => $this->redis->del($key));
+        if (! empty($hash)) {
+            return $this->execute(fn () => $this->redis->hSet($key, $hash, $token)) !== false ? $token : false;
+        }
+
+        return $this->execute(fn () => $this->redis->del($key)) !== false ? $token : false;
     }
 
     /**

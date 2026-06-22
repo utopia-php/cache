@@ -29,6 +29,11 @@ class Cache
     protected ?Counter $loadResults = null;
 
     /**
+     * @var array<string, string>
+     */
+    private array $tokens = [];
+
+    /**
      * Set telemetry adapter. Instruments are created lazily on first use to
      * avoid emitting empty data point streams on every export interval.
      *
@@ -99,8 +104,19 @@ class Cache
         $key = $this->caseSensitive ? $key : \strtolower($key);
         $hash = $this->caseSensitive ? $hash : \strtolower($hash);
 
+        $effectiveHash = empty($hash) ? $key : $hash;
+
         $start = microtime(true);
         $result = $this->adapter->load($key, $ttl, $hash);
+        $tokenKey = $this->getTokenKey($key, $effectiveHash);
+        if ($result instanceof Token) {
+            $this->tokens[$tokenKey] = $result->value;
+            $result = false;
+        } elseif ($result !== false) {
+            unset($this->tokens[$tokenKey]);
+        } else {
+            unset($this->tokens[$tokenKey]);
+        }
         $duration = microtime(true) - $start;
         $adapterName = $this->adapter->getName($key);
         $this->getOperationDuration()->record($duration, [
@@ -127,73 +143,19 @@ class Cache
     {
         $key = $this->caseSensitive ? $key : strtolower($key);
         $hash = $this->caseSensitive ? $hash : strtolower($hash);
+        $effectiveHash = empty($hash) ? $key : $hash;
+        $tokenKey = $this->getTokenKey($key, $effectiveHash);
+        $token = $this->tokens[$tokenKey] ?? null;
+        unset($this->tokens[$tokenKey]);
+
         $start = microtime(true);
 
         try {
-            return $this->adapter->save($key, $data, $hash);
+            return $this->adapter->save($key, $data, $effectiveHash, $token);
         } finally {
             $duration = microtime(true) - $start;
             $this->getOperationDuration()->record($duration, [
                 'operation' => 'save',
-                'adapter' => $this->adapter->getName($key),
-            ]);
-        }
-    }
-
-    /**
-     * Reserve an empty cache slot for a later conditional save.
-     *
-     * @param  string  $key
-     * @param  string  $hash optional
-     * @param  int|null  $ttl optional
-     * @return string|false
-     */
-    public function lease(string $key, string $hash = '', ?int $ttl = null): string|false
-    {
-        $key = $this->caseSensitive ? $key : strtolower($key);
-        $hash = $this->caseSensitive ? $hash : strtolower($hash);
-
-        if (! ($this->adapter instanceof Feature\Lease)) {
-            return false;
-        }
-
-        $start = microtime(true);
-        try {
-            return $this->adapter->lease($key, $hash, $ttl);
-        } finally {
-            $duration = microtime(true) - $start;
-            $this->operationDuration?->record($duration, [
-                'operation' => 'lease',
-                'adapter' => $this->adapter->getName($key),
-            ]);
-        }
-    }
-
-    /**
-     * Save data only if the slot still holds the provided lease token.
-     *
-     * @param  string  $key
-     * @param  string|array<int|string, mixed>  $data
-     * @param  string  $token
-     * @param  string  $hash optional
-     * @return bool|string|array<int|string, mixed>
-     */
-    public function saveLease(string $key, array|string $data, string $token, string $hash = ''): bool|string|array
-    {
-        $key = $this->caseSensitive ? $key : strtolower($key);
-        $hash = $this->caseSensitive ? $hash : strtolower($hash);
-
-        if (! ($this->adapter instanceof Feature\Lease)) {
-            return false;
-        }
-
-        $start = microtime(true);
-        try {
-            return $this->adapter->saveLease($key, $data, $token, $hash);
-        } finally {
-            $duration = microtime(true) - $start;
-            $this->operationDuration?->record($duration, [
-                'operation' => 'saveLease',
                 'adapter' => $this->adapter->getName($key),
             ]);
         }
@@ -244,13 +206,13 @@ class Cache
     }
 
     /**
-     * Removes data from cache. Returns true on success of false on failure.
+     * Removes data from cache. Returns a token on success or false on failure.
      *
      * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
+     * @return string|false
      */
-    public function purge(string $key, string $hash = ''): bool
+    public function purge(string $key, string $hash = ''): string|false
     {
         $key = $this->caseSensitive ? $key : \strtolower($key);
         $hash = $this->caseSensitive ? $hash : \strtolower($hash);
@@ -275,6 +237,7 @@ class Cache
     {
         $start = microtime(true);
         $result = $this->adapter->flush();
+        $this->tokens = [];
         $duration = microtime(true) - $start;
         $this->getOperationDuration()->record($duration, [
             'operation' => 'flush',
@@ -282,6 +245,11 @@ class Cache
         ]);
 
         return $result;
+    }
+
+    private function getTokenKey(string $key, string $hash): string
+    {
+        return $key."\0".$hash;
     }
 
     /**

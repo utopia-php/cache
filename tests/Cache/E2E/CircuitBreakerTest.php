@@ -26,7 +26,7 @@ class CircuitBreakerTest extends TestCase
         $this->assertTrue($cache->touch('key'));
         $this->assertSame(1, $cache->getSize());
         $this->assertTrue($cache->ping());
-        $this->assertTrue($cache->purge('key'));
+        $this->assertNotFalse($cache->purge('key'));
         $this->assertFalse($cache->load('key', 60));
     }
 
@@ -113,7 +113,7 @@ class FailingAdapter implements Adapter
         throw new RuntimeException('Cache failed.');
     }
 
-    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
         throw new RuntimeException('Cache failed.');
     }
@@ -128,7 +128,7 @@ class FailingAdapter implements Adapter
         throw new RuntimeException('Cache failed.');
     }
 
-    public function purge(string $key, string $hash = ''): bool
+    public function purge(string $key, string $hash = ''): string|false
     {
         throw new RuntimeException('Cache failed.');
     }

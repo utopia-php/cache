@@ -76,9 +76,9 @@ class Memcached implements Adapter, Retryable
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
-        if (empty($key) || empty($data)) {
+        if (empty($key) || empty($data) || $token !== null) {
             return false;
         }
 
@@ -120,11 +120,13 @@ class Memcached implements Adapter, Retryable
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
+     * @return string|false
      */
-    public function purge(string $key, string $hash = ''): bool
+    public function purge(string $key, string $hash = ''): string|false
     {
-        return (bool) $this->execute(fn () => $this->memcached->delete($key));
+        $token = \bin2hex(\random_bytes(16));
+
+        return (bool) $this->execute(fn () => $this->memcached->delete($key)) ? $token : false;
     }
 
     /**
