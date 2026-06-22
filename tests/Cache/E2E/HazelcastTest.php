@@ -58,6 +58,12 @@ class HazelcastTest extends Base
 
     public function testCacheMissSaveIsFenced(): void
     {
+        $missingKey = 'hazelcast-missing-'.\bin2hex(\random_bytes(8));
+
+        $this->assertFalse(self::$cache->load($missingKey, 60, $missingKey));
+        $this->assertEquals('fresh data', self::$cache->save($missingKey, 'fresh data', $missingKey));
+        $this->assertEquals('fresh data', self::$cache->load($missingKey, 60, $missingKey));
+
         self::$cache->purge('fenced-key', 'fenced-key');
 
         $this->assertFalse(self::$cache->load('fenced-key', 60, 'fenced-key'));
