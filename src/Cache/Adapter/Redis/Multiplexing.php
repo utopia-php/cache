@@ -8,6 +8,7 @@ use Swoole\Coroutine\Channel;
 use Swoole\Coroutine\Lock;
 use Throwable;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\FencedFill;
 use Utopia\Cache\Feature\Telemetry as TelemetryFeature;
 use Utopia\Cache\Token;
 use Utopia\Telemetry\Adapter as Telemetry;
@@ -24,7 +25,7 @@ use Utopia\Telemetry\UpDownCounter;
  * single reader coroutine parses inbound frames and dispatches each one to
  * the next pending Channel, exploiting Redis's guarantee of in-order replies.
  */
-class Multiplexing implements Adapter, TelemetryFeature
+class Multiplexing implements Adapter, FencedFill, TelemetryFeature
 {
     private const TOKEN_TTL = 60;
 
@@ -104,6 +105,13 @@ class Multiplexing implements Adapter, TelemetryFeature
     }
 
     public function load(string $key, int $ttl, string $hash = ''): mixed
+    {
+        $result = $this->loadFenced($key, $ttl, $hash);
+
+        return $result instanceof Token ? false : $result;
+    }
+
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
     {
         if (empty($hash)) {
             $hash = $key;
@@ -351,16 +359,8 @@ LUA;
     public function getSize(): int
     {
         $size = $this->command(['DBSIZE']);
-        if (! \is_int($size)) {
-            return 0;
-        }
 
-        $tombstones = $this->command(['KEYS', '*:utopia-cache-token:*']);
-        if (\is_array($tombstones)) {
-            return \max(0, $size - \count($tombstones));
-        }
-
-        return $size;
+        return \is_int($size) ? $size : 0;
     }
 
     public function getName(?string $key = null): string

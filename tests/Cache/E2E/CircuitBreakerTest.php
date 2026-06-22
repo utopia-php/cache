@@ -28,7 +28,8 @@ class CircuitBreakerTest extends TestCase
         $this->assertSame(1, $cache->getSize());
         $this->assertTrue($cache->ping());
         $this->assertNotFalse($cache->purge('key'));
-        $this->assertInstanceOf(Token::class, $cache->load('key', 60));
+        $this->assertFalse($cache->load('key', 60));
+        $this->assertInstanceOf(Token::class, $cache->loadFenced('key', 60));
     }
 
     public function testReturnsFallbacksWhenCacheOperationsFail(): void
@@ -60,7 +61,7 @@ class CircuitBreakerTest extends TestCase
 
         $cache->setTelemetry($telemetry);
 
-        $this->assertInstanceOf(Token::class, $cache->load('missing', 60));
+        $this->assertFalse($cache->load('missing', 60));
         /** @var object{values: list<int|float>} $calls */
         $calls = $telemetry->counters['breaker.calls'];
         $this->assertSame([1], $calls->values);

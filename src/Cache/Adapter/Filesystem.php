@@ -4,9 +4,10 @@ namespace Utopia\Cache\Adapter;
 
 use Exception;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\FencedFill;
 use Utopia\Cache\Token;
 
-class Filesystem implements Adapter
+class Filesystem implements Adapter, FencedFill
 {
     private const ABSENT_TOKEN_PREFIX = '__utopia_cache_absent__:';
 
@@ -45,6 +46,13 @@ class Filesystem implements Adapter
      * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
+    {
+        $result = $this->loadFenced($key, $ttl, $hash);
+
+        return $result instanceof Token ? false : $result;
+    }
+
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
     {
         $file = $this->getPath($key);
 

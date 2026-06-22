@@ -3,9 +3,10 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\FencedFill;
 use Utopia\Cache\Token;
 
-class Sharding implements Adapter
+class Sharding implements Adapter, FencedFill
 {
     /**
      * @var Adapter[]
@@ -54,6 +55,15 @@ class Sharding implements Adapter
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
         return $this->getAdapter($key)->load($key, $ttl, $hash);
+    }
+
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
+    {
+        $adapter = $this->getAdapter($key);
+
+        return $adapter instanceof FencedFill
+            ? $adapter->loadFenced($key, $ttl, $hash)
+            : $adapter->load($key, $ttl, $hash);
     }
 
     /**

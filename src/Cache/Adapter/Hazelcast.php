@@ -4,10 +4,11 @@ namespace Utopia\Cache\Adapter;
 
 use Memcached as Client;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\FencedFill;
 use Utopia\Cache\Feature\Retryable;
 use Utopia\Cache\Token;
 
-class Hazelcast implements Adapter, Retryable
+class Hazelcast implements Adapter, FencedFill, Retryable
 {
     private const ABSENT_TOKEN_PREFIX = 'absent:';
 
@@ -66,6 +67,13 @@ class Hazelcast implements Adapter, Retryable
      * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
+    {
+        $result = $this->loadFenced($key, $ttl, $hash);
+
+        return $result instanceof Token ? false : $result;
+    }
+
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
     {
         $existing = $this->getWithCas($key);
         if ($existing === false || ! \is_string($existing['value'])) {

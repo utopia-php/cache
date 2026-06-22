@@ -8,7 +8,7 @@ use Utopia\Cache\Token;
 use Utopia\CircuitBreaker\CircuitBreaker as UtopiaCircuitBreaker;
 use Utopia\Telemetry\Adapter as Telemetry;
 
-class CircuitBreaker implements Adapter, Feature\Telemetry
+class CircuitBreaker implements Adapter, Feature\FencedFill, Feature\Telemetry
 {
     public function __construct(
         private readonly Adapter $adapter,
@@ -36,6 +36,16 @@ class CircuitBreaker implements Adapter, Feature\Telemetry
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
         return $this->delegate(__FUNCTION__, \func_get_args(), false);
+    }
+
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
+    {
+        return $this->breaker->call(
+            open: fn (): bool => false,
+            close: fn (): mixed => $this->adapter instanceof Feature\FencedFill
+                ? $this->adapter->loadFenced($key, $ttl, $hash)
+                : $this->adapter->load($key, $ttl, $hash),
+        );
     }
 
     public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array

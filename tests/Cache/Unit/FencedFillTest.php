@@ -5,13 +5,14 @@ namespace Utopia\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Cache;
+use Utopia\Cache\Feature\FencedFill;
 use Utopia\Cache\Token;
 
 class FencedFillTest extends TestCase
 {
     public function testSaveKeepsOriginalEmptyHashForCustomAdapters(): void
     {
-        $adapter = new class implements Adapter
+        $adapter = new class implements Adapter, FencedFill
         {
             public ?string $loadHash = null;
 
@@ -20,6 +21,11 @@ class FencedFillTest extends TestCase
             public ?Token $saveToken = null;
 
             public function load(string $key, int $ttl, string $hash = ''): mixed
+            {
+                return false;
+            }
+
+            public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
             {
                 $this->loadHash = $hash;
 
@@ -81,9 +87,14 @@ class FencedFillTest extends TestCase
 
     public function testPendingFillTokensAreBounded(): void
     {
-        $cache = new Cache(new class implements Adapter
+        $cache = new Cache(new class implements Adapter, FencedFill
         {
             public function load(string $key, int $ttl, string $hash = ''): mixed
+            {
+                return false;
+            }
+
+            public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
             {
                 return new Token($key);
             }

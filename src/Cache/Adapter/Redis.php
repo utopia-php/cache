@@ -7,10 +7,11 @@ use Redis as Client;
 use Throwable;
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Adapter\Redis\Envelope;
+use Utopia\Cache\Feature\FencedFill;
 use Utopia\Cache\Feature\Retryable;
 use Utopia\Cache\Token;
 
-class Redis implements Adapter, Retryable
+class Redis implements Adapter, FencedFill, Retryable
 {
     private const TOKEN_TTL = 60;
 
@@ -99,6 +100,13 @@ class Redis implements Adapter, Retryable
      * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
+    {
+        $result = $this->loadFenced($key, $ttl, $hash);
+
+        return $result instanceof Token ? false : $result;
+    }
+
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
     {
         if (empty($hash)) {
             $hash = $key;
@@ -361,20 +369,10 @@ LUA;
      */
     public function getSize(): int
     {
-        $keys = $this->execute(fn () => $this->redis->keys('*'));
-        if (\is_array($keys)) {
-            return \count(\array_filter($keys, fn (mixed $key): bool => \is_string($key) && ! $this->isTombstoneKey($key)));
-        }
-
         /** @var int|false */
         $size = $this->execute(fn () => $this->redis->dbSize());
 
         return \is_int($size) ? $size : 0;
-    }
-
-    private function isTombstoneKey(string $key): bool
-    {
-        return \str_contains($key, ':utopia-cache-token:');
     }
 
     /**

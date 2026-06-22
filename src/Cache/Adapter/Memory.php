@@ -3,9 +3,10 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\FencedFill;
 use Utopia\Cache\Token;
 
-class Memory implements Adapter
+class Memory implements Adapter, FencedFill
 {
     private const ABSENT_TOKEN_PREFIX = 'absent:';
 
@@ -30,6 +31,13 @@ class Memory implements Adapter
      * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
+    {
+        $result = $this->loadFenced($key, $ttl, $hash);
+
+        return $result instanceof Token ? false : $result;
+    }
+
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
     {
         if (! empty($key) && isset($this->store[$key])) {
             /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string} */

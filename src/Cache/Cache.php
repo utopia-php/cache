@@ -109,7 +109,9 @@ class Cache
         $effectiveHash = empty($hash) ? $key : $hash;
 
         $start = microtime(true);
-        $result = $this->adapter->load($key, $ttl, $hash);
+        $result = $this->adapter instanceof Feature\FencedFill
+            ? $this->adapter->loadFenced($key, $ttl, $hash)
+            : $this->adapter->load($key, $ttl, $hash);
         $tokenKey = $this->getTokenKey($key, $effectiveHash);
         if ($result instanceof Token) {
             unset($this->tokens[$tokenKey]);

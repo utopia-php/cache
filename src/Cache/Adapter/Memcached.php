@@ -4,10 +4,11 @@ namespace Utopia\Cache\Adapter;
 
 use Memcached as Client;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\FencedFill;
 use Utopia\Cache\Feature\Retryable;
 use Utopia\Cache\Token;
 
-class Memcached implements Adapter, Retryable
+class Memcached implements Adapter, FencedFill, Retryable
 {
     private const ABSENT_TOKEN_PREFIX = 'absent:';
 
@@ -70,6 +71,13 @@ class Memcached implements Adapter, Retryable
      * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
+    {
+        $result = $this->loadFenced($key, $ttl, $hash);
+
+        return $result instanceof Token ? false : $result;
+    }
+
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
     {
         $existing = $this->getWithCas($key);
         if ($existing === false) {
@@ -245,11 +253,6 @@ class Memcached implements Adapter, Retryable
     {
         $this->pruneTokenExpirations();
 
-        $keys = $this->execute(fn () => $this->memcached->getAllKeys());
-        if (\is_array($keys) && $keys !== []) {
-            return \count(\array_filter($keys, fn (mixed $key): bool => \is_string($key) && ! $this->isTombstoneKey($key)));
-        }
-
         $size = 0;
         $servers = $this->memcached->getServerList();
         if (empty($servers)) {
@@ -343,11 +346,6 @@ class Memcached implements Adapter, Retryable
     private function getTombstoneKey(string $key): string
     {
         return self::TOMBSTONE_PREFIX.\hash('sha256', $key);
-    }
-
-    private function isTombstoneKey(string $key): bool
-    {
-        return \str_starts_with($key, self::TOMBSTONE_PREFIX);
     }
 
     private function pruneTokenExpirations(): void
