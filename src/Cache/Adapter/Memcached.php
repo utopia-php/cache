@@ -16,6 +16,12 @@ class Memcached implements Adapter, FencedFill, Retryable
 
     private const TOMBSTONE_PREFIX = '__utopia_cache_token__:';
 
+    private const LOCK_PREFIX = '__utopia_cache_lock__:';
+
+    private const LOCK_TTL = 5;
+
+    private const LOCK_RETRY_DELAY = 10000;
+
     private const TOKEN_TTL = 60;
 
     /**
@@ -125,63 +131,7 @@ class Memcached implements Adapter, FencedFill, Retryable
         ];
 
         if ($token !== null) {
-            if ($this->isAbsentToken($token)) {
-                $tombstoneKey = $this->getTombstoneKey($key);
-                if ($this->getTombstone($tombstoneKey) !== false) {
-                    return false;
-                }
-
-                $saved = $this->execute(fn () => $this->memcached->add($key, $cache));
-                if ($saved) {
-                    if ($this->hasTombstoneAfterWrite($tombstoneKey)) {
-                        $this->execute(fn () => $this->memcached->delete($key));
-
-                        return false;
-                    }
-
-                    unset($this->tokenExpirations[$key]);
-                }
-
-                return $saved ? $data : false;
-            }
-
-            $existing = $this->getWithCas($key);
-            if ($existing === false) {
-                $tombstoneKey = $this->getTombstoneKey($key);
-                if ($this->getTombstone($tombstoneKey) !== $token->value) {
-                    return false;
-                }
-
-                $saved = $this->execute(fn () => $this->memcached->add($key, $cache));
-                if ($saved) {
-                    $this->execute(fn () => $this->memcached->delete($tombstoneKey));
-                    unset($this->tokenExpirations[$tombstoneKey]);
-                }
-
-                return $saved ? $data : false;
-            }
-
-            if (! $this->matchesToken($existing, $token)) {
-                return false;
-            }
-
-            $tombstoneKey = $this->getTombstoneKey($key);
-            if ($this->getTombstone($tombstoneKey) !== false) {
-                return false;
-            }
-
-            $saved = $this->execute(fn () => $this->memcached->cas($existing['cas'], $key, $cache));
-            if ($saved) {
-                if ($this->hasTombstoneAfterWrite($tombstoneKey)) {
-                    $this->execute(fn () => $this->memcached->delete($key));
-
-                    return false;
-                }
-
-                unset($this->tokenExpirations[$key]);
-            }
-
-            return $saved ? $data : false;
+            return $this->withLock($key, fn () => $this->saveWithToken($key, $data, $cache, $token));
         }
 
         $saved = $this->execute(fn () => $this->memcached->set($key, $cache));
@@ -230,14 +180,14 @@ class Memcached implements Adapter, FencedFill, Retryable
         $token = new Token(\bin2hex(\random_bytes(16)));
         $tombstoneKey = $this->getTombstoneKey($key);
 
-        $saved = (bool) $this->execute(function () use ($key, $tombstoneKey, $token): bool {
+        $saved = (bool) $this->withLock($key, fn (): bool => (bool) $this->execute(function () use ($key, $tombstoneKey, $token): bool {
             $saved = (bool) $this->memcached->set($tombstoneKey, $token->value, self::TOKEN_TTL);
             if ($saved) {
                 $this->memcached->delete($key);
             }
 
             return $saved;
-        });
+        }));
         if ($saved) {
             $this->tokenExpirations[$tombstoneKey] = \time() + self::TOKEN_TTL;
         }
@@ -366,6 +316,72 @@ class Memcached implements Adapter, FencedFill, Retryable
         return \str_starts_with($token->value, self::ABSENT_TOKEN_PREFIX);
     }
 
+    /**
+     * @param  array<int|string, mixed>|string  $data
+     * @param  array{time: int, data: array<int|string, mixed>|string}  $cache
+     * @return bool|string|array<int|string, mixed>
+     */
+    private function saveWithToken(string $key, array|string $data, array $cache, Token $token): bool|string|array
+    {
+        if ($this->isAbsentToken($token)) {
+            $tombstoneKey = $this->getTombstoneKey($key);
+            if ($this->getTombstone($tombstoneKey) !== false) {
+                return false;
+            }
+
+            $saved = $this->execute(fn () => $this->memcached->add($key, $cache));
+            if ($saved) {
+                if ($this->hasTombstoneAfterWrite($tombstoneKey)) {
+                    $this->execute(fn () => $this->memcached->delete($key));
+
+                    return false;
+                }
+
+                unset($this->tokenExpirations[$key]);
+            }
+
+            return $saved ? $data : false;
+        }
+
+        $existing = $this->getWithCas($key);
+        if ($existing === false) {
+            $tombstoneKey = $this->getTombstoneKey($key);
+            if ($this->getTombstone($tombstoneKey) !== $token->value) {
+                return false;
+            }
+
+            $saved = $this->execute(fn () => $this->memcached->add($key, $cache));
+            if ($saved) {
+                $this->execute(fn () => $this->memcached->delete($tombstoneKey));
+                unset($this->tokenExpirations[$tombstoneKey]);
+            }
+
+            return $saved ? $data : false;
+        }
+
+        if (! $this->matchesToken($existing, $token)) {
+            return false;
+        }
+
+        $tombstoneKey = $this->getTombstoneKey($key);
+        if ($this->getTombstone($tombstoneKey) !== false) {
+            return false;
+        }
+
+        $saved = $this->execute(fn () => $this->memcached->cas($existing['cas'], $key, $cache));
+        if ($saved) {
+            if ($this->hasTombstoneAfterWrite($tombstoneKey)) {
+                $this->execute(fn () => $this->memcached->delete($key));
+
+                return false;
+            }
+
+            unset($this->tokenExpirations[$key]);
+        }
+
+        return $saved ? $data : false;
+    }
+
     private function getTombstoneKey(string $key): string
     {
         return self::TOMBSTONE_PREFIX.\hash('sha256', $key);
@@ -382,6 +398,43 @@ class Memcached implements Adapter, FencedFill, Retryable
     private function hasTombstoneAfterWrite(string $key): bool
     {
         return $this->getTombstone($key) !== false;
+    }
+
+    /**
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T|false
+     */
+    private function withLock(string $key, callable $callback): mixed
+    {
+        $lockKey = self::LOCK_PREFIX.\hash('sha256', $key);
+        $lockValue = \bin2hex(\random_bytes(16));
+        $lockTtl = $this->getLockTtl();
+        $deadline = \microtime(true) + $lockTtl + 1;
+
+        while (\microtime(true) < $deadline) {
+            if ($this->execute(fn () => $this->memcached->add($lockKey, $lockValue, $lockTtl))) {
+                try {
+                    return $callback();
+                } finally {
+                    if ($this->execute(fn () => $this->memcached->get($lockKey)) === $lockValue) {
+                        $this->execute(fn () => $this->memcached->delete($lockKey));
+                    }
+                }
+            }
+
+            \usleep(self::LOCK_RETRY_DELAY);
+        }
+
+        return false;
+    }
+
+    private function getLockTtl(): int
+    {
+        $retryWindow = (int) \ceil((($this->maxRetries + 1) * $this->retryDelay) / 1000);
+
+        return \max(self::LOCK_TTL, $retryWindow + 5);
     }
 
     private function pruneTokenExpirations(): void

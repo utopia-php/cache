@@ -18,8 +18,6 @@ class Hazelcast implements Adapter, FencedFill, Retryable
 
     private const LOCK_TTL = 5;
 
-    private const LOCK_RETRIES = 600;
-
     private const LOCK_RETRY_DELAY = 10000;
 
     private const TOKEN_TTL = 60;
@@ -321,9 +319,11 @@ class Hazelcast implements Adapter, FencedFill, Retryable
     {
         $lockKey = self::LOCK_PREFIX.\hash('sha256', $key);
         $lockValue = \bin2hex(\random_bytes(16));
+        $lockTtl = $this->getLockTtl();
+        $deadline = \microtime(true) + $lockTtl + 1;
 
-        for ($attempt = 0; $attempt < self::LOCK_RETRIES; $attempt++) {
-            if ($this->execute(fn () => $this->memcached->add($lockKey, $lockValue, self::LOCK_TTL))) {
+        while (\microtime(true) < $deadline) {
+            if ($this->execute(fn () => $this->memcached->add($lockKey, $lockValue, $lockTtl))) {
                 try {
                     return $callback();
                 } finally {
@@ -382,5 +382,12 @@ class Hazelcast implements Adapter, FencedFill, Retryable
         }
 
         return false;
+    }
+
+    private function getLockTtl(): int
+    {
+        $retryWindow = (int) \ceil((($this->maxRetries + 1) * $this->retryDelay) / 1000);
+
+        return \max(self::LOCK_TTL, $retryWindow + 5);
     }
 }
