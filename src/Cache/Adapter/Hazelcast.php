@@ -84,9 +84,7 @@ class Hazelcast implements Adapter, FencedFill, Retryable
         }
 
         if (! is_array($cache)) {
-            $token = $this->purge($key, $hash);
-
-            return $token;
+            return new Token($this->dataToken($existing['value']));
         }
 
         if (! isset($cache['data'])) {

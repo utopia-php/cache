@@ -277,9 +277,6 @@ class Filesystem implements Adapter, FencedFill
 
     /**
      * @param  array<int|string, mixed>|string  $data
-     */
-    /**
-     * @param  array<int|string, mixed>|string  $data
      * @return bool|string|array<int|string, mixed>
      */
     private function saveWithToken(string $file, array|string $data, Token $token, bool $existed): bool|string|array
@@ -294,6 +291,7 @@ class Filesystem implements Adapter, FencedFill
             return false;
         }
 
+        $success = false;
         try {
             if (! \flock($handle, LOCK_EX)) {
                 return false;
@@ -315,10 +313,16 @@ class Filesystem implements Adapter, FencedFill
                 }
             }
 
+            $success = true;
+
             return $data;
         } finally {
             \flock($handle, LOCK_UN);
             \fclose($handle);
+
+            if (! $success && ! $existed && \is_file($file) && \filesize($file) === 0) {
+                @\unlink($file);
+            }
         }
     }
 
