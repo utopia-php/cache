@@ -116,8 +116,6 @@ class Cache
             $this->tokens[$tokenKey] = $result;
             $this->pruneTokens();
             $result = false;
-        } elseif ($result !== false) {
-            unset($this->tokens[$tokenKey]);
         } else {
             unset($this->tokens[$tokenKey]);
         }

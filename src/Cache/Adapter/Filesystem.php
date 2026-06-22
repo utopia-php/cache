@@ -266,9 +266,14 @@ class Filesystem implements Adapter
     /**
      * @param  array<int|string, mixed>|string  $data
      */
-    private function saveWithToken(string $file, array|string $data, Token $token, bool $existed): bool|string
+    /**
+     * @param  array<int|string, mixed>|string  $data
+     * @return bool|string|array<int|string, mixed>
+     */
+    private function saveWithToken(string $file, array|string $data, Token $token, bool $existed): bool|string|array
     {
-        if (! \is_string($data)) {
+        $chunks = $this->getWritableChunks($data);
+        if ($chunks === false) {
             return false;
         }
 
@@ -292,7 +297,13 @@ class Filesystem implements Adapter
                 return false;
             }
 
-            return \fwrite($handle, $data) === false ? false : $data;
+            foreach ($chunks as $chunk) {
+                if (\fwrite($handle, $chunk) === false) {
+                    return false;
+                }
+            }
+
+            return $data;
         } finally {
             \flock($handle, LOCK_UN);
             \fclose($handle);
@@ -310,6 +321,28 @@ class Filesystem implements Adapter
         }
 
         return $this->dataToken($file, $contents) === $token->value;
+    }
+
+    /**
+     * @param  array<int|string, mixed>|string  $data
+     * @return list<string>|false
+     */
+    private function getWritableChunks(array|string $data): array|false
+    {
+        if (\is_string($data)) {
+            return [$data];
+        }
+
+        $chunks = [];
+        foreach ($data as $chunk) {
+            if (! \is_scalar($chunk) && ! $chunk instanceof \Stringable) {
+                return false;
+            }
+
+            $chunks[] = (string) $chunk;
+        }
+
+        return $chunks;
     }
 
     /**
