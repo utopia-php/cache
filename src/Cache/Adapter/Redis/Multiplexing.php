@@ -188,6 +188,10 @@ LUA;
                 (string) \time(),
             ]);
 
+            if (! \is_int($result) && ! \is_string($result)) {
+                return false;
+            }
+
             return ((int) $result === 1) ? $value : false;
         } catch (Throwable) {
             return false;
@@ -228,6 +232,10 @@ LUA;
                 $token,
                 $value,
             ]);
+
+            if (! \is_int($result) && ! \is_string($result)) {
+                return false;
+            }
 
             return ((int) $result === 1) ? $data : false;
         } catch (Throwable) {

@@ -181,7 +181,12 @@ return 0
 LUA;
 
         try {
-            return ((int) $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $value, (string) self::LEASE_TTL, $ttl === null ? '' : (string) $ttl, (string) \time()], 1)) === 1) ? $value : false;
+            $result = $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $value, (string) self::LEASE_TTL, $ttl === null ? '' : (string) $ttl, (string) \time()], 1));
+            if (! \is_int($result) && ! \is_string($result)) {
+                return false;
+            }
+
+            return ((int) $result === 1) ? $value : false;
         } catch (Throwable) {
             return false;
         }
@@ -212,7 +217,12 @@ return 0
 LUA;
 
         try {
-            return ((int) $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $token, $value], 1)) === 1) ? $data : false;
+            $result = $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $token, $value], 1));
+            if (! \is_int($result) && ! \is_string($result)) {
+                return false;
+            }
+
+            return ((int) $result === 1) ? $data : false;
         } catch (Throwable) {
             return false;
         }
