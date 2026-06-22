@@ -89,23 +89,30 @@ class Hazelcast implements Adapter, Retryable
             return false;
         }
 
-        if ($token !== null) {
-            $existing = $this->execute(fn () => $this->memcached->get($key));
-            if (is_string($existing)) {
-                $existing = json_decode($existing, true);
-            }
-
-            if (! is_array($existing) || ($existing['token'] ?? null) !== $token->value) {
-                return false;
-            }
-        }
-
         $cache = [
             'time' => time(),
             'data' => $data,
         ];
+        $payload = json_encode($cache);
+        if ($payload === false) {
+            return false;
+        }
 
-        return ($this->execute(fn () => $this->memcached->set($key, json_encode($cache)))) ? $data : false;
+        if ($token !== null) {
+            $existing = $this->getWithCas($key);
+            if ($existing === false || ! \is_string($existing['value'])) {
+                return false;
+            }
+
+            $value = json_decode($existing['value'], true);
+            if (! \is_array($value) || ($value['token'] ?? null) !== $token->value) {
+                return false;
+            }
+
+            return ($this->execute(fn () => $this->memcached->cas($existing['cas'], $key, $payload))) ? $data : false;
+        }
+
+        return ($this->execute(fn () => $this->memcached->set($key, $payload))) ? $data : false;
     }
 
     /**
@@ -219,6 +226,28 @@ class Hazelcast implements Adapter, Retryable
     public function getRetryDelay(): int
     {
         return $this->retryDelay;
+    }
+
+    /**
+     * @return array{value: mixed, cas: float}|false
+     */
+    private function getWithCas(string $key): array|false
+    {
+        $result = $this->execute(fn () => $this->memcached->get($key, null, Client::GET_EXTENDED));
+
+        if (! \is_array($result) || ! \array_key_exists('value', $result) || ! \array_key_exists('cas', $result)) {
+            return false;
+        }
+
+        $cas = $result['cas'];
+        if (! \is_string($cas) && ! \is_int($cas) && ! \is_float($cas)) {
+            return false;
+        }
+
+        return [
+            'value' => $result['value'],
+            'cas' => (float) $cas,
+        ];
     }
 
     /**

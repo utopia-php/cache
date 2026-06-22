@@ -91,18 +91,24 @@ class Memcached implements Adapter, Retryable
             return false;
         }
 
-        if ($token !== null) {
-            /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string}|false */
-            $existing = $this->execute(fn () => $this->memcached->get($key));
-            if ($existing === false || ($existing['token'] ?? null) !== $token->value) {
-                return false;
-            }
-        }
-
         $cache = [
             'time' => \time(),
             'data' => $data,
         ];
+
+        if ($token !== null) {
+            $existing = $this->getWithCas($key);
+            if ($existing === false) {
+                return false;
+            }
+
+            $value = $existing['value'];
+            if (! \is_array($value) || ($value['token'] ?? null) !== $token->value) {
+                return false;
+            }
+
+            return $this->execute(fn () => $this->memcached->cas($existing['cas'], $key, $cache)) ? $data : false;
+        }
 
         return $this->execute(fn () => $this->memcached->set($key, $cache)) ? $data : false;
     }
@@ -215,6 +221,28 @@ class Memcached implements Adapter, Retryable
     public function getRetryDelay(): int
     {
         return $this->retryDelay;
+    }
+
+    /**
+     * @return array{value: mixed, cas: float}|false
+     */
+    private function getWithCas(string $key): array|false
+    {
+        $result = $this->execute(fn () => $this->memcached->get($key, null, Client::GET_EXTENDED));
+
+        if (! \is_array($result) || ! \array_key_exists('value', $result) || ! \array_key_exists('cas', $result)) {
+            return false;
+        }
+
+        $cas = $result['cas'];
+        if (! \is_string($cas) && ! \is_int($cas) && ! \is_float($cas)) {
+            return false;
+        }
+
+        return [
+            'value' => $result['value'],
+            'cas' => (float) $cas,
+        ];
     }
 
     /**
