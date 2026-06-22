@@ -195,10 +195,16 @@ LUA;
                 return $data;
             }
 
-            $this->execute(function () use ($key, $hash, $value) {
-                $this->redis->hSet($key, $hash, $value);
-                $this->redis->del($this->getTombstoneKey($key, $hash));
-            });
+            $script = <<<'LUA'
+redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+redis.call('DEL', KEYS[2])
+return 1
+LUA;
+
+            $result = $this->execute(fn () => $this->redis->eval($script, [$key, $this->getTombstoneKey($key, $hash), $hash, $value], 2));
+            if ((! \is_int($result) && ! \is_string($result)) || (int) $result !== 1) {
+                return false;
+            }
 
             return $data;
         } catch (Throwable $th) {

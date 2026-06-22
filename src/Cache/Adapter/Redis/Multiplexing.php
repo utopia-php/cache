@@ -203,8 +203,25 @@ LUA;
             return $data;
         }
 
-        $this->command(['HSET', $key, $hash, $value]);
-        $this->command(['DEL', $this->getTombstoneKey($key, $hash)]);
+        $script = <<<'LUA'
+redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+redis.call('DEL', KEYS[2])
+return 1
+LUA;
+
+        $result = $this->command([
+            'EVAL',
+            $script,
+            '2',
+            $key,
+            $this->getTombstoneKey($key, $hash),
+            $hash,
+            $value,
+        ]);
+
+        if ((! \is_int($result) && ! \is_string($result)) || (int) $result !== 1) {
+            return false;
+        }
 
         return $data;
     }
