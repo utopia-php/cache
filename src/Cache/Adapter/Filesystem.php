@@ -8,6 +8,8 @@ use Utopia\Cache\Token;
 
 class Filesystem implements Adapter
 {
+    private const ABSENT_TOKEN_PREFIX = '__utopia_cache_absent__:';
+
     private const TOKEN_PREFIX = '__utopia_cache_token__:';
 
     private const DATA_TOKEN_PREFIX = '__utopia_cache_data__:';
@@ -69,9 +71,7 @@ class Filesystem implements Adapter
             return $contents;
         }
 
-        $token = $this->purge($key, $hash);
-
-        return $token;
+        return $this->createAbsentToken();
     }
 
     /**
@@ -98,7 +98,7 @@ class Filesystem implements Adapter
             }
 
             if ($token !== null) {
-                return $this->saveWithToken($file, $data, $token);
+                return $this->saveWithToken($file, $data, $token, \file_exists($file));
             }
 
             return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
@@ -212,6 +212,10 @@ class Filesystem implements Adapter
             if (is_file($path)) {
                 $contents = \file_get_contents($path);
                 if ($this->isTokenContents($contents)) {
+                    if ($this->isTokenExpired($path)) {
+                        @\unlink($path);
+                    }
+
                     continue;
                 }
 
@@ -249,10 +253,20 @@ class Filesystem implements Adapter
         return self::DATA_TOKEN_PREFIX.\hash('sha256', \filemtime($file)."\0".$contents);
     }
 
+    private function createAbsentToken(): Token
+    {
+        return new Token(self::ABSENT_TOKEN_PREFIX.\bin2hex(\random_bytes(16)));
+    }
+
+    private function isAbsentToken(Token $token): bool
+    {
+        return \str_starts_with($token->value, self::ABSENT_TOKEN_PREFIX);
+    }
+
     /**
      * @param  array<int|string, mixed>|string  $data
      */
-    private function saveWithToken(string $file, array|string $data, Token $token): bool|string
+    private function saveWithToken(string $file, array|string $data, Token $token, bool $existed): bool|string
     {
         if (! \is_string($data)) {
             return false;
@@ -270,7 +284,7 @@ class Filesystem implements Adapter
 
             \rewind($handle);
             $contents = \stream_get_contents($handle);
-            if (! \is_string($contents) || ! $this->contentsMatchToken($file, $contents, $token)) {
+            if (! \is_string($contents) || ! $this->contentsMatchToken($file, $contents, $token, $existed)) {
                 return false;
             }
 
@@ -285,8 +299,12 @@ class Filesystem implements Adapter
         }
     }
 
-    private function contentsMatchToken(string $file, string $contents, Token $token): bool
+    private function contentsMatchToken(string $file, string $contents, Token $token, bool $existed): bool
     {
+        if ($this->isAbsentToken($token)) {
+            return ! $existed && $contents === '';
+        }
+
         if ($contents === self::TOKEN_PREFIX.$token->value) {
             return true;
         }

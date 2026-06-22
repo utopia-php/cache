@@ -9,6 +9,8 @@ use Utopia\Cache\Token;
 
 class Memcached implements Adapter, Retryable
 {
+    private const ABSENT_TOKEN_PREFIX = 'absent:';
+
     private const CAS_TOKEN_PREFIX = 'cas:';
 
     private const TOKEN_TTL = 60;
@@ -69,9 +71,7 @@ class Memcached implements Adapter, Retryable
     {
         $existing = $this->getWithCas($key);
         if ($existing === false) {
-            $token = $this->purge($key, $hash);
-
-            return $token;
+            return $this->createAbsentToken();
         }
 
         /** @var mixed $cache */
@@ -107,6 +107,15 @@ class Memcached implements Adapter, Retryable
         ];
 
         if ($token !== null) {
+            if ($this->isAbsentToken($token)) {
+                $saved = $this->execute(fn () => $this->memcached->add($key, $cache));
+                if ($saved) {
+                    unset($this->tokenExpirations[$key]);
+                }
+
+                return $saved ? $data : false;
+            }
+
             $existing = $this->getWithCas($key);
             if ($existing === false) {
                 return false;
@@ -299,6 +308,16 @@ class Memcached implements Adapter, Retryable
         }
 
         return $token->value === self::CAS_TOKEN_PREFIX.(string) $existing['cas'];
+    }
+
+    private function createAbsentToken(): Token
+    {
+        return new Token(self::ABSENT_TOKEN_PREFIX.\bin2hex(\random_bytes(16)));
+    }
+
+    private function isAbsentToken(Token $token): bool
+    {
+        return \str_starts_with($token->value, self::ABSENT_TOKEN_PREFIX);
     }
 
     private function pruneTokenExpirations(): void

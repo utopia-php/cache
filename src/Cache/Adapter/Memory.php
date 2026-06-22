@@ -7,6 +7,8 @@ use Utopia\Cache\Token;
 
 class Memory implements Adapter
 {
+    private const ABSENT_TOKEN_PREFIX = 'absent:';
+
     private const TOKEN_TTL = 60;
 
     /**
@@ -50,9 +52,7 @@ class Memory implements Adapter
             return new Token($this->dataToken($saved));
         }
 
-        $token = $this->purge($key, $hash);
-
-        return $token;
+        return $this->createAbsentToken();
     }
 
     /**
@@ -70,7 +70,16 @@ class Memory implements Adapter
         if ($token !== null) {
             /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string}|null $saved */
             $saved = $this->store[$key] ?? null;
-            if ($saved === null || ! $this->matchesToken($saved, $token)) {
+            if ($this->isAbsentToken($token)) {
+                if ($saved !== null && $this->isTokenExpired($saved)) {
+                    unset($this->store[$key]);
+                    $saved = null;
+                }
+
+                if ($saved !== null) {
+                    return false;
+                }
+            } elseif ($saved === null || ! $this->matchesToken($saved, $token)) {
                 return false;
             }
         }
@@ -200,5 +209,15 @@ class Memory implements Adapter
     private function dataToken(array $saved): string
     {
         return 'data:'.\hash('sha256', \serialize($saved));
+    }
+
+    private function createAbsentToken(): Token
+    {
+        return new Token(self::ABSENT_TOKEN_PREFIX.\bin2hex(\random_bytes(16)));
+    }
+
+    private function isAbsentToken(Token $token): bool
+    {
+        return \str_starts_with($token->value, self::ABSENT_TOKEN_PREFIX);
     }
 }
