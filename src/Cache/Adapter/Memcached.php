@@ -13,6 +13,8 @@ class Memcached implements Adapter, Retryable
 
     private const CAS_TOKEN_PREFIX = 'cas:';
 
+    private const TOMBSTONE_PREFIX = '__utopia_cache_token__:';
+
     private const TOKEN_TTL = 60;
 
     /**
@@ -71,6 +73,11 @@ class Memcached implements Adapter, Retryable
     {
         $existing = $this->getWithCas($key);
         if ($existing === false) {
+            $token = $this->execute(fn () => $this->memcached->get($this->getTombstoneKey($key)));
+            if (\is_string($token)) {
+                return new Token($token);
+            }
+
             return $this->createAbsentToken();
         }
 
@@ -110,6 +117,10 @@ class Memcached implements Adapter, Retryable
 
         if ($token !== null) {
             if ($this->isAbsentToken($token)) {
+                if ($this->execute(fn () => $this->memcached->get($this->getTombstoneKey($key))) !== false) {
+                    return false;
+                }
+
                 $saved = $this->execute(fn () => $this->memcached->add($key, $cache));
                 if ($saved) {
                     unset($this->tokenExpirations[$key]);
@@ -120,7 +131,18 @@ class Memcached implements Adapter, Retryable
 
             $existing = $this->getWithCas($key);
             if ($existing === false) {
-                return false;
+                $tombstoneKey = $this->getTombstoneKey($key);
+                if ($this->execute(fn () => $this->memcached->get($tombstoneKey)) !== $token->value) {
+                    return false;
+                }
+
+                $saved = $this->execute(fn () => $this->memcached->add($key, $cache));
+                if ($saved) {
+                    $this->execute(fn () => $this->memcached->delete($tombstoneKey));
+                    unset($this->tokenExpirations[$tombstoneKey]);
+                }
+
+                return $saved ? $data : false;
             }
 
             if (! $this->matchesToken($existing, $token)) {
@@ -178,14 +200,15 @@ class Memcached implements Adapter, Retryable
     public function purge(string $key, string $hash = ''): Token|false
     {
         $token = new Token(\bin2hex(\random_bytes(16)));
-        $cache = [
-            'time' => \time(),
-            'token' => $token->value,
-        ];
+        $tombstoneKey = $this->getTombstoneKey($key);
 
-        $saved = (bool) $this->execute(fn () => $this->memcached->set($key, $cache, self::TOKEN_TTL));
+        $saved = (bool) $this->execute(function () use ($key, $tombstoneKey, $token): bool {
+            $this->memcached->delete($key);
+
+            return (bool) $this->memcached->set($tombstoneKey, $token->value, self::TOKEN_TTL);
+        });
         if ($saved) {
-            $this->tokenExpirations[$key] = \time() + self::TOKEN_TTL;
+            $this->tokenExpirations[$tombstoneKey] = \time() + self::TOKEN_TTL;
         }
 
         return $saved ? $token : false;
@@ -224,12 +247,7 @@ class Memcached implements Adapter, Retryable
 
         $keys = $this->execute(fn () => $this->memcached->getAllKeys());
         if (\is_array($keys) && $keys !== []) {
-            $items = $this->execute(fn () => $this->memcached->getMulti($keys));
-            if (! \is_array($items)) {
-                return 0;
-            }
-
-            return \count(\array_filter($items, static fn (mixed $saved): bool => \is_array($saved) && isset($saved['data'])));
+            return \count(\array_filter($keys, fn (mixed $key): bool => \is_string($key) && ! $this->isTombstoneKey($key)));
         }
 
         $size = 0;
@@ -320,6 +338,16 @@ class Memcached implements Adapter, Retryable
     private function isAbsentToken(Token $token): bool
     {
         return \str_starts_with($token->value, self::ABSENT_TOKEN_PREFIX);
+    }
+
+    private function getTombstoneKey(string $key): string
+    {
+        return self::TOMBSTONE_PREFIX.\hash('sha256', $key);
+    }
+
+    private function isTombstoneKey(string $key): bool
+    {
+        return \str_starts_with($key, self::TOMBSTONE_PREFIX);
     }
 
     private function pruneTokenExpirations(): void

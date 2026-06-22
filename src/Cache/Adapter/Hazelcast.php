@@ -17,7 +17,7 @@ class Hazelcast implements Adapter, Retryable
 
     private const LOCK_TTL = 5;
 
-    private const LOCK_RETRIES = 100;
+    private const LOCK_RETRIES = 600;
 
     private const LOCK_RETRY_DELAY = 10000;
 
