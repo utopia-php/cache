@@ -3,6 +3,7 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Token;
 
 class None implements Adapter
 {
@@ -30,7 +31,7 @@ class None implements Adapter
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
     {
         return false;
     }
@@ -57,11 +58,11 @@ class None implements Adapter
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return string|false
+     * @return Token|false
      */
-    public function purge(string $key, string $hash = ''): string|false
+    public function purge(string $key, string $hash = ''): Token|false
     {
-        return \bin2hex(\random_bytes(16));
+        return new Token(\bin2hex(\random_bytes(16)));
     }
 
     /**

@@ -31,7 +31,7 @@ class Cache
     protected ?Counter $loadResults = null;
 
     /**
-     * @var array<string, string>
+     * @var array<string, Token>
      */
     private array $tokens = [];
 
@@ -113,7 +113,7 @@ class Cache
         $tokenKey = $this->getTokenKey($key, $effectiveHash);
         if ($result instanceof Token) {
             unset($this->tokens[$tokenKey]);
-            $this->tokens[$tokenKey] = $result->value;
+            $this->tokens[$tokenKey] = $result;
             $this->pruneTokens();
             $result = false;
         } elseif ($result !== false) {
@@ -229,7 +229,7 @@ class Cache
             'adapter' => $this->adapter->getName($key),
         ]);
 
-        return $result;
+        return $result instanceof Token ? $result->value : false;
     }
 
     /**

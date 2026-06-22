@@ -51,7 +51,7 @@ class Filesystem implements Adapter
             if ($this->isTokenContents($contents)) {
                 $token = $this->purge($key, $hash);
 
-                return $token === false ? false : new Token($token);
+                return $token;
             }
 
             if ($this->streaming) {
@@ -63,7 +63,7 @@ class Filesystem implements Adapter
 
         $token = $this->purge($key, $hash);
 
-        return $token === false ? false : new Token($token);
+        return $token;
     }
 
     /**
@@ -74,7 +74,7 @@ class Filesystem implements Adapter
      *
      * @throws Exception
      */
-    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
     {
         if (empty($data)) {
             return false;
@@ -138,13 +138,13 @@ class Filesystem implements Adapter
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return string|false
+     * @return Token|false
      */
-    public function purge(string $key, string $hash = ''): string|false
+    public function purge(string $key, string $hash = ''): Token|false
     {
         $file = $this->getPath($key);
 
-        $token = \bin2hex(\random_bytes(16));
+        $token = new Token(\bin2hex(\random_bytes(16)));
         $dir = dirname($file);
 
         if (! file_exists($dir)) {
@@ -153,7 +153,7 @@ class Filesystem implements Adapter
             }
         }
 
-        return \file_put_contents($file, self::TOKEN_PREFIX.$token, LOCK_EX) ? $token : false;
+        return \file_put_contents($file, self::TOKEN_PREFIX.$token->value, LOCK_EX) ? $token : false;
     }
 
     /**
@@ -234,7 +234,7 @@ class Filesystem implements Adapter
     /**
      * @param  array<int|string, mixed>|string  $data
      */
-    private function saveTokened(string $file, array|string $data, string $token): bool|string
+    private function saveTokened(string $file, array|string $data, Token $token): bool|string
     {
         if (! \is_string($data)) {
             return false;
@@ -252,7 +252,7 @@ class Filesystem implements Adapter
 
             \rewind($handle);
             $contents = \stream_get_contents($handle);
-            if ($contents !== self::TOKEN_PREFIX.$token) {
+            if ($contents !== self::TOKEN_PREFIX.$token->value) {
                 return false;
             }
 

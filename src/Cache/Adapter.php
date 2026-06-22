@@ -18,7 +18,7 @@ interface Adapter
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array;
+    public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array;
 
     /**
      * @param  string  $key
@@ -36,9 +36,9 @@ interface Adapter
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return string|false
+     * @return Token|false
      */
-    public function purge(string $key, string $hash = ''): string|false;
+    public function purge(string $key, string $hash = ''): Token|false;
 
     /**
      * @return bool

@@ -61,13 +61,13 @@ class Hazelcast implements Adapter, Retryable
         if (! is_array($cache)) {
             $token = $this->purge($key, $hash);
 
-            return $token === false ? false : new Token($token);
+            return $token;
         }
 
         if (! isset($cache['data'])) {
             $token = $this->purge($key, $hash);
 
-            return $token === false ? false : new Token($token);
+            return $token;
         }
 
         if (($cache['time'] + $ttl > time())) { // Cache is valid
@@ -83,7 +83,7 @@ class Hazelcast implements Adapter, Retryable
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -95,7 +95,7 @@ class Hazelcast implements Adapter, Retryable
                 $existing = json_decode($existing, true);
             }
 
-            if (! is_array($existing) || ($existing['token'] ?? null) !== $token) {
+            if (! is_array($existing) || ($existing['token'] ?? null) !== $token->value) {
                 return false;
             }
         }
@@ -141,14 +141,14 @@ class Hazelcast implements Adapter, Retryable
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return string|false
+     * @return Token|false
      */
-    public function purge(string $key, string $hash = ''): string|false
+    public function purge(string $key, string $hash = ''): Token|false
     {
-        $token = \bin2hex(\random_bytes(16));
+        $token = new Token(\bin2hex(\random_bytes(16)));
         $cache = [
             'time' => \time(),
-            'token' => $token,
+            'token' => $token->value,
         ];
 
         return (bool) $this->execute(fn () => $this->memcached->set($key, json_encode($cache))) ? $token : false;

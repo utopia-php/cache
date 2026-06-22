@@ -114,7 +114,7 @@ class FailingAdapter implements Adapter
         throw new RuntimeException('Cache failed.');
     }
 
-    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
     {
         throw new RuntimeException('Cache failed.');
     }
@@ -129,7 +129,7 @@ class FailingAdapter implements Adapter
         throw new RuntimeException('Cache failed.');
     }
 
-    public function purge(string $key, string $hash = ''): string|false
+    public function purge(string $key, string $hash = ''): Token|false
     {
         throw new RuntimeException('Cache failed.');
     }

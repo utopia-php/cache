@@ -130,7 +130,7 @@ class RedisCluster implements Adapter, Retryable
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -156,7 +156,7 @@ end
 return 0
 LUA;
 
-                $result = $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $token, $value], 1));
+                $result = $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $token->value, $value], 1));
                 if ((! \is_int($result) && ! \is_string($result)) || (int) $result !== 1) {
                     return false;
                 }
@@ -217,9 +217,9 @@ LUA;
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return string|false
+     * @return Token|false
      */
-    public function purge(string $key, string $hash = ''): string|false
+    public function purge(string $key, string $hash = ''): Token|false
     {
         $token = $this->createToken();
         if ($token === false) {
@@ -266,18 +266,18 @@ redis.call('HSET', KEYS[1], ARGV[1], ARGV[4])
 return {2, ARGV[4]}
 LUA;
 
-        $result = $this->execute(fn () => $this->redis->eval($script, [$key, $hash, (string) $ttl, (string) \time(), $token], 1));
+        $result = $this->execute(fn () => $this->redis->eval($script, [$key, $hash, (string) $ttl, (string) \time(), $token->value], 1));
 
         return \is_array($result) ? $result : false;
     }
 
-    private function createToken(): string|false
+    private function createToken(): Token|false
     {
         try {
-            return json_encode([
+            return new Token(json_encode([
                 'time' => \time(),
                 'token' => \bin2hex(\random_bytes(16)),
-            ], flags: JSON_THROW_ON_ERROR);
+            ], flags: JSON_THROW_ON_ERROR));
         } catch (Throwable) {
             return false;
         }

@@ -63,13 +63,13 @@ class Memcached implements Adapter, Retryable
         if ($cache === false) {
             $token = $this->purge($key, $hash);
 
-            return $token === false ? false : new Token($token);
+            return $token;
         }
 
         if (! isset($cache['data'])) {
             $token = $this->purge($key, $hash);
 
-            return $token === false ? false : new Token($token);
+            return $token;
         }
 
         if ($cache['time'] + $ttl > time()) { // Cache is valid
@@ -85,7 +85,7 @@ class Memcached implements Adapter, Retryable
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -94,7 +94,7 @@ class Memcached implements Adapter, Retryable
         if ($token !== null) {
             /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string}|false */
             $existing = $this->execute(fn () => $this->memcached->get($key));
-            if ($existing === false || ($existing['token'] ?? null) !== $token) {
+            if ($existing === false || ($existing['token'] ?? null) !== $token->value) {
                 return false;
             }
         }
@@ -137,14 +137,14 @@ class Memcached implements Adapter, Retryable
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return string|false
+     * @return Token|false
      */
-    public function purge(string $key, string $hash = ''): string|false
+    public function purge(string $key, string $hash = ''): Token|false
     {
-        $token = \bin2hex(\random_bytes(16));
+        $token = new Token(\bin2hex(\random_bytes(16)));
         $cache = [
             'time' => \time(),
-            'token' => $token,
+            'token' => $token->value,
         ];
 
         return (bool) $this->execute(fn () => $this->memcached->set($key, $cache)) ? $token : false;

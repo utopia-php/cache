@@ -128,7 +128,7 @@ class Multiplexing implements Adapter, TelemetryFeature
         return false;
     }
 
-    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -154,7 +154,7 @@ LUA;
                 '1',
                 $key,
                 $hash,
-                $token,
+                $token->value,
                 $value,
             ]);
 
@@ -203,7 +203,7 @@ LUA;
         return $keys;
     }
 
-    public function purge(string $key, string $hash = ''): string|false
+    public function purge(string $key, string $hash = ''): Token|false
     {
         $token = $this->createToken();
         if ($token === false) {
@@ -258,19 +258,19 @@ LUA;
             $hash,
             (string) $ttl,
             (string) \time(),
-            $token,
+            $token->value,
         ]);
 
         return \is_array($result) ? $result : false;
     }
 
-    private function createToken(): string|false
+    private function createToken(): Token|false
     {
         try {
-            return json_encode([
+            return new Token(json_encode([
                 'time' => \time(),
                 'token' => \bin2hex(\random_bytes(16)),
-            ], flags: JSON_THROW_ON_ERROR);
+            ], flags: JSON_THROW_ON_ERROR));
         } catch (Throwable) {
             return false;
         }

@@ -17,7 +17,7 @@ class FencedFillTest extends TestCase
 
             public ?string $saveHash = null;
 
-            public ?string $saveToken = null;
+            public ?Token $saveToken = null;
 
             public function load(string $key, int $ttl, string $hash = ''): mixed
             {
@@ -26,12 +26,12 @@ class FencedFillTest extends TestCase
                 return new Token('token');
             }
 
-            public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+            public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
             {
                 $this->saveHash = $hash;
                 $this->saveToken = $token;
 
-                return $hash === '' && $token === 'token' ? $data : false;
+                return $hash === '' && $token?->value === 'token' ? $data : false;
             }
 
             public function touch(string $key, string $hash = ''): bool
@@ -44,9 +44,9 @@ class FencedFillTest extends TestCase
                 return [];
             }
 
-            public function purge(string $key, string $hash = ''): string|false
+            public function purge(string $key, string $hash = ''): Token|false
             {
-                return 'token';
+                return new Token('token');
             }
 
             public function flush(): bool
@@ -76,7 +76,7 @@ class FencedFillTest extends TestCase
         $this->assertSame('value', $cache->save('key', 'value'));
         $this->assertSame('', $adapter->loadHash);
         $this->assertSame('', $adapter->saveHash);
-        $this->assertSame('token', $adapter->saveToken);
+        $this->assertSame('token', $adapter->saveToken?->value);
     }
 
     public function testPendingFillTokensAreBounded(): void
@@ -88,7 +88,7 @@ class FencedFillTest extends TestCase
                 return new Token($key);
             }
 
-            public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+            public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
             {
                 return $data;
             }
@@ -103,9 +103,9 @@ class FencedFillTest extends TestCase
                 return [];
             }
 
-            public function purge(string $key, string $hash = ''): string|false
+            public function purge(string $key, string $hash = ''): Token|false
             {
-                return 'token';
+                return new Token('token');
             }
 
             public function flush(): bool
@@ -135,7 +135,7 @@ class FencedFillTest extends TestCase
 
         $reflection = new \ReflectionProperty(Cache::class, 'tokens');
 
-        /** @var array<string, string> $tokens */
+        /** @var array<string, Token> $tokens */
         $tokens = $reflection->getValue($cache);
         $this->assertCount(1024, $tokens);
     }

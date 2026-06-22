@@ -3,6 +3,7 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Token;
 use Utopia\Pools\Pool as UtopiaPool;
 
 class Pool implements Adapter
@@ -49,7 +50,7 @@ class Pool implements Adapter
         return $this->delegate(__FUNCTION__, \func_get_args());
     }
 
-    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
     {
         /**
          * @var bool|string|array<mixed> $result
@@ -79,9 +80,9 @@ class Pool implements Adapter
         return $result;
     }
 
-    public function purge(string $key, string $hash = ''): string|false
+    public function purge(string $key, string $hash = ''): Token|false
     {
-        /** @var string|false $result */
+        /** @var Token|false $result */
         $result = $this->delegate(__FUNCTION__, \func_get_args());
 
         return $result;

@@ -34,7 +34,7 @@ class Memory implements Adapter
             if (! isset($saved['data'])) {
                 $token = $this->purge($key, $hash);
 
-                return $token === false ? false : new Token($token);
+                return $token;
             }
 
             return ($saved['time'] + $ttl > time()) ? $saved['data'] : false; // return data if cache is valid
@@ -42,7 +42,7 @@ class Memory implements Adapter
 
         $token = $this->purge($key, $hash);
 
-        return $token === false ? false : new Token($token);
+        return $token;
     }
 
     /**
@@ -51,7 +51,7 @@ class Memory implements Adapter
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
-    public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
+    public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
     {
         if (empty($key) || empty($data)) {
             return false;
@@ -60,7 +60,7 @@ class Memory implements Adapter
         if ($token !== null) {
             /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string}|null $saved */
             $saved = $this->store[$key] ?? null;
-            if (($saved['token'] ?? null) !== $token) {
+            if (($saved['token'] ?? null) !== $token->value) {
                 return false;
             }
         }
@@ -110,15 +110,15 @@ class Memory implements Adapter
     /**
      * @param  string  $key
      * @param  string  $hash optional
-     * @return string|false
+     * @return Token|false
      */
-    public function purge(string $key, string $hash = ''): string|false
+    public function purge(string $key, string $hash = ''): Token|false
     {
         if (! empty($key)) {
-            $token = \bin2hex(\random_bytes(16));
+            $token = new Token(\bin2hex(\random_bytes(16)));
             $this->store[$key] = [
                 'time' => \time(),
-                'token' => $token,
+                'token' => $token->value,
             ];
 
             return $token;
