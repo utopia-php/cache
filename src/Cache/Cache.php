@@ -141,6 +141,65 @@ class Cache
     }
 
     /**
+     * Reserve an empty cache slot for a later conditional save.
+     *
+     * @param  string  $key
+     * @param  string  $hash optional
+     * @param  int|null  $ttl optional
+     * @return string|false
+     */
+    public function lease(string $key, string $hash = '', ?int $ttl = null): string|false
+    {
+        $key = $this->caseSensitive ? $key : strtolower($key);
+        $hash = $this->caseSensitive ? $hash : strtolower($hash);
+
+        if (! ($this->adapter instanceof Feature\Lease)) {
+            return false;
+        }
+
+        $start = microtime(true);
+        try {
+            return $this->adapter->lease($key, $hash, $ttl);
+        } finally {
+            $duration = microtime(true) - $start;
+            $this->operationDuration?->record($duration, [
+                'operation' => 'lease',
+                'adapter' => $this->adapter->getName($key),
+            ]);
+        }
+    }
+
+    /**
+     * Save data only if the slot still holds the provided lease token.
+     *
+     * @param  string  $key
+     * @param  string|array<int|string, mixed>  $data
+     * @param  string  $token
+     * @param  string  $hash optional
+     * @return bool|string|array<int|string, mixed>
+     */
+    public function saveLease(string $key, array|string $data, string $token, string $hash = ''): bool|string|array
+    {
+        $key = $this->caseSensitive ? $key : strtolower($key);
+        $hash = $this->caseSensitive ? $hash : strtolower($hash);
+
+        if (! ($this->adapter instanceof Feature\Lease)) {
+            return false;
+        }
+
+        $start = microtime(true);
+        try {
+            return $this->adapter->saveLease($key, $data, $token, $hash);
+        } finally {
+            $duration = microtime(true) - $start;
+            $this->operationDuration?->record($duration, [
+                'operation' => 'saveLease',
+                'adapter' => $this->adapter->getName($key),
+            ]);
+        }
+    }
+
+    /**
      * Refresh a cache entry timestamp without replacing its data.
      *
      * @param  string  $key

@@ -8,6 +8,7 @@ use Swoole\Coroutine\Channel;
 use Swoole\Coroutine\Lock;
 use Throwable;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\Lease;
 use Utopia\Cache\Feature\Telemetry as TelemetryFeature;
 use Utopia\Telemetry\Adapter as Telemetry;
 use Utopia\Telemetry\Adapter\None as NoTelemetry;
@@ -23,8 +24,10 @@ use Utopia\Telemetry\UpDownCounter;
  * single reader coroutine parses inbound frames and dispatches each one to
  * the next pending Channel, exploiting Redis's guarantee of in-order replies.
  */
-class Multiplexing implements Adapter, TelemetryFeature
+class Multiplexing implements Adapter, TelemetryFeature, Lease
 {
+    private const LEASE_TTL = 30;
+
     private ?ConnectionContext $connection = null;
 
     /**
@@ -129,6 +132,107 @@ class Multiplexing implements Adapter, TelemetryFeature
         $this->command(['HSET', $key, $hash, $value]);
 
         return $data;
+    }
+
+    public function lease(string $key, string $hash = '', ?int $ttl = null): string|false
+    {
+        if (empty($key)) {
+            return false;
+        }
+
+        if (empty($hash)) {
+            $hash = $key;
+        }
+
+        try {
+            $token = \bin2hex(\random_bytes(16));
+            $value = json_encode([
+                'time' => \time(),
+                'lease' => $token,
+            ], flags: JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return false;
+        }
+
+        $script = <<<'LUA'
+local existing = redis.call('HGET', KEYS[1], ARGV[1])
+if existing == false then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+    return 1
+end
+
+local ok, decoded = pcall(cjson.decode, existing)
+if ok and decoded['lease'] ~= nil and decoded['time'] + tonumber(ARGV[3]) <= tonumber(ARGV[5]) then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+    return 1
+end
+
+if ok and decoded['data'] ~= nil and ARGV[4] ~= '' and decoded['time'] + tonumber(ARGV[4]) <= tonumber(ARGV[5]) then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+    return 1
+end
+
+return 0
+LUA;
+
+        try {
+            $result = $this->command([
+                'EVAL',
+                $script,
+                '1',
+                $key,
+                $hash,
+                $value,
+                (string) self::LEASE_TTL,
+                $ttl === null ? '' : (string) $ttl,
+                (string) \time(),
+            ]);
+
+            return ((int) $result === 1) ? $value : false;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    public function saveLease(string $key, array|string $data, string $token, string $hash = ''): bool|string|array
+    {
+        if (empty($key) || empty($data) || empty($token)) {
+            return false;
+        }
+
+        if (empty($hash)) {
+            $hash = $key;
+        }
+
+        try {
+            $value = Envelope::encode($data, time());
+        } catch (Throwable) {
+            return false;
+        }
+
+        $script = <<<'LUA'
+if redis.call('HGET', KEYS[1], ARGV[1]) == ARGV[2] then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
+    return 1
+end
+return 0
+LUA;
+
+        try {
+            $result = $this->command([
+                'EVAL',
+                $script,
+                '1',
+                $key,
+                $hash,
+                $token,
+                $value,
+            ]);
+
+            return ((int) $result === 1) ? $data : false;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     public function touch(string $key, string $hash = ''): bool

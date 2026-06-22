@@ -7,10 +7,13 @@ use Redis as Client;
 use Throwable;
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Adapter\Redis\Envelope;
+use Utopia\Cache\Feature;
 use Utopia\Cache\Feature\Retryable;
 
-class Redis implements Adapter, Retryable
+class Redis implements Adapter, Retryable, Feature\Lease
 {
+    private const LEASE_TTL = 30;
+
     /**
      * @var Client
      */
@@ -132,6 +135,85 @@ class Redis implements Adapter, Retryable
 
             return $data;
         } catch (Throwable $th) {
+            return false;
+        }
+    }
+
+    public function lease(string $key, string $hash = '', ?int $ttl = null): string|false
+    {
+        if (empty($key)) {
+            return false;
+        }
+
+        if (empty($hash)) {
+            $hash = $key;
+        }
+
+        try {
+            $token = \bin2hex(\random_bytes(16));
+            $value = json_encode([
+                'time' => \time(),
+                'lease' => $token,
+            ], flags: JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return false;
+        }
+
+        $script = <<<'LUA'
+local existing = redis.call('HGET', KEYS[1], ARGV[1])
+if existing == false then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+    return 1
+end
+
+local ok, decoded = pcall(cjson.decode, existing)
+if ok and decoded['lease'] ~= nil and decoded['time'] + tonumber(ARGV[3]) <= tonumber(ARGV[5]) then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+    return 1
+end
+
+if ok and decoded['data'] ~= nil and ARGV[4] ~= '' and decoded['time'] + tonumber(ARGV[4]) <= tonumber(ARGV[5]) then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+    return 1
+end
+
+return 0
+LUA;
+
+        try {
+            return ((int) $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $value, (string) self::LEASE_TTL, $ttl === null ? '' : (string) $ttl, (string) \time()], 1)) === 1) ? $value : false;
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    public function saveLease(string $key, array|string $data, string $token, string $hash = ''): bool|string|array
+    {
+        if (empty($key) || empty($data) || empty($token)) {
+            return false;
+        }
+
+        if (empty($hash)) {
+            $hash = $key;
+        }
+
+        try {
+            $value = Envelope::encode($data, time());
+        } catch (Throwable) {
+            return false;
+        }
+
+        $script = <<<'LUA'
+if redis.call('HGET', KEYS[1], ARGV[1]) == ARGV[2] then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
+    return 1
+end
+return 0
+LUA;
+
+        try {
+            return ((int) $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $token, $value], 1)) === 1) ? $data : false;
+        } catch (Throwable) {
             return false;
         }
     }

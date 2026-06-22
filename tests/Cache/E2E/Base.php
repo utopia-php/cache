@@ -72,6 +72,63 @@ abstract class Base extends TestCase
         self::$cache->purge('touch-key');
     }
 
+    public function testCacheLease(): void
+    {
+        self::$cache->purge('lease-key', 'lease-key');
+
+        $token = self::$cache->lease('lease-key', 'lease-key');
+        if ($token === false) {
+            $this->assertFalse(self::$cache->saveLease('lease-key', 'leased data', 'missing-token', 'lease-key'));
+
+            return;
+        }
+
+        $this->assertFalse(self::$cache->load('lease-key', 60, 'lease-key'));
+        $this->assertFalse(self::$cache->lease('lease-key', 'lease-key'));
+        $this->assertFalse(self::$cache->saveLease('lease-key', 'leased data', 'missing-token', 'lease-key'));
+        $this->assertEquals('leased data', self::$cache->saveLease('lease-key', 'leased data', $token, 'lease-key'));
+        $this->assertEquals('leased data', self::$cache->load('lease-key', 60, 'lease-key'));
+        $this->assertFalse(self::$cache->lease('lease-key', 'lease-key'));
+
+        self::$cache->purge('lease-key', 'lease-key');
+    }
+
+    public function testPurgedCacheLeaseDoesNotSave(): void
+    {
+        self::$cache->purge('purged-lease-key', 'purged-lease-key');
+
+        $token = self::$cache->lease('purged-lease-key', 'purged-lease-key');
+        if ($token === false) {
+            $this->assertFalse(self::$cache->saveLease('purged-lease-key', 'leased data', 'missing-token', 'purged-lease-key'));
+
+            return;
+        }
+
+        self::$cache->purge('purged-lease-key', 'purged-lease-key');
+
+        $this->assertFalse(self::$cache->saveLease('purged-lease-key', 'leased data', $token, 'purged-lease-key'));
+        $this->assertFalse(self::$cache->load('purged-lease-key', 60, 'purged-lease-key'));
+    }
+
+    public function testExpiredCacheDoesNotBlockLease(): void
+    {
+        self::$cache->purge('expired-lease-key', 'expired-lease-key');
+        self::$cache->save('expired-lease-key', 'expired data', 'expired-lease-key');
+        $this->assertFalse(self::$cache->load('expired-lease-key', 0, 'expired-lease-key'));
+
+        $token = self::$cache->lease('expired-lease-key', 'expired-lease-key', 0);
+        if ($token === false) {
+            $this->assertFalse(self::$cache->saveLease('expired-lease-key', 'leased data', 'missing-token', 'expired-lease-key'));
+
+            return;
+        }
+
+        $this->assertEquals('leased data', self::$cache->saveLease('expired-lease-key', 'leased data', $token, 'expired-lease-key'));
+        $this->assertEquals('leased data', self::$cache->load('expired-lease-key', 60, 'expired-lease-key'));
+
+        self::$cache->purge('expired-lease-key', 'expired-lease-key');
+    }
+
     public function testCaseInsensitivity(): void
     {
         // Ensure case in-sensitivity first (configured in adapter's setUp)
