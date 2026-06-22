@@ -4,9 +4,12 @@ namespace Utopia\Cache\Adapter;
 
 use Exception;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Token;
 
 class Filesystem implements Adapter
 {
+    private const TOKEN_PREFIX = '__utopia_cache_token__:';
+
     /**
      * @var string
      */
@@ -39,15 +42,28 @@ class Filesystem implements Adapter
     {
         $file = $this->getPath($key);
 
-        if (\file_exists($file) && (\filemtime($file) + $ttl > \time())) { // Cache is valid
+        if (\file_exists($file)) {
+            if (\filemtime($file) + $ttl <= \time()) {
+                return false;
+            }
+
+            $contents = \file_get_contents($file);
+            if ($this->isTokenContents($contents)) {
+                $token = $this->purge($key, $hash);
+
+                return $token === false ? false : new Token($token);
+            }
+
             if ($this->streaming) {
                 return \fopen($file, 'rb');
             }
 
-            return \file_get_contents($file);
+            return $contents;
         }
 
-        return false;
+        $token = $this->purge($key, $hash);
+
+        return $token === false ? false : new Token($token);
     }
 
     /**
@@ -60,7 +76,7 @@ class Filesystem implements Adapter
      */
     public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
-        if (empty($data) || $token !== null) {
+        if (empty($data)) {
             return false;
         }
 
@@ -70,6 +86,13 @@ class Filesystem implements Adapter
             if (! file_exists($dir)) {
                 if (! mkdir($dir, 0755, true) && ! file_exists($dir)) {
                     throw new Exception("Can't create directory {$dir}");
+                }
+            }
+
+            if ($token !== null) {
+                $contents = \file_exists($file) ? \file_get_contents($file) : false;
+                if ($contents !== self::TOKEN_PREFIX.$token) {
+                    return false;
                 }
             }
 
@@ -88,7 +111,16 @@ class Filesystem implements Adapter
     {
         $file = $this->getPath($key);
 
-        if (! file_exists($file) || ! touch($file)) {
+        if (! file_exists($file)) {
+            return false;
+        }
+
+        $contents = \file_get_contents($file);
+        if ($this->isTokenContents($contents)) {
+            return false;
+        }
+
+        if (! touch($file)) {
             return false;
         }
 
@@ -115,13 +147,16 @@ class Filesystem implements Adapter
     {
         $file = $this->getPath($key);
 
-        if (\file_exists($file)) {
-            $token = \bin2hex(\random_bytes(16));
+        $token = \bin2hex(\random_bytes(16));
+        $dir = dirname($file);
 
-            return \unlink($file) ? $token : false;
+        if (! file_exists($dir)) {
+            if (! mkdir($dir, 0755, true) && ! file_exists($dir)) {
+                return false;
+            }
         }
 
-        return false;
+        return \file_put_contents($file, self::TOKEN_PREFIX.$token, LOCK_EX) ? $token : false;
     }
 
     /**
@@ -170,6 +205,11 @@ class Filesystem implements Adapter
 
         foreach ($paths as $path) {
             if (is_file($path)) {
+                $contents = \file_get_contents($path);
+                if ($this->isTokenContents($contents)) {
+                    continue;
+                }
+
                 $fileSize = filesize($path);
                 $size += $fileSize !== false ? $fileSize : 0;
             } elseif (is_dir($path)) {
@@ -187,6 +227,11 @@ class Filesystem implements Adapter
     public function getPath(string $filename): string
     {
         return $this->path.DIRECTORY_SEPARATOR.$filename;
+    }
+
+    private function isTokenContents(string|false $contents): bool
+    {
+        return \is_string($contents) && \str_starts_with($contents, self::TOKEN_PREFIX);
     }
 
     /**

@@ -5,6 +5,7 @@ namespace Utopia\Cache\Adapter;
 use Memcached as Client;
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Feature\Retryable;
+use Utopia\Cache\Token;
 
 class Memcached implements Adapter, Retryable
 {
@@ -57,10 +58,18 @@ class Memcached implements Adapter, Retryable
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        /** @var array{time: int, data: string}|false */
+        /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string}|false */
         $cache = $this->execute(fn () => $this->memcached->get($key));
         if ($cache === false) {
-            return false;
+            $token = $this->purge($key, $hash);
+
+            return $token === false ? false : new Token($token);
+        }
+
+        if (! isset($cache['data'])) {
+            $token = $this->purge($key, $hash);
+
+            return $token === false ? false : new Token($token);
         }
 
         if ($cache['time'] + $ttl > time()) { // Cache is valid
@@ -78,8 +87,16 @@ class Memcached implements Adapter, Retryable
      */
     public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
-        if (empty($key) || empty($data) || $token !== null) {
+        if (empty($key) || empty($data)) {
             return false;
+        }
+
+        if ($token !== null) {
+            /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string}|false */
+            $existing = $this->execute(fn () => $this->memcached->get($key));
+            if ($existing === false || ($existing['token'] ?? null) !== $token) {
+                return false;
+            }
         }
 
         $cache = [
@@ -97,9 +114,9 @@ class Memcached implements Adapter, Retryable
      */
     public function touch(string $key, string $hash = ''): bool
     {
-        /** @var array{time: int, data: string|array<int|string, mixed>}|false */
+        /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string}|false */
         $cache = $this->execute(fn () => $this->memcached->get($key));
-        if ($cache === false) {
+        if ($cache === false || ! isset($cache['data'])) {
             return false;
         }
 
@@ -125,8 +142,12 @@ class Memcached implements Adapter, Retryable
     public function purge(string $key, string $hash = ''): string|false
     {
         $token = \bin2hex(\random_bytes(16));
+        $cache = [
+            'time' => \time(),
+            'token' => $token,
+        ];
 
-        return (bool) $this->execute(fn () => $this->memcached->delete($key)) ? $token : false;
+        return (bool) $this->execute(fn () => $this->memcached->set($key, $cache)) ? $token : false;
     }
 
     /**

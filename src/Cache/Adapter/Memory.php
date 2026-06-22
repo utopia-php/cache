@@ -86,8 +86,12 @@ class Memory implements Adapter
             return false;
         }
 
-        /** @var array{time: int, data: string|array<int|string, mixed>} $saved */
+        /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string} $saved */
         $saved = $this->store[$key];
+        if (! isset($saved['data'])) {
+            return false;
+        }
+
         $saved['time'] = time();
         $this->store[$key] = $saved;
 

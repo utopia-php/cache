@@ -10,6 +10,7 @@ use Utopia\Cache\Adapter\Memory;
 use Utopia\Cache\Adapter\Sharding;
 use Utopia\Cache\Cache;
 use Utopia\Cache\Feature;
+use Utopia\Cache\Token;
 use Utopia\CircuitBreaker\CircuitBreaker as UtopiaCircuitBreaker;
 use Utopia\Telemetry\Adapter as Telemetry;
 use Utopia\Telemetry\Adapter\Test as TestTelemetry;
@@ -27,7 +28,7 @@ class CircuitBreakerTest extends TestCase
         $this->assertSame(1, $cache->getSize());
         $this->assertTrue($cache->ping());
         $this->assertNotFalse($cache->purge('key'));
-        $this->assertFalse($cache->load('key', 60));
+        $this->assertInstanceOf(Token::class, $cache->load('key', 60));
     }
 
     public function testReturnsFallbacksWhenCacheOperationsFail(): void
@@ -59,7 +60,7 @@ class CircuitBreakerTest extends TestCase
 
         $cache->setTelemetry($telemetry);
 
-        $this->assertFalse($cache->load('missing', 60));
+        $this->assertInstanceOf(Token::class, $cache->load('missing', 60));
         /** @var object{values: list<int|float>} $calls */
         $calls = $telemetry->counters['breaker.calls'];
         $this->assertSame([1], $calls->values);

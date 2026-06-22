@@ -65,6 +65,21 @@ class NoneTest extends Base
         $this->assertEquals(false, self::$cache->touch($this->key));
     }
 
+    public function testCacheMissSaveIsFenced(): void
+    {
+        $this->assertFalse(self::$cache->load('fenced-key', 60, 'fenced-key'));
+        $this->assertFalse(self::$cache->save('fenced-key', 'fresh data', 'fenced-key'));
+        $this->assertFalse(self::$cache->load('fenced-key', 60, 'fenced-key'));
+    }
+
+    public function testExpiredCacheDoesNotBlockFencedSave(): void
+    {
+        $this->assertFalse(self::$cache->save('expired-fence-key', 'expired data', 'expired-fence-key'));
+        $this->assertFalse(self::$cache->load('expired-fence-key', 0, 'expired-fence-key'));
+        $this->assertFalse(self::$cache->save('expired-fence-key', 'fresh data', 'expired-fence-key'));
+        $this->assertFalse(self::$cache->load('expired-fence-key', 60, 'expired-fence-key'));
+    }
+
     public function testCaseInsensitivity(): void
     {
         // None adapter does not expect case sensitivity/insensitivy

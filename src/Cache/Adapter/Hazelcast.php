@@ -5,6 +5,7 @@ namespace Utopia\Cache\Adapter;
 use Memcached as Client;
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Feature\Retryable;
+use Utopia\Cache\Token;
 
 class Hazelcast implements Adapter, Retryable
 {
@@ -58,7 +59,15 @@ class Hazelcast implements Adapter, Retryable
         }
 
         if (! is_array($cache)) {
-            return false;
+            $token = $this->purge($key, $hash);
+
+            return $token === false ? false : new Token($token);
+        }
+
+        if (! isset($cache['data'])) {
+            $token = $this->purge($key, $hash);
+
+            return $token === false ? false : new Token($token);
         }
 
         if (($cache['time'] + $ttl > time())) { // Cache is valid
@@ -76,8 +85,19 @@ class Hazelcast implements Adapter, Retryable
      */
     public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
     {
-        if (empty($key) || empty($data) || $token !== null) {
+        if (empty($key) || empty($data)) {
             return false;
+        }
+
+        if ($token !== null) {
+            $existing = $this->execute(fn () => $this->memcached->get($key));
+            if (is_string($existing)) {
+                $existing = json_decode($existing, true);
+            }
+
+            if (! is_array($existing) || ($existing['token'] ?? null) !== $token) {
+                return false;
+            }
         }
 
         $cache = [
@@ -100,7 +120,7 @@ class Hazelcast implements Adapter, Retryable
             $cache = json_decode($cache, true);
         }
 
-        if (! is_array($cache)) {
+        if (! is_array($cache) || ! isset($cache['data'])) {
             return false;
         }
 
@@ -126,8 +146,12 @@ class Hazelcast implements Adapter, Retryable
     public function purge(string $key, string $hash = ''): string|false
     {
         $token = \bin2hex(\random_bytes(16));
+        $cache = [
+            'time' => \time(),
+            'token' => $token,
+        ];
 
-        return (bool) $this->execute(fn () => $this->memcached->delete($key)) ? $token : false;
+        return (bool) $this->execute(fn () => $this->memcached->set($key, json_encode($cache))) ? $token : false;
     }
 
     /**
