@@ -77,9 +77,11 @@ class Memcached implements Adapter, Retryable
         /** @var mixed $cache */
         $cache = $existing['value'];
         if (! \is_array($cache) || ! isset($cache['data'])) {
-            $token = $this->purge($key, $hash);
+            if (\is_array($cache) && isset($cache['token']) && \is_string($cache['token'])) {
+                return new Token($cache['token']);
+            }
 
-            return $token;
+            return $this->createAbsentToken();
         }
 
         if ($cache['time'] + $ttl > time()) { // Cache is valid

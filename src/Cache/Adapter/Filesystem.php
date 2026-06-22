@@ -51,13 +51,17 @@ class Filesystem implements Adapter
         if (\file_exists($file)) {
             $contents = \file_get_contents($file);
             if ($this->isTokenContents($contents)) {
-                if ($this->isTokenExpired($file)) {
-                    @\unlink($file);
+                if (! \is_string($contents)) {
+                    return false;
                 }
 
-                $token = $this->purge($key, $hash);
+                if ($this->isTokenExpired($file)) {
+                    @\unlink($file);
 
-                return $token;
+                    return $this->createAbsentToken();
+                }
+
+                return new Token(\substr($contents, \strlen(self::TOKEN_PREFIX)));
             }
 
             if (\filemtime($file) + $ttl <= \time()) {

@@ -26,6 +26,8 @@ use Utopia\Telemetry\UpDownCounter;
  */
 class Multiplexing implements Adapter, TelemetryFeature
 {
+    private const TOKEN_TTL = 60;
+
     private ?ConnectionContext $connection = null;
 
     /**
@@ -146,7 +148,28 @@ class Multiplexing implements Adapter, TelemetryFeature
 
         if ($token !== null) {
             $script = <<<'LUA'
-if redis.call('HGET', KEYS[1], ARGV[1]) == ARGV[2] then
+local current = redis.call('HGET', KEYS[1], ARGV[1])
+local tombstone = redis.call('GET', KEYS[2])
+local globalTombstone = redis.call('GET', KEYS[3])
+local ok, token = pcall(cjson.decode, ARGV[2])
+if ok and type(token) == 'table' and token['state'] == 'absent' then
+    if not current and not tombstone and not globalTombstone then
+        redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
+        return 1
+    end
+    return 0
+end
+if current == ARGV[2] then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
+    redis.call('DEL', KEYS[2])
+    return 1
+end
+if not current and tombstone == ARGV[2] then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
+    redis.call('DEL', KEYS[2])
+    return 1
+end
+if not current and globalTombstone == ARGV[2] then
     redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
     return 1
 end
@@ -156,8 +179,10 @@ LUA;
             $result = $this->command([
                 'EVAL',
                 $script,
-                '1',
+                '3',
                 $key,
+                $this->getTombstoneKey($key, $hash),
+                $this->getTombstoneKey($key, '*'),
                 $hash,
                 $token->value,
                 $value,
@@ -171,6 +196,7 @@ LUA;
         }
 
         $this->command(['HSET', $key, $hash, $value]);
+        $this->command(['DEL', $this->getTombstoneKey($key, $hash)]);
 
         return $data;
     }
@@ -216,10 +242,14 @@ LUA;
         }
 
         if (! empty($hash)) {
-            return $this->command(['HDEL', $key, $hash]) !== false ? $token : false;
+            $this->command(['HDEL', $key, $hash]);
+
+            return $this->command(['SET', $this->getTombstoneKey($key, $hash), $token->value, 'EX', (string) self::TOKEN_TTL]) === 'OK' ? $token : false;
         }
 
-        return $this->command(['DEL', $key]) !== false ? $token : false;
+        $this->command(['DEL', $key]);
+
+        return $this->command(['SET', $this->getTombstoneKey($key, '*'), $token->value, 'EX', (string) self::TOKEN_TTL]) === 'OK' ? $token : false;
     }
 
     /**
@@ -227,7 +257,7 @@ LUA;
      */
     private function loadOrReserve(string $key, string $hash, int $ttl): array|false
     {
-        $token = $this->createToken();
+        $token = $this->createToken('absent');
         if ($token === false) {
             return false;
         }
@@ -244,22 +274,30 @@ if value then
             return {2, value}
         end
         if payload['token'] ~= nil and payload['data'] == nil then
-            redis.call('HSET', KEYS[1], ARGV[1], ARGV[4])
-            return {2, ARGV[4]}
+            return {2, value}
         end
     end
     return {0, ''}
 end
 
-redis.call('HSET', KEYS[1], ARGV[1], ARGV[4])
+local tombstone = redis.call('GET', KEYS[2])
+if tombstone then
+    return {2, tombstone}
+end
+local globalTombstone = redis.call('GET', KEYS[3])
+if globalTombstone then
+    return {2, globalTombstone}
+end
 return {2, ARGV[4]}
 LUA;
 
         $result = $this->command([
             'EVAL',
             $script,
-            '1',
+            '3',
             $key,
+            $this->getTombstoneKey($key, $hash),
+            $this->getTombstoneKey($key, '*'),
             $hash,
             (string) $ttl,
             (string) \time(),
@@ -269,16 +307,31 @@ LUA;
         return \is_array($result) ? $result : false;
     }
 
-    private function createToken(): Token|false
+    private function createToken(string $state = 'token'): Token|false
     {
         try {
             return new Token(json_encode([
                 'time' => \time(),
+                'state' => $state,
                 'token' => \bin2hex(\random_bytes(16)),
             ], flags: JSON_THROW_ON_ERROR));
         } catch (Throwable) {
             return false;
         }
+    }
+
+    private function getTombstoneKey(string $key, string $hash): string
+    {
+        return '{'.$this->getClusterTag($key).'}:utopia-cache-token:'.\hash('sha256', $key."\0".$hash);
+    }
+
+    private function getClusterTag(string $key): string
+    {
+        if (\preg_match('/\{([^{}]+)\}/', $key, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return $key;
     }
 
     public function flush(): bool
@@ -298,8 +351,16 @@ LUA;
     public function getSize(): int
     {
         $size = $this->command(['DBSIZE']);
+        if (! \is_int($size)) {
+            return 0;
+        }
 
-        return is_int($size) ? $size : 0;
+        $tombstones = $this->command(['KEYS', '*:utopia-cache-token:*']);
+        if (\is_array($tombstones)) {
+            return \max(0, $size - \count($tombstones));
+        }
+
+        return $size;
     }
 
     public function getName(?string $key = null): string

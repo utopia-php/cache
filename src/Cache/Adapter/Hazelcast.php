@@ -84,9 +84,11 @@ class Hazelcast implements Adapter, Retryable
         }
 
         if (! isset($cache['data'])) {
-            $token = $this->purge($key, $hash);
+            if (isset($cache['token']) && \is_string($cache['token'])) {
+                return new Token($cache['token']);
+            }
 
-            return $token;
+            return $this->createAbsentToken();
         }
 
         if (($cache['time'] + $ttl > time())) { // Cache is valid
