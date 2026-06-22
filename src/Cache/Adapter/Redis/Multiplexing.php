@@ -177,7 +177,7 @@ if not current and tombstone == ARGV[2] then
     redis.call('DEL', KEYS[2])
     return 1
 end
-if not current and globalTombstone == ARGV[2] then
+if not current and not tombstone and globalTombstone == ARGV[2] then
     redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
     return 1
 end
