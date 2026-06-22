@@ -210,13 +210,13 @@ class Cache
     }
 
     /**
-     * Removes data from cache. Returns a token on success or false on failure.
+     * Removes data from cache. Returns true on success or false on failure.
      *
      * @param  string  $key
      * @param  string  $hash optional
-     * @return string|false
+     * @return bool
      */
-    public function purge(string $key, string $hash = ''): string|false
+    public function purge(string $key, string $hash = ''): bool
     {
         $key = $this->caseSensitive ? $key : \strtolower($key);
         $hash = $this->caseSensitive ? $hash : \strtolower($hash);
@@ -229,7 +229,7 @@ class Cache
             'adapter' => $this->adapter->getName($key),
         ]);
 
-        return $result instanceof Token ? $result->value : false;
+        return $result instanceof Token;
     }
 
     /**

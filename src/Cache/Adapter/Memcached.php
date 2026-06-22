@@ -9,6 +9,10 @@ use Utopia\Cache\Token;
 
 class Memcached implements Adapter, Retryable
 {
+    private const CAS_TOKEN_PREFIX = 'cas:';
+
+    private const TOKEN_TTL = 60;
+
     /**
      * @var Client
      */
@@ -17,6 +21,11 @@ class Memcached implements Adapter, Retryable
     private int $maxRetries = 0;
 
     private int $retryDelay = 1000; // milliseconds
+
+    /**
+     * @var array<string, int>
+     */
+    private array $tokenExpirations = [];
 
     /**
      * Memcached constructor.
@@ -58,15 +67,16 @@ class Memcached implements Adapter, Retryable
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string}|false */
-        $cache = $this->execute(fn () => $this->memcached->get($key));
-        if ($cache === false) {
+        $existing = $this->getWithCas($key);
+        if ($existing === false) {
             $token = $this->purge($key, $hash);
 
             return $token;
         }
 
-        if (! isset($cache['data'])) {
+        /** @var mixed $cache */
+        $cache = $existing['value'];
+        if (! \is_array($cache) || ! isset($cache['data'])) {
             $token = $this->purge($key, $hash);
 
             return $token;
@@ -76,7 +86,7 @@ class Memcached implements Adapter, Retryable
             return $cache['data'];
         }
 
-        return false;
+        return new Token(self::CAS_TOKEN_PREFIX.(string) $existing['cas']);
     }
 
     /**
@@ -102,15 +112,24 @@ class Memcached implements Adapter, Retryable
                 return false;
             }
 
-            $value = $existing['value'];
-            if (! \is_array($value) || ($value['token'] ?? null) !== $token->value) {
+            if (! $this->matchesToken($existing, $token)) {
                 return false;
             }
 
-            return $this->execute(fn () => $this->memcached->cas($existing['cas'], $key, $cache)) ? $data : false;
+            $saved = $this->execute(fn () => $this->memcached->cas($existing['cas'], $key, $cache));
+            if ($saved) {
+                unset($this->tokenExpirations[$key]);
+            }
+
+            return $saved ? $data : false;
         }
 
-        return $this->execute(fn () => $this->memcached->set($key, $cache)) ? $data : false;
+        $saved = $this->execute(fn () => $this->memcached->set($key, $cache));
+        if ($saved) {
+            unset($this->tokenExpirations[$key]);
+        }
+
+        return $saved ? $data : false;
     }
 
     /**
@@ -153,7 +172,12 @@ class Memcached implements Adapter, Retryable
             'token' => $token->value,
         ];
 
-        return (bool) $this->execute(fn () => $this->memcached->set($key, $cache)) ? $token : false;
+        $saved = (bool) $this->execute(fn () => $this->memcached->set($key, $cache, self::TOKEN_TTL));
+        if ($saved) {
+            $this->tokenExpirations[$key] = \time() + self::TOKEN_TTL;
+        }
+
+        return $saved ? $token : false;
     }
 
     /**
@@ -185,17 +209,31 @@ class Memcached implements Adapter, Retryable
      */
     public function getSize(): int
     {
-        $size = 0;
-        $servers = $this->memcached->getServerList();
-        if (! empty($servers)) {
-            $stats = $this->memcached->getStats();
-            $key = $servers[0]['host'].':'.$servers[0]['port'];
-            if (isset($stats[$key])) {
-                $size = $stats[$key]['curr_items'] ?? 0;
+        $this->pruneTokenExpirations();
+
+        $keys = $this->execute(fn () => $this->memcached->getAllKeys());
+        if (\is_array($keys) && $keys !== []) {
+            $items = $this->execute(fn () => $this->memcached->getMulti($keys));
+            if (! \is_array($items)) {
+                return 0;
             }
+
+            return \count(\array_filter($items, static fn (mixed $saved): bool => \is_array($saved) && isset($saved['data'])));
         }
 
-        return $size;
+        $size = 0;
+        $servers = $this->memcached->getServerList();
+        if (empty($servers)) {
+            return $size;
+        }
+
+        $stats = $this->memcached->getStats();
+        $key = $servers[0]['host'].':'.$servers[0]['port'];
+        if (isset($stats[$key])) {
+            $size = $stats[$key]['curr_items'] ?? 0;
+        }
+
+        return (int) \max(0, $size - \count($this->tokenExpirations));
     }
 
     /**
@@ -248,6 +286,29 @@ class Memcached implements Adapter, Retryable
             'value' => $result['value'],
             'cas' => $cas,
         ];
+    }
+
+    /**
+     * @param  array{value: mixed, cas: float}  $existing
+     */
+    private function matchesToken(array $existing, Token $token): bool
+    {
+        $value = $existing['value'];
+        if (\is_array($value) && ($value['token'] ?? null) === $token->value) {
+            return true;
+        }
+
+        return $token->value === self::CAS_TOKEN_PREFIX.(string) $existing['cas'];
+    }
+
+    private function pruneTokenExpirations(): void
+    {
+        $now = \time();
+        foreach ($this->tokenExpirations as $key => $expiresAt) {
+            if ($expiresAt <= $now) {
+                unset($this->tokenExpirations[$key]);
+            }
+        }
     }
 
     /**

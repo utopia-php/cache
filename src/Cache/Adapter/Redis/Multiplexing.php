@@ -138,7 +138,12 @@ class Multiplexing implements Adapter, TelemetryFeature
             $hash = $key;
         }
 
-        $value = Envelope::encode($data, time());
+        try {
+            $value = Envelope::encode($data, time());
+        } catch (Throwable) {
+            return false;
+        }
+
         if ($token !== null) {
             $script = <<<'LUA'
 if redis.call('HGET', KEYS[1], ARGV[1]) == ARGV[2] then
@@ -236,7 +241,7 @@ if value then
             if payload['time'] + tonumber(ARGV[2]) > tonumber(ARGV[3]) then
                 return {1, value}
             end
-            return {0, ''}
+            return {2, value}
         end
         if payload['token'] ~= nil and payload['data'] == nil then
             redis.call('HSET', KEYS[1], ARGV[1], ARGV[4])

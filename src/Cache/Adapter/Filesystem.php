@@ -10,6 +10,10 @@ class Filesystem implements Adapter
 {
     private const TOKEN_PREFIX = '__utopia_cache_token__:';
 
+    private const DATA_TOKEN_PREFIX = '__utopia_cache_data__:';
+
+    private const TOKEN_TTL = 60;
+
     /**
      * @var string
      */
@@ -43,15 +47,19 @@ class Filesystem implements Adapter
         $file = $this->getPath($key);
 
         if (\file_exists($file)) {
-            if (\filemtime($file) + $ttl <= \time()) {
-                return false;
-            }
-
             $contents = \file_get_contents($file);
             if ($this->isTokenContents($contents)) {
+                if ($this->isTokenExpired($file)) {
+                    @\unlink($file);
+                }
+
                 $token = $this->purge($key, $hash);
 
                 return $token;
+            }
+
+            if (\filemtime($file) + $ttl <= \time()) {
+                return \is_string($contents) ? new Token($this->dataToken($file, $contents)) : false;
             }
 
             if ($this->streaming) {
@@ -90,7 +98,7 @@ class Filesystem implements Adapter
             }
 
             if ($token !== null) {
-                return $this->saveTokened($file, $data, $token);
+                return $this->saveWithToken($file, $data, $token);
             }
 
             return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
@@ -231,10 +239,20 @@ class Filesystem implements Adapter
         return \is_string($contents) && \str_starts_with($contents, self::TOKEN_PREFIX);
     }
 
+    private function isTokenExpired(string $file): bool
+    {
+        return \filemtime($file) + self::TOKEN_TTL <= \time();
+    }
+
+    private function dataToken(string $file, string $contents): string
+    {
+        return self::DATA_TOKEN_PREFIX.\hash('sha256', \filemtime($file)."\0".$contents);
+    }
+
     /**
      * @param  array<int|string, mixed>|string  $data
      */
-    private function saveTokened(string $file, array|string $data, Token $token): bool|string
+    private function saveWithToken(string $file, array|string $data, Token $token): bool|string
     {
         if (! \is_string($data)) {
             return false;
@@ -252,7 +270,7 @@ class Filesystem implements Adapter
 
             \rewind($handle);
             $contents = \stream_get_contents($handle);
-            if ($contents !== self::TOKEN_PREFIX.$token->value) {
+            if (! \is_string($contents) || ! $this->contentsMatchToken($file, $contents, $token)) {
                 return false;
             }
 
@@ -265,6 +283,15 @@ class Filesystem implements Adapter
             \flock($handle, LOCK_UN);
             \fclose($handle);
         }
+    }
+
+    private function contentsMatchToken(string $file, string $contents, Token $token): bool
+    {
+        if ($contents === self::TOKEN_PREFIX.$token->value) {
+            return true;
+        }
+
+        return $this->dataToken($file, $contents) === $token->value;
     }
 
     /**

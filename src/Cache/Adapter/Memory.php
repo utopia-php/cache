@@ -7,6 +7,8 @@ use Utopia\Cache\Token;
 
 class Memory implements Adapter
 {
+    private const TOKEN_TTL = 60;
+
     /**
      * @var array<string, mixed>
      */
@@ -32,12 +34,20 @@ class Memory implements Adapter
             $saved = $this->store[$key];
 
             if (! isset($saved['data'])) {
+                if ($this->isTokenExpired($saved)) {
+                    unset($this->store[$key]);
+                }
+
                 $token = $this->purge($key, $hash);
 
                 return $token;
             }
 
-            return ($saved['time'] + $ttl > time()) ? $saved['data'] : false; // return data if cache is valid
+            if ($saved['time'] + $ttl > time()) {
+                return $saved['data'];
+            }
+
+            return new Token($this->dataToken($saved));
         }
 
         $token = $this->purge($key, $hash);
@@ -60,7 +70,7 @@ class Memory implements Adapter
         if ($token !== null) {
             /** @var array{time: int, data?: string|array<int|string, mixed>, token?: string}|null $saved */
             $saved = $this->store[$key] ?? null;
-            if (($saved['token'] ?? null) !== $token->value) {
+            if ($saved === null || ! $this->matchesToken($saved, $token)) {
                 return false;
             }
         }
@@ -152,7 +162,7 @@ class Memory implements Adapter
      */
     public function getSize(): int
     {
-        return count($this->store);
+        return \count(\array_filter($this->store, static fn (mixed $saved): bool => \is_array($saved) && isset($saved['data'])));
     }
 
     /**
@@ -162,5 +172,33 @@ class Memory implements Adapter
     public function getName(?string $key = null): string
     {
         return 'memory';
+    }
+
+    /**
+     * @param  array{time: int, data?: string|array<int|string, mixed>, token?: string}  $saved
+     */
+    private function isTokenExpired(array $saved): bool
+    {
+        return ! isset($saved['data']) && ($saved['time'] + self::TOKEN_TTL <= \time());
+    }
+
+    /**
+     * @param  array{time: int, data?: string|array<int|string, mixed>, token?: string}  $saved
+     */
+    private function matchesToken(array $saved, Token $token): bool
+    {
+        if (($saved['token'] ?? null) === $token->value) {
+            return true;
+        }
+
+        return isset($saved['data']) && $this->dataToken($saved) === $token->value;
+    }
+
+    /**
+     * @param  array{time: int, data?: string|array<int|string, mixed>, token?: string}  $saved
+     */
+    private function dataToken(array $saved): string
+    {
+        return 'data:'.\hash('sha256', \serialize($saved));
     }
 }

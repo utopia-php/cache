@@ -9,6 +9,10 @@ use Utopia\Cache\Token;
 
 class Hazelcast implements Adapter, Retryable
 {
+    private const CAS_TOKEN_PREFIX = 'cas:';
+
+    private const TOKEN_TTL = 60;
+
     /**
      * @var Client
      */
@@ -53,7 +57,14 @@ class Hazelcast implements Adapter, Retryable
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        $cache = $this->execute(fn () => $this->memcached->get($key));
+        $existing = $this->getWithCas($key);
+        if ($existing === false || ! \is_string($existing['value'])) {
+            $token = $this->purge($key, $hash);
+
+            return $token;
+        }
+
+        $cache = $existing['value'];
         if (is_string($cache)) {
             $cache = json_decode($cache, true);
         }
@@ -74,7 +85,7 @@ class Hazelcast implements Adapter, Retryable
             return $cache['data'];
         }
 
-        return false;
+        return new Token(self::CAS_TOKEN_PREFIX.(string) $existing['cas']);
     }
 
     /**
@@ -105,13 +116,12 @@ class Hazelcast implements Adapter, Retryable
             }
 
             $value = json_decode($existing['value'], true);
-            if (! \is_array($value) || ($value['token'] ?? null) !== $token->value) {
+            if (! \is_array($value) || ! $this->matchesToken($value, $existing['cas'], $token)) {
                 return false;
             }
 
-            // Hazelcast's memcache protocol can return CAS=0 and reject cas().
             if ($existing['cas'] <= 0) {
-                return ($this->execute(fn () => $this->memcached->set($key, $payload))) ? $data : false;
+                return false;
             }
 
             return ($this->execute(fn () => $this->memcached->cas($existing['cas'], $key, $payload))) ? $data : false;
@@ -163,7 +173,7 @@ class Hazelcast implements Adapter, Retryable
             'token' => $token->value,
         ];
 
-        return (bool) $this->execute(fn () => $this->memcached->set($key, json_encode($cache))) ? $token : false;
+        return (bool) $this->execute(fn () => $this->memcached->set($key, json_encode($cache), self::TOKEN_TTL)) ? $token : false;
     }
 
     /**
@@ -253,6 +263,18 @@ class Hazelcast implements Adapter, Retryable
             'value' => $result['value'],
             'cas' => (float) $cas,
         ];
+    }
+
+    /**
+     * @param  array{time?: int, data?: mixed, token?: string}  $value
+     */
+    private function matchesToken(array $value, float $cas, Token $token): bool
+    {
+        if (($value['token'] ?? null) === $token->value) {
+            return true;
+        }
+
+        return $token->value === self::CAS_TOKEN_PREFIX.(string) $cas;
     }
 
     /**
