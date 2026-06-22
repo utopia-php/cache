@@ -9,6 +9,8 @@ use Utopia\Telemetry\Histogram;
 
 class Cache
 {
+    private const MAX_PENDING_TOKENS = 1024;
+
     private Adapter $adapter;
 
     /**
@@ -110,7 +112,9 @@ class Cache
         $result = $this->adapter->load($key, $ttl, $hash);
         $tokenKey = $this->getTokenKey($key, $effectiveHash);
         if ($result instanceof Token) {
+            unset($this->tokens[$tokenKey]);
             $this->tokens[$tokenKey] = $result->value;
+            $this->pruneTokens();
             $result = false;
         } elseif ($result !== false) {
             unset($this->tokens[$tokenKey]);
@@ -151,7 +155,7 @@ class Cache
         $start = microtime(true);
 
         try {
-            return $this->adapter->save($key, $data, $effectiveHash, $token);
+            return $this->adapter->save($key, $data, $hash, $token);
         } finally {
             $duration = microtime(true) - $start;
             $this->getOperationDuration()->record($duration, [
@@ -250,6 +254,14 @@ class Cache
     private function getTokenKey(string $key, string $hash): string
     {
         return $key."\0".$hash;
+    }
+
+    private function pruneTokens(): void
+    {
+        while (\count($this->tokens) > self::MAX_PENDING_TOKENS) {
+            $oldest = \array_key_first($this->tokens);
+            unset($this->tokens[$oldest]);
+        }
     }
 
     /**

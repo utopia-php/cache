@@ -68,15 +68,4 @@ final class Envelope
             return false;
         }
     }
-
-    public static function isToken(string $value): bool
-    {
-        try {
-            $cache = json_decode($value, true, flags: JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            return false;
-        }
-
-        return is_array($cache) && isset($cache['time'], $cache['token']) && ! array_key_exists('data', $cache);
-    }
 }

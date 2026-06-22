@@ -90,10 +90,7 @@ class Filesystem implements Adapter
             }
 
             if ($token !== null) {
-                $contents = \file_exists($file) ? \file_get_contents($file) : false;
-                if ($contents !== self::TOKEN_PREFIX.$token) {
-                    return false;
-                }
+                return $this->saveTokened($file, $data, $token);
             }
 
             return (\file_put_contents($file, $data, LOCK_EX)) ? $data : false;
@@ -232,6 +229,42 @@ class Filesystem implements Adapter
     private function isTokenContents(string|false $contents): bool
     {
         return \is_string($contents) && \str_starts_with($contents, self::TOKEN_PREFIX);
+    }
+
+    /**
+     * @param  array<int|string, mixed>|string  $data
+     */
+    private function saveTokened(string $file, array|string $data, string $token): bool|string
+    {
+        if (! \is_string($data)) {
+            return false;
+        }
+
+        $handle = \fopen($file, 'c+');
+        if ($handle === false) {
+            return false;
+        }
+
+        try {
+            if (! \flock($handle, LOCK_EX)) {
+                return false;
+            }
+
+            \rewind($handle);
+            $contents = \stream_get_contents($handle);
+            if ($contents !== self::TOKEN_PREFIX.$token) {
+                return false;
+            }
+
+            if (! \ftruncate($handle, 0) || ! \rewind($handle)) {
+                return false;
+            }
+
+            return \fwrite($handle, $data) === false ? false : $data;
+        } finally {
+            \flock($handle, LOCK_UN);
+            \fclose($handle);
+        }
     }
 
     /**
