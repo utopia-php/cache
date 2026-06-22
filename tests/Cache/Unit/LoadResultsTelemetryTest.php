@@ -3,8 +3,10 @@
 namespace Utopia\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
+use Utopia\Cache\Adapter;
 use Utopia\Cache\Adapter\Memory;
 use Utopia\Cache\Cache;
+use Utopia\Cache\Token;
 use Utopia\Telemetry\Adapter\Test as TestTelemetry;
 
 class LoadResultsTelemetryTest extends TestCase
@@ -76,11 +78,51 @@ class LoadResultsTelemetryTest extends TestCase
     {
         $captured = [];
 
-        $adapter = new class extends Memory
+        $adapter = new class implements Adapter
         {
             public function load(string $key, int $ttl, string $hash = ''): mixed
             {
                 return null;
+            }
+
+            public function save(string $key, array|string $data, string $hash = '', ?Token $token = null): bool|string|array
+            {
+                return false;
+            }
+
+            public function touch(string $key, string $hash = ''): bool
+            {
+                return false;
+            }
+
+            public function list(string $key): array
+            {
+                return [];
+            }
+
+            public function purge(string $key, string $hash = ''): Token|false
+            {
+                return false;
+            }
+
+            public function flush(): bool
+            {
+                return true;
+            }
+
+            public function ping(): bool
+            {
+                return true;
+            }
+
+            public function getSize(): int
+            {
+                return 0;
+            }
+
+            public function getName(?string $key = null): string
+            {
+                return 'null-loader';
             }
         };
 
