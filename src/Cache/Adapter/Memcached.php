@@ -136,8 +136,9 @@ class Memcached implements Adapter, FencedFill, Retryable
 
         $saved = $this->execute(fn () => $this->memcached->set($key, $cache));
         if ($saved) {
-            $this->execute(fn () => $this->memcached->delete($this->getTombstoneKey($key)));
-            unset($this->tokenExpirations[$key]);
+            $tombstoneKey = $this->getTombstoneKey($key);
+            $this->execute(fn () => $this->memcached->delete($tombstoneKey));
+            unset($this->tokenExpirations[$tombstoneKey]);
         }
 
         return $saved ? $data : false;
@@ -337,7 +338,7 @@ class Memcached implements Adapter, FencedFill, Retryable
                     return false;
                 }
 
-                unset($this->tokenExpirations[$key]);
+                unset($this->tokenExpirations[$this->getTombstoneKey($key)]);
             }
 
             return $saved ? $data : false;
@@ -376,7 +377,7 @@ class Memcached implements Adapter, FencedFill, Retryable
                 return false;
             }
 
-            unset($this->tokenExpirations[$key]);
+            unset($this->tokenExpirations[$this->getTombstoneKey($key)]);
         }
 
         return $saved ? $data : false;

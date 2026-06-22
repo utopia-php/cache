@@ -46,11 +46,13 @@ class Memory implements Adapter, FencedFill
             if (! isset($saved['data'])) {
                 if ($this->isTokenExpired($saved)) {
                     unset($this->store[$key]);
+
+                    return $this->createAbsentToken();
                 }
 
-                $token = $this->purge($key, $hash);
-
-                return $token;
+                return isset($saved['token'])
+                    ? new Token($saved['token'])
+                    : $this->createAbsentToken();
             }
 
             if ($saved['time'] + $ttl > time()) {
