@@ -239,9 +239,14 @@ class Memcached implements Adapter, Retryable
             return false;
         }
 
+        $cas = (float) $cas;
+        if ($cas <= 0) {
+            return false;
+        }
+
         return [
             'value' => $result['value'],
-            'cas' => (float) $cas,
+            'cas' => $cas,
         ];
     }
 

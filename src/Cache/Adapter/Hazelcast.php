@@ -109,6 +109,11 @@ class Hazelcast implements Adapter, Retryable
                 return false;
             }
 
+            // Hazelcast's memcache protocol can return CAS=0 and reject cas().
+            if ($existing['cas'] <= 0) {
+                return ($this->execute(fn () => $this->memcached->set($key, $payload))) ? $data : false;
+            }
+
             return ($this->execute(fn () => $this->memcached->cas($existing['cas'], $key, $payload))) ? $data : false;
         }
 
