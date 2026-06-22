@@ -107,22 +107,25 @@ class Multiplexing implements Adapter, TelemetryFeature
             $hash = $key;
         }
 
-        $value = $this->command(['HGET', $key, $hash]);
-
-        if (! is_string($value)) {
-            $token = $this->reserve($key, $hash);
-
-            return $token === false ? false : new Token($token);
+        $result = $this->loadOrReserve($key, $hash, $ttl);
+        if (! \is_array($result) || ! isset($result[0])) {
+            return false;
         }
 
-        $decoded = Envelope::decode($value, $ttl, time());
-        if ($decoded === false && Envelope::isToken($value)) {
-            $token = $this->reserve($key, $hash);
-
-            return $token === false ? false : new Token($token);
+        $status = $result[0];
+        if (! \is_int($status) && ! \is_string($status)) {
+            return false;
         }
 
-        return $decoded;
+        if ((int) $status === 2 && isset($result[1]) && \is_string($result[1])) {
+            return new Token($result[1]);
+        }
+
+        if ((int) $status === 1 && isset($result[1]) && \is_string($result[1])) {
+            return Envelope::decode($result[1], $ttl, time());
+        }
+
+        return false;
     }
 
     public function save(string $key, array|string $data, string $hash = '', ?string $token = null): bool|string|array
@@ -214,14 +217,51 @@ LUA;
         return $this->command(['DEL', $key]) !== false ? $token : false;
     }
 
-    private function reserve(string $key, string $hash): string|false
+    /**
+     * @return array<int, mixed>|false
+     */
+    private function loadOrReserve(string $key, string $hash, int $ttl): array|false
     {
         $token = $this->createToken();
         if ($token === false) {
             return false;
         }
 
-        return $this->command(['HSET', $key, $hash, $token]) !== false ? $token : false;
+        $script = <<<'LUA'
+local value = redis.call('HGET', KEYS[1], ARGV[1])
+if value then
+    local ok, payload = pcall(cjson.decode, value)
+    if ok and type(payload) == 'table' then
+        if payload['data'] ~= nil and type(payload['time']) == 'number' then
+            if payload['time'] + tonumber(ARGV[2]) > tonumber(ARGV[3]) then
+                return {1, value}
+            end
+            return {0, ''}
+        end
+        if payload['token'] ~= nil and payload['data'] == nil then
+            redis.call('HSET', KEYS[1], ARGV[1], ARGV[4])
+            return {2, ARGV[4]}
+        end
+    end
+    return {0, ''}
+end
+
+redis.call('HSET', KEYS[1], ARGV[1], ARGV[4])
+return {2, ARGV[4]}
+LUA;
+
+        $result = $this->command([
+            'EVAL',
+            $script,
+            '1',
+            $key,
+            $hash,
+            (string) $ttl,
+            (string) \time(),
+            $token,
+        ]);
+
+        return \is_array($result) ? $result : false;
     }
 
     private function createToken(): string|false
