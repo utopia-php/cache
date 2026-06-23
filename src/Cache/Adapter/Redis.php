@@ -277,7 +277,8 @@ class Redis implements Adapter, Leasable, Retryable
             return [];
         }
 
-        return $keys;
+        // Don't expose the internal generation field as a listable cache field.
+        return \array_values(\array_filter($keys, fn (string $field): bool => $field !== self::GENERATION_FIELD));
     }
 
     /**

@@ -113,4 +113,16 @@ class LeasableTest extends TestCase
         $this->assertSame('1', $this->cache->getGeneration('doc:1'));
         $this->assertFalse($this->cache->saveWithLease('doc:1', 'stale', 'doc:1', '0'));
     }
+
+    public function testListHidesGenerationField(): void
+    {
+        $this->cache->flush();
+        $this->cache->saveWithLease('doc:1', ['v' => 1], 'field-a', $this->cache->getGeneration('doc:1'));
+        $this->assertSame(['field-a'], $this->cache->list('doc:1'));
+
+        // After a purge the key holds only its internal generation field, which
+        // must not surface as a listable cache field.
+        $this->cache->purge('doc:1');
+        $this->assertSame([], $this->cache->list('doc:1'));
+    }
 }
