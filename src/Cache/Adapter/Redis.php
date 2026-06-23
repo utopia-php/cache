@@ -34,10 +34,12 @@ class Redis implements Adapter, Leasable, Retryable
 
     /**
      * Atomically drop $key and advance its generation, so an in-flight reader
-     * holding the previous generation cannot re-cache stale data. Returns the
-     * number of value keys removed, preserving purge() semantics. The generation
-     * marker never expires: it must outlive any reader still holding an older
-     * generation (cache entries may be read with very long TTLs).
+     * holding the previous generation cannot re-cache stale data. The bump is
+     * unconditional: a reader may have read a row the writer is now deleting
+     * before anything was cached, so the generation must move even when DEL
+     * removed nothing. Returns the number of value keys removed, preserving
+     * purge() semantics. The marker never expires (it must outlive any reader
+     * holding an older generation); getSize() excludes markers from the count.
      * KEYS[1]=key, KEYS[2]=generationKey.
      */
     private const LUA_PURGE_BUMP = <<<'LUA'
@@ -293,10 +295,23 @@ class Redis implements Adapter, Leasable, Retryable
      */
     public function getSize(): int
     {
-        /** @var int */
+        /** @var int $size */
         $size = $this->execute(fn () => $this->redis->dbSize());
 
-        return $size;
+        // Generation markers are internal bookkeeping, not cache entries, so
+        // exclude them from the reported size.
+        $generations = 0;
+        $iterator = null;
+        do {
+            $keys = $this->execute(function () use (&$iterator) {
+                return $this->redis->scan($iterator, self::GENERATION_PREFIX.'*', 1000);
+            });
+            if (\is_array($keys)) {
+                $generations += \count($keys);
+            }
+        } while ($iterator > 0);
+
+        return \max(0, $size - $generations);
     }
 
     /**

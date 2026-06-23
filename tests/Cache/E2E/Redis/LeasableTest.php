@@ -76,4 +76,19 @@ class LeasableTest extends TestCase
         $this->cache->saveWithLease('doc:1', ['v' => 1], 'doc:1', $this->cache->getGeneration('doc:1'));
         $this->assertTrue($this->cache->purge('doc:1'), 'Purging an existing key returns true');
     }
+
+    public function testSizeExcludesGenerationMarkers(): void
+    {
+        $this->cache->flush();
+        $this->cache->saveWithLease('doc:1', ['v' => 1], 'doc:1', $this->cache->getGeneration('doc:1'));
+        $this->assertSame(1, $this->cache->getSize());
+
+        // A purge writes a generation marker; it must be excluded from the size.
+        $this->cache->purge('doc:absent');
+        $this->assertSame(1, $this->cache->getSize(), 'Generation markers must not inflate the reported size');
+
+        // After a real purge the marker persists but must not count as an entry.
+        $this->cache->purge('doc:1');
+        $this->assertSame(0, $this->cache->getSize(), 'Generation markers must not count toward cache size');
+    }
 }
