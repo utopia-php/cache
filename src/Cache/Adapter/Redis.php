@@ -13,19 +13,22 @@ use Utopia\Cache\Feature\Retryable;
 class Redis implements Adapter, Leasable, Retryable
 {
     /**
-     * Reserved key namespace for per-key generation markers. Prefixed (not
-     * suffixed) so a marker can never collide with a real cache entry — which is
-     * stored as a Redis hash — and trigger a WRONGTYPE error.
+     * Reserved hash field that holds a key's generation alongside its value
+     * fields. Keeping the generation inside the value's own hash makes every
+     * lease operation single-key (one shard): no sidecar key to collide with or
+     * scan, and the scripts stay correct under Redis Cluster / multi-threaded
+     * backends (e.g. Dragonfly), where a multi-key script would span shards.
+     * Callers must not use this as a cache hash/field.
      */
-    private const GENERATION_PREFIX = '_utopia_cache_gen:';
+    private const GENERATION_FIELD = '__utopia_gen__';
 
     /**
-     * Save $hash field into hash $key only when generation key still equals the
-     * caller's token. KEYS[1]=key, KEYS[2]=generationKey; ARGV[1]=hash,
+     * Save $hash field into hash $key only when the key's generation field still
+     * equals the caller's token. Single-key. KEYS[1]=key; ARGV[1]=hash,
      * ARGV[2]=value, ARGV[3]=expected generation.
      */
     private const LUA_SAVE_WITH_LEASE = <<<'LUA'
-        local current = redis.call('GET', KEYS[2])
+        local current = redis.call('HGET', KEYS[1], '__utopia_gen__')
         if current == false then current = '0' end
         if current ~= ARGV[3] then return 0 end
         redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
@@ -33,19 +36,23 @@ class Redis implements Adapter, Leasable, Retryable
         LUA;
 
     /**
-     * Atomically drop $key and advance its generation, so an in-flight reader
-     * holding the previous generation cannot re-cache stale data. The bump is
-     * unconditional: a reader may have read a row the writer is now deleting
-     * before anything was cached, so the generation must move even when DEL
-     * removed nothing. Returns the number of value keys removed, preserving
-     * purge() semantics. The marker never expires (it must outlive any reader
-     * holding an older generation); getSize() excludes markers from the count.
-     * KEYS[1]=key, KEYS[2]=generationKey.
+     * Drop $key's value fields and advance its generation in one step, so an
+     * in-flight reader holding the previous generation cannot re-cache stale
+     * data. The bump is unconditional: a reader may have read a row the writer is
+     * now deleting before anything was cached, so the generation must move even
+     * when nothing was cached. Returns the number of value fields removed (the
+     * generation field is excluded), preserving purge() semantics. The
+     * generation field is the only thing that survives a purge, so it outlives
+     * any reader holding an older generation. Single-key. KEYS[1]=key.
      */
     private const LUA_PURGE_BUMP = <<<'LUA'
-        local deleted = redis.call('DEL', KEYS[1])
-        redis.call('INCR', KEYS[2])
-        return deleted
+        local field = '__utopia_gen__'
+        local removed = redis.call('HLEN', KEYS[1]) - redis.call('HEXISTS', KEYS[1], field)
+        local current = redis.call('HGET', KEYS[1], field)
+        local next = (tonumber(current) or 0) + 1
+        redis.call('DEL', KEYS[1])
+        redis.call('HSET', KEYS[1], field, next)
+        return removed
         LUA;
 
     /**
@@ -175,7 +182,7 @@ class Redis implements Adapter, Leasable, Retryable
 
     public function getGeneration(string $key): string
     {
-        $gen = $this->execute(fn () => $this->redis->get(self::GENERATION_PREFIX.$key));
+        $gen = $this->execute(fn () => $this->redis->hGet($key, self::GENERATION_FIELD));
 
         return \is_string($gen) ? $gen : '0';
     }
@@ -194,8 +201,8 @@ class Redis implements Adapter, Leasable, Retryable
             $value = Envelope::encode($data, time());
             $stored = $this->execute(fn () => $this->redis->eval(
                 self::LUA_SAVE_WITH_LEASE,
-                [$key, self::GENERATION_PREFIX.$key, $hash, $value, $generation],
-                2
+                [$key, $hash, $value, $generation],
+                1
             ));
 
             return $stored ? $data : false;
@@ -256,13 +263,13 @@ class Redis implements Adapter, Leasable, Retryable
             return (bool) $this->execute(fn () => $this->redis->hdel($key, $hash));
         }
 
-        // Drop the key and advance its generation in one atomic step (Redis Lua)
-        // so an in-flight reader holding the previous generation cannot re-cache
-        // stale data after this purge.
+        // Drop the value fields and advance the in-hash generation in one atomic
+        // step (single-key Redis Lua) so an in-flight reader holding the previous
+        // generation cannot re-cache stale data after this purge.
         return (bool) $this->execute(fn () => $this->redis->eval(
             self::LUA_PURGE_BUMP,
-            [$key, self::GENERATION_PREFIX.$key],
-            2
+            [$key],
+            1
         ));
     }
 
@@ -295,23 +302,15 @@ class Redis implements Adapter, Leasable, Retryable
      */
     public function getSize(): int
     {
+        // Trade-off of the in-hash generation: a purged key keeps a tiny hash
+        // holding only its generation field until it is re-cached, so it still
+        // counts here. Filtering those out would need an O(N) scan with a per-key
+        // HLEN check; for a diagnostic counter that isn't worth it, so DBSIZE may
+        // slightly over-count purged-but-not-yet-recached keys.
         /** @var int $size */
         $size = $this->execute(fn () => $this->redis->dbSize());
 
-        // Generation markers are internal bookkeeping, not cache entries, so
-        // exclude them from the reported size.
-        $generations = 0;
-        $iterator = null;
-        do {
-            $keys = $this->execute(function () use (&$iterator) {
-                return $this->redis->scan($iterator, self::GENERATION_PREFIX.'*', 1000);
-            });
-            if (\is_array($keys)) {
-                $generations += \count($keys);
-            }
-        } while ($iterator > 0);
-
-        return \max(0, $size - $generations);
+        return $size;
     }
 
     /**
