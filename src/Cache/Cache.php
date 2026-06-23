@@ -9,6 +9,10 @@ use Utopia\Telemetry\Histogram;
 
 class Cache
 {
+    private const MAX_PENDING_TOKENS = 1024;
+
+    private const TOKEN_CONTEXT_PREFIX = '__utopia_cache_tokens:';
+
     private Adapter $adapter;
 
     /**
@@ -27,6 +31,13 @@ class Cache
      * @var Counter|null
      */
     protected ?Counter $loadResults = null;
+
+    /**
+     * @var array<string, Token>
+     */
+    private array $tokens = [];
+
+    private int $tokenGeneration = 0;
 
     /**
      * Set telemetry adapter. Instruments are created lazily on first use to
@@ -98,9 +109,19 @@ class Cache
     {
         $key = $this->caseSensitive ? $key : \strtolower($key);
         $hash = $this->caseSensitive ? $hash : \strtolower($hash);
+        $effectiveHash = empty($hash) ? $key : $hash;
 
         $start = microtime(true);
-        $result = $this->adapter->load($key, $ttl, $hash);
+        $result = $this->adapter instanceof Feature\FencedFill
+            ? $this->adapter->loadFenced($key, $ttl, $hash)
+            : $this->adapter->load($key, $ttl, $hash);
+        $tokenKey = $this->getTokenKey($key, $effectiveHash);
+        if ($result instanceof Token) {
+            $this->rememberToken($tokenKey, $result);
+            $result = false;
+        } else {
+            $this->forgetToken($tokenKey);
+        }
         $duration = microtime(true) - $start;
         $adapterName = $this->adapter->getName($key);
         $this->getOperationDuration()->record($duration, [
@@ -127,9 +148,16 @@ class Cache
     {
         $key = $this->caseSensitive ? $key : strtolower($key);
         $hash = $this->caseSensitive ? $hash : strtolower($hash);
+        $effectiveHash = empty($hash) ? $key : $hash;
+        $tokenKey = $this->getTokenKey($key, $effectiveHash);
+        $token = $this->consumeToken($tokenKey);
         $start = microtime(true);
 
         try {
+            if ($token !== null && $this->adapter instanceof Feature\FencedFill) {
+                return $this->adapter->saveFenced($key, $data, $token, $hash);
+            }
+
             return $this->adapter->save($key, $data, $hash);
         } finally {
             $duration = microtime(true) - $start;
@@ -216,6 +244,8 @@ class Cache
     {
         $start = microtime(true);
         $result = $this->adapter->flush();
+        $this->tokenGeneration++;
+        $this->clearTokens();
         $duration = microtime(true) - $start;
         $this->getOperationDuration()->record($duration, [
             'operation' => 'flush',
@@ -223,6 +253,128 @@ class Cache
         ]);
 
         return $result;
+    }
+
+    private function getTokenKey(string $key, string $hash): string
+    {
+        return $this->tokenGeneration."\0".$key."\0".$hash;
+    }
+
+    private function rememberToken(string $tokenKey, Token $token): void
+    {
+        $context = $this->getCoroutineContext();
+        if ($context !== null) {
+            $contextKey = $this->getTokenContextKey();
+            $tokens = $this->getContextTokens($context, $contextKey);
+            unset($tokens[$tokenKey]);
+            $tokens[$tokenKey] = $token;
+            $context[$contextKey] = $this->pruneTokens($tokens);
+
+            return;
+        }
+
+        unset($this->tokens[$tokenKey]);
+        $this->tokens[$tokenKey] = $token;
+        $this->tokens = $this->pruneTokens($this->tokens);
+    }
+
+    private function forgetToken(string $tokenKey): void
+    {
+        $context = $this->getCoroutineContext();
+        if ($context !== null) {
+            $contextKey = $this->getTokenContextKey();
+            $tokens = $this->getContextTokens($context, $contextKey);
+            unset($tokens[$tokenKey]);
+            $context[$contextKey] = $tokens;
+
+            return;
+        }
+
+        unset($this->tokens[$tokenKey]);
+    }
+
+    private function consumeToken(string $tokenKey): ?Token
+    {
+        $context = $this->getCoroutineContext();
+        if ($context !== null) {
+            $contextKey = $this->getTokenContextKey();
+            $tokens = $this->getContextTokens($context, $contextKey);
+            $token = $tokens[$tokenKey] ?? null;
+            unset($tokens[$tokenKey]);
+            $context[$contextKey] = $tokens;
+
+            return $token;
+        }
+
+        $token = $this->tokens[$tokenKey] ?? null;
+        unset($this->tokens[$tokenKey]);
+
+        return $token;
+    }
+
+    private function clearTokens(): void
+    {
+        $context = $this->getCoroutineContext();
+        if ($context !== null) {
+            unset($context[$this->getTokenContextKey()]);
+        }
+
+        $this->tokens = [];
+    }
+
+    private function getTokenContextKey(): string
+    {
+        return self::TOKEN_CONTEXT_PREFIX.\spl_object_id($this);
+    }
+
+    /**
+     * @return \ArrayAccess<string, mixed>|null
+     */
+    private function getCoroutineContext(): ?\ArrayAccess
+    {
+        if (! \class_exists(\Swoole\Coroutine::class, false)) {
+            return null;
+        }
+
+        $cid = \call_user_func([\Swoole\Coroutine::class, 'getCid']);
+        if (! \is_int($cid) || $cid < 0) {
+            return null;
+        }
+
+        $context = \call_user_func([\Swoole\Coroutine::class, 'getContext']);
+        if (! $context instanceof \ArrayAccess) {
+            return null;
+        }
+
+        return $context;
+    }
+
+    /**
+     * @param  \ArrayAccess<string, mixed>  $context
+     * @return array<string, Token>
+     */
+    private function getContextTokens(\ArrayAccess $context, string $contextKey): array
+    {
+        if (! isset($context[$contextKey]) || ! \is_array($context[$contextKey])) {
+            return [];
+        }
+
+        /** @var array<string, Token> */
+        return $context[$contextKey];
+    }
+
+    /**
+     * @param  array<string, Token>  $tokens
+     * @return array<string, Token>
+     */
+    private function pruneTokens(array $tokens): array
+    {
+        while (\count($tokens) > self::MAX_PENDING_TOKENS) {
+            $oldest = \array_key_first($tokens);
+            unset($tokens[$oldest]);
+        }
+
+        return $tokens;
     }
 
     /**

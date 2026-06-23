@@ -80,4 +80,49 @@ class RedisClusterTest extends Base
         $this->assertEquals('reconnect', self::$cache->save('test:reconnect', 'reconnect', 'test:reconnect'));
         $this->assertEquals('reconnect', self::$cache->load('test:reconnect', 5));
     }
+
+    public function testRedisClusterMissSaveIsFenced(): void
+    {
+        self::$cache->purge('redis-cluster:fenced-key', 'redis-cluster:fenced-key');
+
+        $this->assertFalse(self::$cache->load('redis-cluster:fenced-key', 60, 'redis-cluster:fenced-key'));
+        $this->assertEquals('fresh data', self::$cache->save('redis-cluster:fenced-key', 'fresh data', 'redis-cluster:fenced-key'));
+        $this->assertEquals('fresh data', self::$cache->load('redis-cluster:fenced-key', 60, 'redis-cluster:fenced-key'));
+
+        self::$cache->purge('redis-cluster:fenced-key', 'redis-cluster:fenced-key');
+    }
+
+    public function testRedisClusterPurgedMissDoesNotSave(): void
+    {
+        self::$cache->purge('redis-cluster:purged-miss-key', 'redis-cluster:purged-miss-key');
+
+        $this->assertFalse(self::$cache->load('redis-cluster:purged-miss-key', 60, 'redis-cluster:purged-miss-key'));
+        self::$cache->purge('redis-cluster:purged-miss-key', 'redis-cluster:purged-miss-key');
+
+        $this->assertFalse(self::$cache->save('redis-cluster:purged-miss-key', 'stale data', 'redis-cluster:purged-miss-key'));
+        $this->assertFalse(self::$cache->load('redis-cluster:purged-miss-key', 60, 'redis-cluster:purged-miss-key'));
+    }
+
+    public function testRedisClusterExpiredEntryCanBeReplacedByFencedSave(): void
+    {
+        self::$cache->purge('redis-cluster:expired-fence-key', 'redis-cluster:expired-fence-key');
+        self::$cache->save('redis-cluster:expired-fence-key', 'expired data', 'redis-cluster:expired-fence-key');
+
+        $this->assertFalse(self::$cache->load('redis-cluster:expired-fence-key', 0, 'redis-cluster:expired-fence-key'));
+        $this->assertEquals('fresh data', self::$cache->save('redis-cluster:expired-fence-key', 'fresh data', 'redis-cluster:expired-fence-key'));
+        $this->assertEquals('fresh data', self::$cache->load('redis-cluster:expired-fence-key', 60, 'redis-cluster:expired-fence-key'));
+
+        self::$cache->purge('redis-cluster:expired-fence-key', 'redis-cluster:expired-fence-key');
+    }
+
+    public function testRedisClusterGlobalPurgeBlocksStaleHashFill(): void
+    {
+        self::$cache->purge('redis-cluster:global-purge-key');
+
+        $this->assertFalse(self::$cache->load('redis-cluster:global-purge-key', 60, 'field'));
+        self::$cache->purge('redis-cluster:global-purge-key');
+
+        $this->assertFalse(self::$cache->save('redis-cluster:global-purge-key', 'stale data', 'field'));
+        $this->assertFalse(self::$cache->load('redis-cluster:global-purge-key', 60, 'field'));
+    }
 }

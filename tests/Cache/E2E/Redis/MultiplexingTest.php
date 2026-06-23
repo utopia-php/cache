@@ -140,6 +140,63 @@ class MultiplexingTest extends TestCase
         });
     }
 
+    public function testMissSaveIsFenced(): void
+    {
+        $this->runCo(function () {
+            $cache = $this->makeCache();
+            $cache->purge('redis-mux:fenced-key', 'redis-mux:fenced-key');
+
+            $this->assertFalse($cache->load('redis-mux:fenced-key', 60, 'redis-mux:fenced-key'));
+            $this->assertEquals('fresh data', $cache->save('redis-mux:fenced-key', 'fresh data', 'redis-mux:fenced-key'));
+            $this->assertEquals('fresh data', $cache->load('redis-mux:fenced-key', 60, 'redis-mux:fenced-key'));
+
+            $cache->purge('redis-mux:fenced-key', 'redis-mux:fenced-key');
+        });
+    }
+
+    public function testPurgedMissDoesNotSave(): void
+    {
+        $this->runCo(function () {
+            $cache = $this->makeCache();
+            $cache->purge('redis-mux:purged-miss-key', 'redis-mux:purged-miss-key');
+
+            $this->assertFalse($cache->load('redis-mux:purged-miss-key', 60, 'redis-mux:purged-miss-key'));
+            $cache->purge('redis-mux:purged-miss-key', 'redis-mux:purged-miss-key');
+
+            $this->assertFalse($cache->save('redis-mux:purged-miss-key', 'stale data', 'redis-mux:purged-miss-key'));
+            $this->assertFalse($cache->load('redis-mux:purged-miss-key', 60, 'redis-mux:purged-miss-key'));
+        });
+    }
+
+    public function testExpiredEntryCanBeReplacedByFencedSave(): void
+    {
+        $this->runCo(function () {
+            $cache = $this->makeCache();
+            $cache->purge('redis-mux:expired-fence-key', 'redis-mux:expired-fence-key');
+            $cache->save('redis-mux:expired-fence-key', 'expired data', 'redis-mux:expired-fence-key');
+
+            $this->assertFalse($cache->load('redis-mux:expired-fence-key', 0, 'redis-mux:expired-fence-key'));
+            $this->assertEquals('fresh data', $cache->save('redis-mux:expired-fence-key', 'fresh data', 'redis-mux:expired-fence-key'));
+            $this->assertEquals('fresh data', $cache->load('redis-mux:expired-fence-key', 60, 'redis-mux:expired-fence-key'));
+
+            $cache->purge('redis-mux:expired-fence-key', 'redis-mux:expired-fence-key');
+        });
+    }
+
+    public function testGlobalPurgeBlocksStaleHashFill(): void
+    {
+        $this->runCo(function () {
+            $cache = $this->makeCache();
+            $cache->purge('redis-mux:global-purge-key');
+
+            $this->assertFalse($cache->load('redis-mux:global-purge-key', 60, 'field'));
+            $cache->purge('redis-mux:global-purge-key');
+
+            $this->assertFalse($cache->save('redis-mux:global-purge-key', 'stale data', 'field'));
+            $this->assertFalse($cache->load('redis-mux:global-purge-key', 60, 'field'));
+        });
+    }
+
     public function testJsonData(): void
     {
         $this->runCo(function () {

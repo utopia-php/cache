@@ -6,10 +6,15 @@ use Exception;
 use RedisCluster as Client;
 use Throwable;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Adapter\Redis\Envelope;
+use Utopia\Cache\Feature\FencedFill;
 use Utopia\Cache\Feature\Retryable;
+use Utopia\Cache\Token;
 
-class RedisCluster implements Adapter, Retryable
+class RedisCluster implements Adapter, FencedFill, Retryable
 {
+    private const int TOKEN_TTL = 60;
+
     /**
      * @var Client
      */
@@ -97,22 +102,33 @@ class RedisCluster implements Adapter, Retryable
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
+        $result = $this->loadFenced($key, $ttl, $hash);
+
+        return $result instanceof Token ? false : $result;
+    }
+
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
+    {
         if (empty($hash)) {
             $hash = $key;
         }
 
-        /** @var string|false */
-        $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
-
-        if ($redis_string === false || ! is_string($redis_string)) {
+        $result = $this->loadOrToken($key, $hash, $ttl);
+        if (! \is_array($result) || ! isset($result[0])) {
             return false;
         }
 
-        /** @var array{time: int, data: string} $cache */
-        $cache = json_decode($redis_string, true);
+        $status = $result[0];
+        if (! \is_int($status) && ! \is_string($status)) {
+            return false;
+        }
 
-        if ($cache['time'] + $ttl > time()) { // Cache is valid
-            return $cache['data'];
+        if ((int) $status === 2 && isset($result[1]) && \is_string($result[1])) {
+            return new Token($result[1]);
+        }
+
+        if ((int) $status === 1 && isset($result[1]) && \is_string($result[1])) {
+            return Envelope::decode($result[1], $ttl, time());
         }
 
         return false;
@@ -135,18 +151,78 @@ class RedisCluster implements Adapter, Retryable
         }
 
         try {
-            $value = json_encode([
-                'time' => \time(),
-                'data' => $data,
-            ], flags: JSON_THROW_ON_ERROR);
+            $value = Envelope::encode($data, time());
         } catch (Throwable $th) {
             return false;
         }
 
         try {
-            $this->execute(fn () => $this->redis->hSet($key, $hash, $value));
+            $script = <<<'LUA'
+redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+redis.call('DEL', KEYS[2])
+return 1
+LUA;
+
+            $result = $this->execute(fn () => $this->redis->eval($script, [$key, $this->getTombstoneKey($key, $hash), $hash, $value], 2));
+            if ((! \is_int($result) && ! \is_string($result)) || (int) $result !== 1) {
+                return false;
+            }
 
             return $data;
+        } catch (Throwable $th) {
+            return false;
+        }
+    }
+
+    public function saveFenced(string $key, array|string $data, Token $token, string $hash = ''): bool|string|array
+    {
+        if (empty($key) || empty($data)) {
+            return false;
+        }
+
+        if (empty($hash)) {
+            $hash = $key;
+        }
+
+        try {
+            $value = Envelope::encode($data, time());
+        } catch (Throwable $th) {
+            return false;
+        }
+
+        $script = <<<'LUA'
+local current = redis.call('HGET', KEYS[1], ARGV[1])
+local tombstone = redis.call('GET', KEYS[2])
+local globalTombstone = redis.call('GET', KEYS[3])
+local ok, token = pcall(cjson.decode, ARGV[2])
+if ok and type(token) == 'table' and token['state'] == 'absent' then
+    if not current and not tombstone and not globalTombstone then
+        redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
+        return 1
+    end
+    return 0
+end
+if current == ARGV[2] then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
+    redis.call('DEL', KEYS[2])
+    return 1
+end
+if not current and tombstone == ARGV[2] and not globalTombstone then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
+    redis.call('DEL', KEYS[2])
+    return 1
+end
+if not current and not tombstone and globalTombstone == ARGV[2] then
+    redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
+    return 1
+end
+return 0
+LUA;
+
+        try {
+            $result = $this->execute(fn () => $this->redis->eval($script, [$key, $this->getTombstoneKey($key, $hash), $this->getTombstoneKey($key, '*'), $hash, $token->value, $value], 3));
+
+            return (\is_int($result) || \is_string($result)) && (int) $result === 1 ? $data : false;
         } catch (Throwable $th) {
             return false;
         }
@@ -170,12 +246,8 @@ class RedisCluster implements Adapter, Retryable
             return false;
         }
 
-        try {
-            /** @var array{time: int, data: mixed} $cache */
-            $cache = json_decode($redis_string, true, flags: JSON_THROW_ON_ERROR);
-            $cache['time'] = time();
-            $value = json_encode($cache, flags: JSON_THROW_ON_ERROR);
-        } catch (Throwable $th) {
+        $value = Envelope::touch($redis_string, time());
+        if ($value === false) {
             return false;
         }
 
@@ -205,11 +277,99 @@ class RedisCluster implements Adapter, Retryable
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        if (! empty($hash)) {
-            return (bool) $this->execute(fn () => $this->redis->hdel($key, $hash));
+        $token = $this->createToken();
+        if ($token === false) {
+            return false;
         }
 
-        return (bool) $this->execute(fn () => $this->redis->del($key));
+        if (! empty($hash)) {
+            $script = <<<'LUA'
+redis.call('HDEL', KEYS[1], ARGV[1])
+redis.call('SETEX', KEYS[2], ARGV[2], ARGV[3])
+return 1
+LUA;
+
+            $result = $this->execute(fn () => $this->redis->eval($script, [$key, $this->getTombstoneKey($key, $hash), $hash, (string) self::TOKEN_TTL, $token->value], 2));
+
+            return (\is_int($result) || \is_string($result)) && (int) $result === 1;
+        }
+
+        $script = <<<'LUA'
+redis.call('DEL', KEYS[1])
+redis.call('SETEX', KEYS[2], ARGV[1], ARGV[2])
+return 1
+LUA;
+
+        $result = $this->execute(fn () => $this->redis->eval($script, [$key, $this->getTombstoneKey($key, '*'), (string) self::TOKEN_TTL, $token->value], 2));
+
+        return (\is_int($result) || \is_string($result)) && (int) $result === 1;
+    }
+
+    /**
+     * @return array<int, mixed>|false
+     */
+    private function loadOrToken(string $key, string $hash, int $ttl): array|false
+    {
+        $token = $this->createToken('absent');
+        if ($token === false) {
+            return false;
+        }
+
+        $script = <<<'LUA'
+local value = redis.call('HGET', KEYS[1], ARGV[1])
+if value then
+    local ok, payload = pcall(cjson.decode, value)
+    if ok and type(payload) == 'table' then
+        if payload['data'] ~= nil and type(payload['time']) == 'number' then
+            if payload['time'] + tonumber(ARGV[2]) > tonumber(ARGV[3]) then
+                return {1, value}
+            end
+            return {2, value}
+        end
+        if payload['token'] ~= nil and payload['data'] == nil then
+            return {2, value}
+        end
+    end
+    return {2, value}
+end
+
+local tombstone = redis.call('GET', KEYS[2])
+if tombstone then
+    return {2, tombstone}
+end
+local globalTombstone = redis.call('GET', KEYS[3])
+if globalTombstone then
+    return {2, globalTombstone}
+end
+return {2, ARGV[4]}
+LUA;
+
+        $result = $this->execute(fn () => $this->redis->eval($script, [$key, $this->getTombstoneKey($key, $hash), $this->getTombstoneKey($key, '*'), $hash, (string) $ttl, (string) \time(), $token->value], 3));
+
+        return \is_array($result) ? $result : false;
+    }
+
+    private function createToken(string $state = 'token'): Token|false
+    {
+        try {
+            return new Token(json_encode([
+                'time' => \time(),
+                'state' => $state,
+                'token' => \bin2hex(\random_bytes(16)),
+            ], flags: JSON_THROW_ON_ERROR));
+        } catch (Throwable) {
+            return false;
+        }
+    }
+
+    private function getTombstoneKey(string $key, string $hash): string
+    {
+        $tag = $key;
+        if (\preg_match('/\{([^{}]+)\}/', $key, $matches) === 1) {
+            $tag = $matches[1];
+        }
+
+        return '{'.$tag.'}:utopia-cache-token:'.\hash('sha256', $key."\0".$hash);
     }
 
     /**
