@@ -56,6 +56,20 @@ class Redis implements Adapter, Leasable, Retryable
         LUA;
 
     /**
+     * Delete a single $hash field and advance the key's generation in one step,
+     * so a field-level purge invalidates in-flight leases just like a full purge.
+     * Returns the number of fields removed, preserving purge()'s deletion-result
+     * semantics. Single-key. KEYS[1]=key; ARGV[1]=field.
+     */
+    private const LUA_PURGE_FIELD = <<<'LUA'
+        local removed = redis.call('HDEL', KEYS[1], ARGV[1])
+        local current = redis.call('HGET', KEYS[1], '__utopia_gen__')
+        local next = (tonumber(current) or 0) + 1
+        redis.call('HSET', KEYS[1], '__utopia_gen__', next)
+        return removed
+        LUA;
+
+    /**
      * @var Client
      */
     protected Client $redis;
@@ -293,7 +307,11 @@ class Redis implements Adapter, Leasable, Retryable
                 return false;
             }
 
-            return (bool) $this->execute(fn () => $this->redis->hdel($key, $hash));
+            return (bool) $this->execute(fn () => $this->redis->eval(
+                self::LUA_PURGE_FIELD,
+                [$key, $hash],
+                1
+            ));
         }
 
         // Drop the value fields and advance the in-hash generation in one atomic

@@ -41,6 +41,22 @@ class LeasableTest extends TestCase
         $this->assertNotSame($before, $this->cache->getGeneration('doc:1'));
     }
 
+    public function testHashPurgeAdvancesGeneration(): void
+    {
+        $captured = $this->cache->getGeneration('doc:1');
+        $this->assertNotFalse($this->cache->saveWithLease('doc:1', ['v' => 1], 'field-a', $captured));
+
+        // A field-level purge must advance the per-key generation, just like a
+        // full purge, or the lease is bypassed for hashed entries.
+        $this->assertTrue($this->cache->purge('doc:1', 'field-a'));
+        $this->assertNotSame($captured, $this->cache->getGeneration('doc:1'));
+
+        // A reader holding the pre-purge generation can no longer re-cache a
+        // stale field via saveWithLease.
+        $this->assertFalse($this->cache->saveWithLease('doc:1', ['stale' => true], 'field-a', $captured));
+        $this->assertFalse($this->cache->load('doc:1', 60, 'field-a'));
+    }
+
     /**
      * The core read-after-write guarantee: a reader that captured the generation
      * BEFORE a concurrent purge must NOT be able to re-cache its now-stale value
