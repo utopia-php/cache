@@ -226,6 +226,10 @@ class Cache
 
         $start = microtime(true);
         $result = $this->adapter->purge($key, $hash);
+        if ($result) {
+            $effectiveHash = empty($hash) ? $key : $hash;
+            $this->forgetPurgedTokens($key, empty($hash) ? null : $effectiveHash);
+        }
         $duration = microtime(true) - $start;
         $this->getOperationDuration()->record($duration, [
             'operation' => 'purge',
@@ -291,6 +295,36 @@ class Cache
         }
 
         unset($this->tokens[$tokenKey]);
+    }
+
+    private function forgetPurgedTokens(string $key, ?string $hash): void
+    {
+        if ($hash !== null) {
+            $this->forgetToken($this->getTokenKey($key, $hash));
+
+            return;
+        }
+
+        $prefix = $this->tokenGeneration."\0".$key."\0";
+        $context = $this->getCoroutineContext();
+        if ($context !== null) {
+            $contextKey = $this->getTokenContextKey();
+            $tokens = $this->getContextTokens($context, $contextKey);
+            foreach (\array_keys($tokens) as $tokenKey) {
+                if (\str_starts_with($tokenKey, $prefix)) {
+                    unset($tokens[$tokenKey]);
+                }
+            }
+            $context[$contextKey] = $tokens;
+
+            return;
+        }
+
+        foreach (\array_keys($this->tokens) as $tokenKey) {
+            if (\str_starts_with($tokenKey, $prefix)) {
+                unset($this->tokens[$tokenKey]);
+            }
+        }
     }
 
     private function consumeToken(string $tokenKey): ?Token

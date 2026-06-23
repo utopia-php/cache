@@ -100,15 +100,32 @@ class RedisTest extends Base
         self::$cache->purge('redis:fenced-key', 'redis:fenced-key');
     }
 
-    public function testRedisPurgedMissDoesNotSave(): void
+    public function testRedisPurgedMissAllowsFreshSave(): void
     {
         self::$cache->purge('redis:purged-miss-key', 'redis:purged-miss-key');
 
         $this->assertFalse(self::$cache->load('redis:purged-miss-key', 60, 'redis:purged-miss-key'));
         self::$cache->purge('redis:purged-miss-key', 'redis:purged-miss-key');
 
-        $this->assertFalse(self::$cache->save('redis:purged-miss-key', 'stale data', 'redis:purged-miss-key'));
-        $this->assertFalse(self::$cache->load('redis:purged-miss-key', 60, 'redis:purged-miss-key'));
+        $this->assertEquals('fresh data', self::$cache->save('redis:purged-miss-key', 'fresh data', 'redis:purged-miss-key'));
+        $this->assertEquals('fresh data', self::$cache->load('redis:purged-miss-key', 60, 'redis:purged-miss-key'));
+
+        self::$cache->purge('redis:purged-miss-key', 'redis:purged-miss-key');
+    }
+
+    public function testRedisFlushBlocksPreFlushMissToken(): void
+    {
+        self::$cache->purge('redis:flush-fence-key', 'redis:flush-fence-key');
+
+        $this->assertFalse(self::$cache->load('redis:flush-fence-key', 60, 'redis:flush-fence-key'));
+
+        $redis = new Redis();
+        $redis->connect('redis', 6379);
+        $otherCache = new Cache(new RedisAdapter($redis));
+        $this->assertTrue($otherCache->flush());
+
+        $this->assertFalse(self::$cache->save('redis:flush-fence-key', 'stale data', 'redis:flush-fence-key'));
+        $this->assertFalse(self::$cache->load('redis:flush-fence-key', 60, 'redis:flush-fence-key'));
     }
 
     public function testRedisExpiredEntryCanBeReplacedByFencedSave(): void

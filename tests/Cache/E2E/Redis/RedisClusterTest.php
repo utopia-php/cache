@@ -92,15 +92,31 @@ class RedisClusterTest extends Base
         self::$cache->purge('redis-cluster:fenced-key', 'redis-cluster:fenced-key');
     }
 
-    public function testRedisClusterPurgedMissDoesNotSave(): void
+    public function testRedisClusterPurgedMissAllowsFreshSave(): void
     {
         self::$cache->purge('redis-cluster:purged-miss-key', 'redis-cluster:purged-miss-key');
 
         $this->assertFalse(self::$cache->load('redis-cluster:purged-miss-key', 60, 'redis-cluster:purged-miss-key'));
         self::$cache->purge('redis-cluster:purged-miss-key', 'redis-cluster:purged-miss-key');
 
-        $this->assertFalse(self::$cache->save('redis-cluster:purged-miss-key', 'stale data', 'redis-cluster:purged-miss-key'));
-        $this->assertFalse(self::$cache->load('redis-cluster:purged-miss-key', 60, 'redis-cluster:purged-miss-key'));
+        $this->assertEquals('fresh data', self::$cache->save('redis-cluster:purged-miss-key', 'fresh data', 'redis-cluster:purged-miss-key'));
+        $this->assertEquals('fresh data', self::$cache->load('redis-cluster:purged-miss-key', 60, 'redis-cluster:purged-miss-key'));
+
+        self::$cache->purge('redis-cluster:purged-miss-key', 'redis-cluster:purged-miss-key');
+    }
+
+    public function testRedisClusterFlushBlocksPreFlushMissToken(): void
+    {
+        self::$cache->purge('redis-cluster:flush-fence-key', 'redis-cluster:flush-fence-key');
+
+        $this->assertFalse(self::$cache->load('redis-cluster:flush-fence-key', 60, 'redis-cluster:flush-fence-key'));
+
+        $redis = new RedisCluster(null, SEEDS, TIMEOUT, TIMEOUT);
+        $otherCache = new Cache(new RedisAdapter($redis, SEEDS));
+        $this->assertTrue($otherCache->flush());
+
+        $this->assertFalse(self::$cache->save('redis-cluster:flush-fence-key', 'stale data', 'redis-cluster:flush-fence-key'));
+        $this->assertFalse(self::$cache->load('redis-cluster:flush-fence-key', 60, 'redis-cluster:flush-fence-key'));
     }
 
     public function testRedisClusterExpiredEntryCanBeReplacedByFencedSave(): void

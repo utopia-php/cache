@@ -190,6 +190,11 @@ LUA;
             return false;
         }
 
+        $tokenTime = $this->getAbsentTokenTime($token);
+        if ($tokenTime !== null && $this->wasFlushedAfter($tokenTime)) {
+            return false;
+        }
+
         $script = <<<'LUA'
 local current = redis.call('HGET', KEYS[1], ARGV[1])
 local tombstone = redis.call('GET', KEYS[2])
@@ -224,8 +229,17 @@ LUA;
 
         try {
             $result = $this->execute(fn () => $this->redis->eval($script, [$key, $this->getTombstoneKey($key, $hash), $this->getTombstoneKey($key, '*'), $hash, $token->value, $value, (string) self::TOKEN_TTL, (string) \time()], 3));
+            if ((! \is_int($result) && ! \is_string($result)) || (int) $result !== 1) {
+                return false;
+            }
 
-            return (\is_int($result) || \is_string($result)) && (int) $result === 1 ? $data : false;
+            if ($tokenTime !== null && $this->wasFlushedAfter($tokenTime)) {
+                $this->deleteIfCurrent($key, $hash, $value);
+
+                return false;
+            }
+
+            return $data;
         } catch (Throwable $th) {
             return false;
         }
@@ -380,7 +394,7 @@ LUA;
      */
     public function flush(): bool
     {
-        return (bool) $this->execute(function () {
+        $flushed = (bool) $this->execute(function () {
             /** @var array<string> $masters */
             $masters = $this->redis->_masters();
             foreach ($masters as $master) {
@@ -389,6 +403,51 @@ LUA;
 
             return true;
         });
+
+        if (! $flushed) {
+            return false;
+        }
+
+        return (bool) $this->execute(fn () => $this->redis->setex($this->getFlushKey(), self::TOKEN_TTL, (string) \time()));
+    }
+
+    private function getAbsentTokenTime(Token $token): ?int
+    {
+        try {
+            $decoded = json_decode($token->value, true, flags: JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            return null;
+        }
+
+        if (! \is_array($decoded) || ($decoded['state'] ?? null) !== 'absent' || ! \is_int($decoded['time'] ?? null)) {
+            return null;
+        }
+
+        return $decoded['time'];
+    }
+
+    private function wasFlushedAfter(int $tokenTime): bool
+    {
+        $lastFlush = $this->execute(fn () => $this->redis->get($this->getFlushKey()));
+
+        return (\is_int($lastFlush) || \is_string($lastFlush)) && (int) $lastFlush >= $tokenTime;
+    }
+
+    private function deleteIfCurrent(string $key, string $hash, string $value): void
+    {
+        $script = <<<'LUA'
+if redis.call('HGET', KEYS[1], ARGV[1]) == ARGV[2] then
+    redis.call('HDEL', KEYS[1], ARGV[1])
+end
+return 1
+LUA;
+
+        $this->execute(fn () => $this->redis->eval($script, [$key, $hash, $value], 1));
+    }
+
+    private function getFlushKey(): string
+    {
+        return 'utopia-cache-flush-token';
     }
 
     /**

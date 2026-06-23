@@ -197,9 +197,13 @@ LUA;
 local current = redis.call('HGET', KEYS[1], ARGV[1])
 local tombstone = redis.call('GET', KEYS[2])
 local globalTombstone = redis.call('GET', KEYS[3])
+local lastFlush = redis.call('GET', KEYS[4])
 local ok, token = pcall(cjson.decode, ARGV[2])
 if ok and type(token) == 'table' and token['state'] == 'absent' then
     if type(token['time']) ~= 'number' or token['time'] + tonumber(ARGV[4]) <= tonumber(ARGV[5]) then
+        return 0
+    end
+    if lastFlush and tonumber(lastFlush) >= token['time'] then
         return 0
     end
     if not current and not tombstone and not globalTombstone then
@@ -232,6 +236,7 @@ LUA;
             $key,
             $this->getTombstoneKey($key, $hash),
             $this->getTombstoneKey($key, '*'),
+            $this->getFlushKey(),
             $hash,
             $token->value,
             $value,
@@ -402,7 +407,27 @@ LUA;
 
     public function flush(): bool
     {
-        return $this->command(['FLUSHDB']) === 'OK';
+        $script = <<<'LUA'
+redis.call('FLUSHDB')
+redis.call('SETEX', KEYS[1], ARGV[1], ARGV[2])
+return 1
+LUA;
+
+        $result = $this->command([
+            'EVAL',
+            $script,
+            '1',
+            $this->getFlushKey(),
+            (string) self::TOKEN_TTL,
+            (string) \time(),
+        ]);
+
+        return (\is_int($result) || \is_string($result)) && (int) $result === 1;
+    }
+
+    private function getFlushKey(): string
+    {
+        return 'utopia-cache-flush-token';
     }
 
     public function ping(): bool

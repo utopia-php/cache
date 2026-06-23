@@ -167,6 +167,152 @@ class FencedFillTest extends TestCase
         $this->assertCount(1024, $tokens);
     }
 
+    public function testPurgeClearsPendingFillTokenForHash(): void
+    {
+        $adapter = new class implements Adapter, FencedFill
+        {
+            public bool $saveFencedCalled = false;
+
+            public function load(string $key, int $ttl, string $hash = ''): mixed
+            {
+                return false;
+            }
+
+            public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
+            {
+                return new Token('token');
+            }
+
+            public function save(string $key, array|string $data, string $hash = ''): bool|string|array
+            {
+                return $data;
+            }
+
+            public function saveFenced(string $key, array|string $data, Token $token, string $hash = ''): bool|string|array
+            {
+                $this->saveFencedCalled = true;
+
+                return false;
+            }
+
+            public function touch(string $key, string $hash = ''): bool
+            {
+                return false;
+            }
+
+            public function list(string $key): array
+            {
+                return [];
+            }
+
+            public function purge(string $key, string $hash = ''): bool
+            {
+                return true;
+            }
+
+            public function flush(): bool
+            {
+                return true;
+            }
+
+            public function ping(): bool
+            {
+                return true;
+            }
+
+            public function getSize(): int
+            {
+                return 0;
+            }
+
+            public function getName(?string $key = null): string
+            {
+                return 'fenced';
+            }
+        };
+        $cache = new Cache($adapter);
+
+        $this->assertFalse($cache->load('key', 60, 'hash'));
+        $this->assertTrue($cache->purge('key', 'hash'));
+
+        $this->assertSame('fresh', $cache->save('key', 'fresh', 'hash'));
+        $this->assertFalse($adapter->saveFencedCalled);
+    }
+
+    public function testKeyPurgeClearsPendingFillTokensForAllHashes(): void
+    {
+        $adapter = new class implements Adapter, FencedFill
+        {
+            public int $saveFencedCalls = 0;
+
+            public function load(string $key, int $ttl, string $hash = ''): mixed
+            {
+                return false;
+            }
+
+            public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
+            {
+                return new Token('token-'.$hash);
+            }
+
+            public function save(string $key, array|string $data, string $hash = ''): bool|string|array
+            {
+                return $data;
+            }
+
+            public function saveFenced(string $key, array|string $data, Token $token, string $hash = ''): bool|string|array
+            {
+                $this->saveFencedCalls++;
+
+                return false;
+            }
+
+            public function touch(string $key, string $hash = ''): bool
+            {
+                return false;
+            }
+
+            public function list(string $key): array
+            {
+                return [];
+            }
+
+            public function purge(string $key, string $hash = ''): bool
+            {
+                return true;
+            }
+
+            public function flush(): bool
+            {
+                return true;
+            }
+
+            public function ping(): bool
+            {
+                return true;
+            }
+
+            public function getSize(): int
+            {
+                return 0;
+            }
+
+            public function getName(?string $key = null): string
+            {
+                return 'fenced';
+            }
+        };
+        $cache = new Cache($adapter);
+
+        $this->assertFalse($cache->load('key', 60, 'hash-a'));
+        $this->assertFalse($cache->load('key', 60, 'hash-b'));
+        $this->assertTrue($cache->purge('key'));
+
+        $this->assertSame('fresh-a', $cache->save('key', 'fresh-a', 'hash-a'));
+        $this->assertSame('fresh-b', $cache->save('key', 'fresh-b', 'hash-b'));
+        $this->assertSame(0, $adapter->saveFencedCalls);
+    }
+
     public function testShardingForwardsFencedFill(): void
     {
         $adapter = new FencedTestAdapter();

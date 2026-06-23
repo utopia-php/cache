@@ -154,7 +154,7 @@ class MultiplexingTest extends TestCase
         });
     }
 
-    public function testPurgedMissDoesNotSave(): void
+    public function testPurgedMissAllowsFreshSave(): void
     {
         $this->runCo(function () {
             $cache = $this->makeCache();
@@ -163,8 +163,31 @@ class MultiplexingTest extends TestCase
             $this->assertFalse($cache->load('redis-mux:purged-miss-key', 60, 'redis-mux:purged-miss-key'));
             $cache->purge('redis-mux:purged-miss-key', 'redis-mux:purged-miss-key');
 
-            $this->assertFalse($cache->save('redis-mux:purged-miss-key', 'stale data', 'redis-mux:purged-miss-key'));
-            $this->assertFalse($cache->load('redis-mux:purged-miss-key', 60, 'redis-mux:purged-miss-key'));
+            $this->assertEquals('fresh data', $cache->save('redis-mux:purged-miss-key', 'fresh data', 'redis-mux:purged-miss-key'));
+            $this->assertEquals('fresh data', $cache->load('redis-mux:purged-miss-key', 60, 'redis-mux:purged-miss-key'));
+
+            $cache->purge('redis-mux:purged-miss-key', 'redis-mux:purged-miss-key');
+        });
+    }
+
+    public function testFlushBlocksPreFlushMissToken(): void
+    {
+        $this->runCo(function () {
+            $cache = $this->makeCache();
+            $cache->purge('redis-mux:flush-fence-key', 'redis-mux:flush-fence-key');
+
+            $this->assertFalse($cache->load('redis-mux:flush-fence-key', 60, 'redis-mux:flush-fence-key'));
+
+            $otherAdapter = new RedisMultiplexing('redis', 6379);
+            try {
+                $otherCache = new Cache($otherAdapter);
+                $this->assertTrue($otherCache->flush());
+            } finally {
+                $otherAdapter->disconnect();
+            }
+
+            $this->assertFalse($cache->save('redis-mux:flush-fence-key', 'stale data', 'redis-mux:flush-fence-key'));
+            $this->assertFalse($cache->load('redis-mux:flush-fence-key', 60, 'redis-mux:flush-fence-key'));
         });
     }
 
