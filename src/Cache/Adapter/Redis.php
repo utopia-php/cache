@@ -12,7 +12,12 @@ use Utopia\Cache\Feature\Retryable;
 
 class Redis implements Adapter, Leasable, Retryable
 {
-    private const GENERATION_SUFFIX = ':__gen';
+    /**
+     * Reserved key namespace for per-key generation markers. Prefixed (not
+     * suffixed) so a marker can never collide with a real cache entry — which is
+     * stored as a Redis hash — and trigger a WRONGTYPE error.
+     */
+    private const GENERATION_PREFIX = '_utopia_cache_gen:';
 
     /**
      * Save $hash field into hash $key only when generation key still equals the
@@ -28,18 +33,18 @@ class Redis implements Adapter, Leasable, Retryable
         LUA;
 
     /**
-     * Atomically drop $key and advance its generation so any in-flight reader
-     * that read the previous generation cannot re-cache stale data.
-     * KEYS[1]=key, KEYS[2]=generationKey; ARGV[1]=generation ttl seconds.
+     * Atomically drop $key and advance its generation, so an in-flight reader
+     * holding the previous generation cannot re-cache stale data. Returns the
+     * number of value keys removed, preserving purge() semantics. The generation
+     * marker never expires: it must outlive any reader still holding an older
+     * generation (cache entries may be read with very long TTLs).
+     * KEYS[1]=key, KEYS[2]=generationKey.
      */
     private const LUA_PURGE_BUMP = <<<'LUA'
-        redis.call('DEL', KEYS[1])
-        local gen = redis.call('INCR', KEYS[2])
-        redis.call('EXPIRE', KEYS[2], ARGV[1])
-        return gen
+        local deleted = redis.call('DEL', KEYS[1])
+        redis.call('INCR', KEYS[2])
+        return deleted
         LUA;
-
-    private const GENERATION_TTL = 86400;
 
     /**
      * @var Client
@@ -168,7 +173,7 @@ class Redis implements Adapter, Leasable, Retryable
 
     public function getGeneration(string $key): string
     {
-        $gen = $this->execute(fn () => $this->redis->get($key.self::GENERATION_SUFFIX));
+        $gen = $this->execute(fn () => $this->redis->get(self::GENERATION_PREFIX.$key));
 
         return \is_string($gen) ? $gen : '0';
     }
@@ -187,7 +192,7 @@ class Redis implements Adapter, Leasable, Retryable
             $value = Envelope::encode($data, time());
             $stored = $this->execute(fn () => $this->redis->eval(
                 self::LUA_SAVE_WITH_LEASE,
-                [$key, $key.self::GENERATION_SUFFIX, $hash, $value, $generation],
+                [$key, self::GENERATION_PREFIX.$key, $hash, $value, $generation],
                 2
             ));
 
@@ -254,7 +259,7 @@ class Redis implements Adapter, Leasable, Retryable
         // stale data after this purge.
         return (bool) $this->execute(fn () => $this->redis->eval(
             self::LUA_PURGE_BUMP,
-            [$key, $key.self::GENERATION_SUFFIX, (string) self::GENERATION_TTL],
+            [$key, self::GENERATION_PREFIX.$key],
             2
         ));
     }

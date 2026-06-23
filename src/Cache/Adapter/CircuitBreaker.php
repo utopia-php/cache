@@ -7,7 +7,7 @@ use Utopia\Cache\Feature;
 use Utopia\CircuitBreaker\CircuitBreaker as UtopiaCircuitBreaker;
 use Utopia\Telemetry\Adapter as Telemetry;
 
-class CircuitBreaker implements Adapter, Feature\Telemetry
+class CircuitBreaker implements Adapter, Feature\Leasable, Feature\Telemetry
 {
     public function __construct(
         private readonly Adapter $adapter,
@@ -39,6 +39,30 @@ class CircuitBreaker implements Adapter, Feature\Telemetry
 
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
+        /** @var bool|string|array<int|string, mixed> $result */
+        $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
+
+        return $result;
+    }
+
+    public function getGeneration(string $key): string
+    {
+        if (! $this->adapter instanceof Feature\Leasable) {
+            return '0';
+        }
+
+        /** @var string $result */
+        $result = $this->delegate(__FUNCTION__, \func_get_args(), '0');
+
+        return $result;
+    }
+
+    public function saveWithLease(string $key, array|string $data, string $hash, string $generation): bool|string|array
+    {
+        if (! $this->adapter instanceof Feature\Leasable) {
+            return $this->save($key, $data, $hash);
+        }
+
         /** @var bool|string|array<int|string, mixed> $result */
         $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
 

@@ -68,4 +68,12 @@ class LeasableTest extends TestCase
         $this->assertNotFalse($this->cache->saveWithLease('doc:1', ['v' => 2], 'doc:1', $generation));
         $this->assertSame(['v' => 2], $this->cache->load('doc:1', 60, 'doc:1'));
     }
+
+    public function testPurgePreservesDeletionResult(): void
+    {
+        $this->assertFalse($this->cache->purge('doc:absent'), 'Purging a missing key returns false');
+
+        $this->cache->saveWithLease('doc:1', ['v' => 1], 'doc:1', $this->cache->getGeneration('doc:1'));
+        $this->assertTrue($this->cache->purge('doc:1'), 'Purging an existing key returns true');
+    }
 }
