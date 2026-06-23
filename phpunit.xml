@@ -12,8 +12,39 @@
         <testsuite name="unit">
             <directory>./tests/Cache/Unit</directory>
         </testsuite>
-        <testsuite name="e2e">
-            <directory>./tests/Cache/E2E</directory>
+        <testsuite name="memory">
+            <file>./tests/Cache/E2E/MemoryTest.php</file>
+        </testsuite>
+        <testsuite name="none">
+            <file>./tests/Cache/E2E/NoneTest.php</file>
+        </testsuite>
+        <testsuite name="filesystem">
+            <file>./tests/Cache/E2E/FilesystemTest.php</file>
+        </testsuite>
+        <testsuite name="pool">
+            <file>./tests/Cache/E2E/PoolTest.php</file>
+        </testsuite>
+        <testsuite name="circuitbreaker">
+            <file>./tests/Cache/E2E/CircuitBreakerTest.php</file>
+        </testsuite>
+        <testsuite name="telemetry">
+            <file>./tests/Cache/E2E/TelemetryTest.php</file>
+        </testsuite>
+        <testsuite name="memcached">
+            <file>./tests/Cache/E2E/MemcachedTest.php</file>
+        </testsuite>
+        <testsuite name="hazelcast">
+            <file>./tests/Cache/E2E/HazelcastTest.php</file>
+        </testsuite>
+        <testsuite name="sharding">
+            <file>./tests/Cache/E2E/ShardingTest.php</file>
+        </testsuite>
+        <testsuite name="redis">
+            <directory>./tests/Cache/E2E/Redis</directory>
+            <exclude>./tests/Cache/E2E/Redis/RedisClusterTest.php</exclude>
+        </testsuite>
+        <testsuite name="redis-cluster">
+            <file>./tests/Cache/E2E/Redis/RedisClusterTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>

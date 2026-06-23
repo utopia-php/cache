@@ -1,13 +1,16 @@
+name: cache
+
 services:
   tests:
     container_name: tests
+    image: cache-tests:${PHP_VERSION:-8.4}
     build:
       context: .
       dockerfile: Dockerfile.php-${PHP_VERSION:-8.4}
     networks:
       - database
     volumes:
-      - ./phpunit.xml:/usr/code/phpunit.xml
+      - ./phpunit.xml:/usr/src/code/phpunit.xml
       - ./src:/usr/src/code/src
       - ./tests:/usr/src/code/tests
       - /var/run/docker.sock:/var/run/docker.sock
@@ -23,6 +26,11 @@ services:
   redis:
     image: redis:6.0-alpine
     container_name: cache-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
     networks:
       - database
 
@@ -32,6 +40,12 @@ services:
     hostname: redis-cluster
     environment:
       - IP=redis-cluster
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -p 7000 cluster info | grep -q cluster_state:ok"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
     networks:
       - database
 
@@ -41,29 +55,44 @@ services:
       HZ_NETWORK_MEMCACHEPROTOCOL_ENABLED: "true"
     container_name: hazelcast
     networks:
-      - database  
+      - database
 
   memcached:
     image: memcached:1.6.17-alpine
     container_name: memcached
     networks:
       - database
-  
+
   shardA:
     image: redis:6.0-alpine
     container_name: shardA
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
     networks:
       - database
-  
+
   shardB:
     image: redis:6.0-alpine
     container_name: shardB
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
     networks:
-      - database  
-  
+      - database
+
   shardC:
     image: redis:6.0-alpine
     container_name: shardC
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
     networks:
       - database
 
