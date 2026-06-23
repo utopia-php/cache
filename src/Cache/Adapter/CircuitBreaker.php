@@ -4,10 +4,11 @@ namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Feature;
+use Utopia\Cache\Token;
 use Utopia\CircuitBreaker\CircuitBreaker as UtopiaCircuitBreaker;
 use Utopia\Telemetry\Adapter as Telemetry;
 
-class CircuitBreaker implements Adapter, Feature\Telemetry
+class CircuitBreaker implements Adapter, Feature\FencedFill, Feature\Telemetry
 {
     public function __construct(
         private readonly Adapter $adapter,
@@ -37,8 +38,29 @@ class CircuitBreaker implements Adapter, Feature\Telemetry
         return $this->delegate(__FUNCTION__, \func_get_args(), false);
     }
 
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
+    {
+        if (! ($this->adapter instanceof Feature\FencedFill)) {
+            return $this->load($key, $ttl, $hash);
+        }
+
+        return $this->delegate(__FUNCTION__, \func_get_args(), false);
+    }
+
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
+        /** @var bool|string|array<int|string, mixed> $result */
+        $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
+
+        return $result;
+    }
+
+    public function saveFenced(string $key, array|string $data, Token $token, string $hash = ''): bool|string|array
+    {
+        if (! ($this->adapter instanceof Feature\FencedFill)) {
+            return false;
+        }
+
         /** @var bool|string|array<int|string, mixed> $result */
         $result = $this->delegate(__FUNCTION__, \func_get_args(), false);
 

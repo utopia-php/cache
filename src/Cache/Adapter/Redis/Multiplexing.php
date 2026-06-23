@@ -199,6 +199,9 @@ local tombstone = redis.call('GET', KEYS[2])
 local globalTombstone = redis.call('GET', KEYS[3])
 local ok, token = pcall(cjson.decode, ARGV[2])
 if ok and type(token) == 'table' and token['state'] == 'absent' then
+    if type(token['time']) ~= 'number' or token['time'] + tonumber(ARGV[4]) <= tonumber(ARGV[5]) then
+        return 0
+    end
     if not current and not tombstone and not globalTombstone then
         redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
         return 1
@@ -232,6 +235,8 @@ LUA;
             $hash,
             $token->value,
             $value,
+            (string) self::TOKEN_TTL,
+            (string) \time(),
         ]);
 
         return (\is_int($result) || \is_string($result)) && (int) $result === 1 ? $data : false;

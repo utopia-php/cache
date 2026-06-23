@@ -4,9 +4,15 @@ namespace Utopia\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Adapter\CircuitBreaker;
+use Utopia\Cache\Adapter\Pool;
+use Utopia\Cache\Adapter\Sharding;
 use Utopia\Cache\Cache;
 use Utopia\Cache\Feature\FencedFill;
 use Utopia\Cache\Token;
+use Utopia\CircuitBreaker\CircuitBreaker as UtopiaCircuitBreaker;
+use Utopia\Pools\Adapter\Stack;
+use Utopia\Pools\Pool as UtopiaPool;
 
 class FencedFillTest extends TestCase
 {
@@ -159,5 +165,98 @@ class FencedFillTest extends TestCase
         /** @var array<string, Token> $tokens */
         $tokens = $reflection->getValue($cache);
         $this->assertCount(1024, $tokens);
+    }
+
+    public function testShardingForwardsFencedFill(): void
+    {
+        $adapter = new FencedTestAdapter();
+        $cache = new Cache(new Sharding([$adapter]));
+
+        $this->assertFalse($cache->load('key', 60));
+        $this->assertSame('value', $cache->save('key', 'value'));
+        $this->assertSame('token-key', $adapter->saveToken?->value);
+    }
+
+    public function testPoolForwardsFencedFill(): void
+    {
+        $adapter = new FencedTestAdapter();
+        $pool = new UtopiaPool(new Stack(), 'test', 1, fn () => $adapter);
+        $cache = new Cache(new Pool($pool));
+
+        $this->assertFalse($cache->load('key', 60));
+        $this->assertSame('value', $cache->save('key', 'value'));
+        $this->assertSame('token-key', $adapter->saveToken?->value);
+    }
+
+    public function testCircuitBreakerForwardsFencedFill(): void
+    {
+        $adapter = new FencedTestAdapter();
+        $cache = new Cache(new CircuitBreaker($adapter, new UtopiaCircuitBreaker()));
+
+        $this->assertFalse($cache->load('key', 60));
+        $this->assertSame('value', $cache->save('key', 'value'));
+        $this->assertSame('token-key', $adapter->saveToken?->value);
+    }
+}
+
+class FencedTestAdapter implements Adapter, FencedFill
+{
+    public ?Token $saveToken = null;
+
+    public function load(string $key, int $ttl, string $hash = ''): mixed
+    {
+        return false;
+    }
+
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
+    {
+        return new Token('token-'.$key);
+    }
+
+    public function save(string $key, array|string $data, string $hash = ''): bool|string|array
+    {
+        return false;
+    }
+
+    public function saveFenced(string $key, array|string $data, Token $token, string $hash = ''): bool|string|array
+    {
+        $this->saveToken = $token;
+
+        return $data;
+    }
+
+    public function touch(string $key, string $hash = ''): bool
+    {
+        return false;
+    }
+
+    public function list(string $key): array
+    {
+        return [];
+    }
+
+    public function purge(string $key, string $hash = ''): bool
+    {
+        return true;
+    }
+
+    public function flush(): bool
+    {
+        return true;
+    }
+
+    public function ping(): bool
+    {
+        return true;
+    }
+
+    public function getSize(): int
+    {
+        return 0;
+    }
+
+    public function getName(?string $key = null): string
+    {
+        return 'fenced-test';
     }
 }

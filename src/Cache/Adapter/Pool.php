@@ -3,9 +3,11 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\FencedFill;
+use Utopia\Cache\Token;
 use Utopia\Pools\Pool as UtopiaPool;
 
-class Pool implements Adapter
+class Pool implements Adapter, FencedFill
 {
     /**
      * @var UtopiaPool<covariant Adapter>
@@ -49,12 +51,39 @@ class Pool implements Adapter
         return $this->delegate(__FUNCTION__, \func_get_args());
     }
 
+    public function loadFenced(string $key, int $ttl, string $hash = ''): mixed
+    {
+        return $this->pool->use(function (Adapter $adapter) use ($key, $ttl, $hash) {
+            if ($adapter instanceof FencedFill) {
+                return $adapter->loadFenced($key, $ttl, $hash);
+            }
+
+            return $adapter->load($key, $ttl, $hash);
+        });
+    }
+
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
         /**
          * @var bool|string|array<mixed> $result
          */
         $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
+    }
+
+    public function saveFenced(string $key, array|string $data, Token $token, string $hash = ''): bool|string|array
+    {
+        /**
+         * @var bool|string|array<mixed> $result
+         */
+        $result = $this->pool->use(function (Adapter $adapter) use ($key, $data, $token, $hash) {
+            if (! ($adapter instanceof FencedFill)) {
+                return false;
+            }
+
+            return $adapter->saveFenced($key, $data, $token, $hash);
+        });
 
         return $result;
     }
