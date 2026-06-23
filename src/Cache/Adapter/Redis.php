@@ -170,7 +170,7 @@ if current == ARGV[2] then
     redis.call('DEL', KEYS[2])
     return 1
 end
-if not current and tombstone == ARGV[2] then
+if not current and tombstone == ARGV[2] and not globalTombstone then
     redis.call('HSET', KEYS[1], ARGV[1], ARGV[3])
     redis.call('DEL', KEYS[2])
     return 1
@@ -308,7 +308,7 @@ if value then
             return {2, value}
         end
     end
-    return {0, ''}
+    return {2, value}
 end
 
 local tombstone = redis.call('GET', KEYS[2])

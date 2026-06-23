@@ -11,6 +11,8 @@ class Cache
 {
     private const MAX_PENDING_TOKENS = 1024;
 
+    private const TOKEN_CONTEXT_PREFIX = '__utopia_cache_tokens:';
+
     private Adapter $adapter;
 
     /**
@@ -34,6 +36,8 @@ class Cache
      * @var array<string, Token>
      */
     private array $tokens = [];
+
+    private int $tokenGeneration = 0;
 
     /**
      * Set telemetry adapter. Instruments are created lazily on first use to
@@ -114,12 +118,10 @@ class Cache
             : $this->adapter->load($key, $ttl, $hash);
         $tokenKey = $this->getTokenKey($key, $effectiveHash);
         if ($result instanceof Token) {
-            unset($this->tokens[$tokenKey]);
-            $this->tokens[$tokenKey] = $result;
-            $this->pruneTokens();
+            $this->rememberToken($tokenKey, $result);
             $result = false;
         } else {
-            unset($this->tokens[$tokenKey]);
+            $this->forgetToken($tokenKey);
         }
         $duration = microtime(true) - $start;
         $adapterName = $this->adapter->getName($key);
@@ -149,8 +151,7 @@ class Cache
         $hash = $this->caseSensitive ? $hash : strtolower($hash);
         $effectiveHash = empty($hash) ? $key : $hash;
         $tokenKey = $this->getTokenKey($key, $effectiveHash);
-        $token = $this->tokens[$tokenKey] ?? null;
-        unset($this->tokens[$tokenKey]);
+        $token = $this->consumeToken($tokenKey);
 
         $start = microtime(true);
 
@@ -241,7 +242,8 @@ class Cache
     {
         $start = microtime(true);
         $result = $this->adapter->flush();
-        $this->tokens = [];
+        $this->tokenGeneration++;
+        $this->clearTokens();
         $duration = microtime(true) - $start;
         $this->getOperationDuration()->record($duration, [
             'operation' => 'flush',
@@ -253,15 +255,124 @@ class Cache
 
     private function getTokenKey(string $key, string $hash): string
     {
-        return $key."\0".$hash;
+        return $this->tokenGeneration."\0".$key."\0".$hash;
     }
 
-    private function pruneTokens(): void
+    private function rememberToken(string $tokenKey, Token $token): void
     {
-        while (\count($this->tokens) > self::MAX_PENDING_TOKENS) {
-            $oldest = \array_key_first($this->tokens);
-            unset($this->tokens[$oldest]);
+        $context = $this->getCoroutineContext();
+        if ($context !== null) {
+            $contextKey = $this->getTokenContextKey();
+            $tokens = $this->getContextTokens($context, $contextKey);
+            unset($tokens[$tokenKey]);
+            $tokens[$tokenKey] = $token;
+            $context[$contextKey] = $this->pruneTokens($tokens);
+
+            return;
         }
+
+        unset($this->tokens[$tokenKey]);
+        $this->tokens[$tokenKey] = $token;
+        $this->tokens = $this->pruneTokens($this->tokens);
+    }
+
+    private function forgetToken(string $tokenKey): void
+    {
+        $context = $this->getCoroutineContext();
+        if ($context !== null) {
+            $contextKey = $this->getTokenContextKey();
+            $tokens = $this->getContextTokens($context, $contextKey);
+            unset($tokens[$tokenKey]);
+            $context[$contextKey] = $tokens;
+
+            return;
+        }
+
+        unset($this->tokens[$tokenKey]);
+    }
+
+    private function consumeToken(string $tokenKey): ?Token
+    {
+        $context = $this->getCoroutineContext();
+        if ($context !== null) {
+            $contextKey = $this->getTokenContextKey();
+            $tokens = $this->getContextTokens($context, $contextKey);
+            $token = $tokens[$tokenKey] ?? null;
+            unset($tokens[$tokenKey]);
+            $context[$contextKey] = $tokens;
+
+            return $token;
+        }
+
+        $token = $this->tokens[$tokenKey] ?? null;
+        unset($this->tokens[$tokenKey]);
+
+        return $token;
+    }
+
+    private function clearTokens(): void
+    {
+        $context = $this->getCoroutineContext();
+        if ($context !== null) {
+            unset($context[$this->getTokenContextKey()]);
+        }
+
+        $this->tokens = [];
+    }
+
+    private function getTokenContextKey(): string
+    {
+        return self::TOKEN_CONTEXT_PREFIX.\spl_object_id($this);
+    }
+
+    /**
+     * @return \ArrayAccess<string, mixed>|null
+     */
+    private function getCoroutineContext(): ?\ArrayAccess
+    {
+        if (! \class_exists('Swoole\\Coroutine', false)) {
+            return null;
+        }
+
+        $cid = \call_user_func(['Swoole\\Coroutine', 'getCid']);
+        if (! \is_int($cid) || $cid < 0) {
+            return null;
+        }
+
+        $context = \call_user_func(['Swoole\\Coroutine', 'getContext']);
+        if (! $context instanceof \ArrayAccess) {
+            return null;
+        }
+
+        return $context;
+    }
+
+    /**
+     * @param  \ArrayAccess<string, mixed>  $context
+     * @return array<string, Token>
+     */
+    private function getContextTokens(\ArrayAccess $context, string $contextKey): array
+    {
+        if (! isset($context[$contextKey]) || ! \is_array($context[$contextKey])) {
+            return [];
+        }
+
+        /** @var array<string, Token> */
+        return $context[$contextKey];
+    }
+
+    /**
+     * @param  array<string, Token>  $tokens
+     * @return array<string, Token>
+     */
+    private function pruneTokens(array $tokens): array
+    {
+        while (\count($tokens) > self::MAX_PENDING_TOKENS) {
+            $oldest = \array_key_first($tokens);
+            unset($tokens[$oldest]);
+        }
+
+        return $tokens;
     }
 
     /**
