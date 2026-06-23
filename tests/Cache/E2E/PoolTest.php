@@ -29,4 +29,14 @@ class PoolTest extends Base
         self::$cache->save('test', 'test');
         $this->assertEquals(4, self::$cache->getSize());
     }
+
+    public function testLeaseFallbackForNonLeasableAdapter(): void
+    {
+        // The pool holds Filesystem adapters, which are not Leasable. The Pool
+        // adapter must degrade gracefully (no "Call to undefined method" fatal):
+        // getGeneration() returns '0' and saveWithLease() falls back to save().
+        $this->assertSame('0', self::$cache->getGeneration('lease:fallback'));
+        $this->assertNotFalse(self::$cache->saveWithLease('lease:fallback', 'value', 'lease:fallback', '0'));
+        $this->assertSame('value', self::$cache->load('lease:fallback', 60, 'lease:fallback'));
+    }
 }

@@ -3,9 +3,10 @@
 namespace Utopia\Cache\Adapter;
 
 use Utopia\Cache\Adapter;
+use Utopia\Cache\Feature\Leasable;
 use Utopia\Pools\Pool as UtopiaPool;
 
-class Pool implements Adapter
+class Pool implements Adapter, Leasable
 {
     /**
      * @var UtopiaPool<covariant Adapter>
@@ -55,6 +56,27 @@ class Pool implements Adapter
          * @var bool|string|array<mixed> $result
          */
         $result = $this->delegate(__FUNCTION__, \func_get_args());
+
+        return $result;
+    }
+
+    public function getGeneration(string $key): string
+    {
+        return $this->pool->use(function (Adapter $adapter) use ($key): string {
+            return $adapter instanceof Leasable ? $adapter->getGeneration($key) : '0';
+        });
+    }
+
+    public function saveWithLease(string $key, array|string $data, string $hash, string $generation): bool|string|array
+    {
+        /**
+         * @var bool|string|array<mixed> $result
+         */
+        $result = $this->pool->use(function (Adapter $adapter) use ($key, $data, $hash, $generation) {
+            return $adapter instanceof Leasable
+                ? $adapter->saveWithLease($key, $data, $hash, $generation)
+                : $adapter->save($key, $data, $hash);
+        });
 
         return $result;
     }

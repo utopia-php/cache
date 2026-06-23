@@ -2,3 +2,4 @@
 /.idea/
 .phpunit.result.cache
 tests/data
+tests/Cache/E2E/tests/pool/

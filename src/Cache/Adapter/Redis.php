@@ -7,10 +7,68 @@ use Redis as Client;
 use Throwable;
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Adapter\Redis\Envelope;
+use Utopia\Cache\Feature\Leasable;
 use Utopia\Cache\Feature\Retryable;
 
-class Redis implements Adapter, Retryable
+class Redis implements Adapter, Leasable, Retryable
 {
+    /**
+     * Reserved hash field that holds a key's generation alongside its value
+     * fields. Keeping the generation inside the value's own hash makes every
+     * lease operation single-key (one shard): no sidecar key to collide with or
+     * scan, and the scripts stay correct under Redis Cluster / multi-threaded
+     * backends (e.g. Dragonfly), where a multi-key script would span shards.
+     * Callers must not use this as a cache hash/field.
+     */
+    private const GENERATION_FIELD = '__utopia_gen__';
+
+    /**
+     * Save $hash field into hash $key only when the key's generation field still
+     * equals the caller's token. Single-key. KEYS[1]=key; ARGV[1]=hash,
+     * ARGV[2]=value, ARGV[3]=expected generation.
+     */
+    private const LUA_SAVE_WITH_LEASE = <<<'LUA'
+        local current = redis.call('HGET', KEYS[1], '__utopia_gen__')
+        if current == false then current = '0' end
+        if current ~= ARGV[3] then return 0 end
+        redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
+        return 1
+        LUA;
+
+    /**
+     * Drop $key's value fields and advance its generation in one step, so an
+     * in-flight reader holding the previous generation cannot re-cache stale
+     * data. The bump is unconditional: a reader may have read a row the writer is
+     * now deleting before anything was cached, so the generation must move even
+     * when nothing was cached. Returns the number of value fields removed (the
+     * generation field is excluded), preserving purge() semantics. The
+     * generation field is the only thing that survives a purge, so it outlives
+     * any reader holding an older generation. Single-key. KEYS[1]=key.
+     */
+    private const LUA_PURGE_BUMP = <<<'LUA'
+        local field = '__utopia_gen__'
+        local removed = redis.call('HLEN', KEYS[1]) - redis.call('HEXISTS', KEYS[1], field)
+        local current = redis.call('HGET', KEYS[1], field)
+        local next = (tonumber(current) or 0) + 1
+        redis.call('DEL', KEYS[1])
+        redis.call('HSET', KEYS[1], field, next)
+        return removed
+        LUA;
+
+    /**
+     * Delete a single $hash field and advance the key's generation in one step,
+     * so a field-level purge invalidates in-flight leases just like a full purge.
+     * Returns the number of fields removed, preserving purge()'s deletion-result
+     * semantics. Single-key. KEYS[1]=key; ARGV[1]=field.
+     */
+    private const LUA_PURGE_FIELD = <<<'LUA'
+        local removed = redis.call('HDEL', KEYS[1], ARGV[1])
+        local current = redis.call('HGET', KEYS[1], '__utopia_gen__')
+        local next = (tonumber(current) or 0) + 1
+        redis.call('HSET', KEYS[1], '__utopia_gen__', next)
+        return removed
+        LUA;
+
     /**
      * @var Client
      */
@@ -101,6 +159,13 @@ class Redis implements Adapter, Retryable
             $hash = $key;
         }
 
+        // The generation lives in this same hash; never let a caller read, write
+        // or delete it through the public field API, or they could reset the
+        // generation and revive stale lease tokens.
+        if ($hash === self::GENERATION_FIELD) {
+            return false;
+        }
+
         $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
 
         if (! is_string($redis_string)) {
@@ -126,11 +191,56 @@ class Redis implements Adapter, Retryable
             $hash = $key;
         }
 
+        // The generation lives in this same hash; never let a caller read, write
+        // or delete it through the public field API, or they could reset the
+        // generation and revive stale lease tokens.
+        if ($hash === self::GENERATION_FIELD) {
+            return false;
+        }
+
         try {
             $value = Envelope::encode($data, time());
             $this->execute(fn () => $this->redis->hSet($key, $hash, $value));
 
             return $data;
+        } catch (Throwable $th) {
+            return false;
+        }
+    }
+
+    public function getGeneration(string $key): string
+    {
+        $gen = $this->execute(fn () => $this->redis->hGet($key, self::GENERATION_FIELD));
+
+        return \is_string($gen) ? $gen : '0';
+    }
+
+    public function saveWithLease(string $key, array|string $data, string $hash, string $generation): bool|string|array
+    {
+        if (empty($key) || empty($data)) {
+            return false;
+        }
+
+        if (empty($hash)) {
+            $hash = $key;
+        }
+
+        // The generation lives in this same hash; never let a caller read, write
+        // or delete it through the public field API, or they could reset the
+        // generation and revive stale lease tokens.
+        if ($hash === self::GENERATION_FIELD) {
+            return false;
+        }
+
+        try {
+            $value = Envelope::encode($data, time());
+            $stored = $this->execute(fn () => $this->redis->eval(
+                self::LUA_SAVE_WITH_LEASE,
+                [$key, $hash, $value, $generation],
+                1
+            ));
+
+            return $stored ? $data : false;
         } catch (Throwable $th) {
             return false;
         }
@@ -145,6 +255,13 @@ class Redis implements Adapter, Retryable
     {
         if (empty($hash)) {
             $hash = $key;
+        }
+
+        // The generation lives in this same hash; never let a caller read, write
+        // or delete it through the public field API, or they could reset the
+        // generation and revive stale lease tokens.
+        if ($hash === self::GENERATION_FIELD) {
+            return false;
         }
 
         $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
@@ -174,7 +291,8 @@ class Redis implements Adapter, Retryable
             return [];
         }
 
-        return $keys;
+        // Don't expose the internal generation field as a listable cache field.
+        return \array_values(\array_filter($keys, fn (string $field): bool => $field !== self::GENERATION_FIELD));
     }
 
     /**
@@ -185,10 +303,25 @@ class Redis implements Adapter, Retryable
     public function purge(string $key, string $hash = ''): bool
     {
         if (! empty($hash)) {
-            return (bool) $this->execute(fn () => $this->redis->hdel($key, $hash));
+            if ($hash === self::GENERATION_FIELD) {
+                return false;
+            }
+
+            return (bool) $this->execute(fn () => $this->redis->eval(
+                self::LUA_PURGE_FIELD,
+                [$key, $hash],
+                1
+            ));
         }
 
-        return (bool) $this->execute(fn () => $this->redis->del($key));
+        // Drop the value fields and advance the in-hash generation in one atomic
+        // step (single-key Redis Lua) so an in-flight reader holding the previous
+        // generation cannot re-cache stale data after this purge.
+        return (bool) $this->execute(fn () => $this->redis->eval(
+            self::LUA_PURGE_BUMP,
+            [$key],
+            1
+        ));
     }
 
     /**
@@ -220,7 +353,12 @@ class Redis implements Adapter, Retryable
      */
     public function getSize(): int
     {
-        /** @var int */
+        // Trade-off of the in-hash generation: a purged key keeps a tiny hash
+        // holding only its generation field until it is re-cached, so it still
+        // counts here. Filtering those out would need an O(N) scan with a per-key
+        // HLEN check; for a diagnostic counter that isn't worth it, so DBSIZE may
+        // slightly over-count purged-but-not-yet-recached keys.
+        /** @var int $size */
         $size = $this->execute(fn () => $this->redis->dbSize());
 
         return $size;
