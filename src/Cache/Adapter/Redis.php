@@ -145,6 +145,13 @@ class Redis implements Adapter, Leasable, Retryable
             $hash = $key;
         }
 
+        // The generation lives in this same hash; never let a caller read, write
+        // or delete it through the public field API, or they could reset the
+        // generation and revive stale lease tokens.
+        if ($hash === self::GENERATION_FIELD) {
+            return false;
+        }
+
         $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
 
         if (! is_string($redis_string)) {
@@ -168,6 +175,13 @@ class Redis implements Adapter, Leasable, Retryable
 
         if (empty($hash)) {
             $hash = $key;
+        }
+
+        // The generation lives in this same hash; never let a caller read, write
+        // or delete it through the public field API, or they could reset the
+        // generation and revive stale lease tokens.
+        if ($hash === self::GENERATION_FIELD) {
+            return false;
         }
 
         try {
@@ -197,6 +211,13 @@ class Redis implements Adapter, Leasable, Retryable
             $hash = $key;
         }
 
+        // The generation lives in this same hash; never let a caller read, write
+        // or delete it through the public field API, or they could reset the
+        // generation and revive stale lease tokens.
+        if ($hash === self::GENERATION_FIELD) {
+            return false;
+        }
+
         try {
             $value = Envelope::encode($data, time());
             $stored = $this->execute(fn () => $this->redis->eval(
@@ -220,6 +241,13 @@ class Redis implements Adapter, Leasable, Retryable
     {
         if (empty($hash)) {
             $hash = $key;
+        }
+
+        // The generation lives in this same hash; never let a caller read, write
+        // or delete it through the public field API, or they could reset the
+        // generation and revive stale lease tokens.
+        if ($hash === self::GENERATION_FIELD) {
+            return false;
         }
 
         $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
@@ -260,6 +288,10 @@ class Redis implements Adapter, Leasable, Retryable
     public function purge(string $key, string $hash = ''): bool
     {
         if (! empty($hash)) {
+            if ($hash === self::GENERATION_FIELD) {
+                return false;
+            }
+
             return (bool) $this->execute(fn () => $this->redis->hdel($key, $hash));
         }
 

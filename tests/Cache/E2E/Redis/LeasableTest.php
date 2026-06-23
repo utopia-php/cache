@@ -93,4 +93,24 @@ class LeasableTest extends TestCase
         $this->assertSame('1', $this->cache->getGeneration('doc:1'));
         $this->assertSame(1, $this->cache->getSize());
     }
+
+    public function testReservedGenerationFieldIsProtected(): void
+    {
+        $this->cache->flush();
+        $this->cache->saveWithLease('doc:1', ['v' => 1], 'doc:1', $this->cache->getGeneration('doc:1'));
+        $this->cache->purge('doc:1');
+        $this->assertSame('1', $this->cache->getGeneration('doc:1'));
+
+        // Reading, writing, or deleting the reserved generation field through the
+        // public API must be rejected, so a caller can't clobber it and reset the
+        // generation sequence (which would revive stale lease tokens).
+        $this->assertFalse($this->cache->save('doc:1', 'attacker', '__utopia_gen__'));
+        $this->assertFalse($this->cache->saveWithLease('doc:1', 'attacker', '__utopia_gen__', '1'));
+        $this->assertFalse($this->cache->purge('doc:1', '__utopia_gen__'));
+        $this->assertFalse($this->cache->load('doc:1', 60, '__utopia_gen__'));
+
+        // Generation is untouched, so an old token is still rejected.
+        $this->assertSame('1', $this->cache->getGeneration('doc:1'));
+        $this->assertFalse($this->cache->saveWithLease('doc:1', 'stale', 'doc:1', '0'));
+    }
 }
