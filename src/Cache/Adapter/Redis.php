@@ -17,7 +17,7 @@ class Redis implements Adapter, Leasable, Retryable
     /**
      * Save $hash field into hash $key only when generation key still equals the
      * caller's token. KEYS[1]=key, KEYS[2]=generationKey; ARGV[1]=hash,
-     * ARGV[2]=value, ARGV[3]=expected generation, ARGV[4]=generation ttl seconds.
+     * ARGV[2]=value, ARGV[3]=expected generation.
      */
     private const LUA_SAVE_WITH_LEASE = <<<'LUA'
         local current = redis.call('GET', KEYS[2])

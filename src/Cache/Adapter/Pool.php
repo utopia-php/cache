@@ -62,12 +62,9 @@ class Pool implements Adapter, Leasable
 
     public function getGeneration(string $key): string
     {
-        /**
-         * @var string $result
-         */
-        $result = $this->delegate(__FUNCTION__, \func_get_args());
-
-        return $result;
+        return $this->pool->use(function (Adapter $adapter) use ($key): string {
+            return $adapter instanceof Leasable ? $adapter->getGeneration($key) : '0';
+        });
     }
 
     public function saveWithLease(string $key, array|string $data, string $hash, string $generation): bool|string|array
@@ -75,7 +72,11 @@ class Pool implements Adapter, Leasable
         /**
          * @var bool|string|array<mixed> $result
          */
-        $result = $this->delegate(__FUNCTION__, \func_get_args());
+        $result = $this->pool->use(function (Adapter $adapter) use ($key, $data, $hash, $generation) {
+            return $adapter instanceof Leasable
+                ? $adapter->saveWithLease($key, $data, $hash, $generation)
+                : $adapter->save($key, $data, $hash);
+        });
 
         return $result;
     }
