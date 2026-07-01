@@ -89,8 +89,9 @@ jobs:
           - { name: Memcached,      suite: memcached,      services: 'memcached',            wait: 3 }
           - { name: Hazelcast,      suite: hazelcast,      services: 'hazelcast',            wait: 30 }
           - { name: Sharding,       suite: sharding,       services: 'shardA shardB shardC', wait: 0 }
-          - { name: Redis,          suite: redis,          services: 'redis',                wait: 0 }
-          - { name: RedisCluster,   suite: redis-cluster,  services: 'redis-cluster',        wait: 0 }
+          - { name: Redis,             suite: redis,              services: 'redis',                wait: 0 }
+          - { name: RedisMultiplexing, suite: redis-multiplexing, services: 'redis',                wait: 0 }
+          - { name: RedisCluster,      suite: redis-cluster,      services: 'redis-cluster',        wait: 0 }
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3

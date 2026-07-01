@@ -23,7 +23,7 @@ use Utopia\Telemetry\UpDownCounter;
  * single reader coroutine parses inbound frames and dispatches each one to
  * the next pending Channel, exploiting Redis's guarantee of in-order replies.
  */
-class Multiplexing implements Adapter, TelemetryFeature
+class Multiplexing extends Leasable implements Adapter, TelemetryFeature
 {
     private ?ConnectionContext $connection = null;
 
@@ -106,6 +106,10 @@ class Multiplexing implements Adapter, TelemetryFeature
             $hash = $key;
         }
 
+        if ($this->isReserved($hash)) {
+            return false;
+        }
+
         $value = $this->command(['HGET', $key, $hash]);
 
         if (! is_string($value)) {
@@ -125,6 +129,10 @@ class Multiplexing implements Adapter, TelemetryFeature
             $hash = $key;
         }
 
+        if ($this->isReserved($hash)) {
+            return false;
+        }
+
         $value = Envelope::encode($data, time());
         $this->command(['HSET', $key, $hash, $value]);
 
@@ -135,6 +143,10 @@ class Multiplexing implements Adapter, TelemetryFeature
     {
         if (empty($hash)) {
             $hash = $key;
+        }
+
+        if ($this->isReserved($hash)) {
+            return false;
         }
 
         $value = $this->command(['HGET', $key, $hash]);
@@ -161,16 +173,17 @@ class Multiplexing implements Adapter, TelemetryFeature
         }
 
         /** @var string[] $keys */
-        return $keys;
+        return \array_values(\array_filter($keys, fn (string $field): bool => ! $this->isReserved($field)));
     }
 
-    public function purge(string $key, string $hash = ''): bool
+    protected function leaseEval(string $script, string $key, array $args): mixed
     {
-        if (! empty($hash)) {
-            return (bool) $this->command(['HDEL', $key, $hash]);
-        }
+        return $this->command(['EVAL', $script, '1', $key, ...$args]);
+    }
 
-        return (bool) $this->command(['DEL', $key]);
+    protected function leaseHget(string $key, string $field): mixed
+    {
+        return $this->command(['HGET', $key, $field]);
     }
 
     public function flush(): bool

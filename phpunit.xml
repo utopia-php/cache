@@ -42,9 +42,15 @@
         <testsuite name="redis">
             <directory>./tests/Cache/E2E/Redis</directory>
             <exclude>./tests/Cache/E2E/Redis/RedisClusterTest.php</exclude>
+            <exclude>./tests/Cache/E2E/Redis/MultiplexingTest.php</exclude>
+            <exclude>./tests/Cache/E2E/Redis/LeasableMultiplexingTest.php</exclude>
         </testsuite>
         <testsuite name="redis-cluster">
             <file>./tests/Cache/E2E/Redis/RedisClusterTest.php</file>
+        </testsuite>
+        <testsuite name="redis-multiplexing">
+            <file>./tests/Cache/E2E/Redis/MultiplexingTest.php</file>
+            <file>./tests/Cache/E2E/Redis/LeasableMultiplexingTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>
