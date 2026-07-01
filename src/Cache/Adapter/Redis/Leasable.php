@@ -199,7 +199,7 @@ abstract class Leasable implements \Utopia\Cache\Feature\Leasable
      *
      * @param  array<int, int|string>  $args
      */
-    protected function leaseRun(string $script, string $key, array $args): mixed
+    private function leaseRun(string $script, string $key, array $args): mixed
     {
         try {
             return $this->leaseEvalSha($this->shaFor($script), $key, $args);
