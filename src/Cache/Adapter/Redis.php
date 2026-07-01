@@ -23,49 +23,80 @@ class Redis implements Adapter, Leasable, Retryable
     private const GENERATION_FIELD = '__utopia_gen__';
 
     /**
-     * Save $hash field into hash $key only when the key's generation field still
-     * equals the caller's token. Single-key. KEYS[1]=key; ARGV[1]=hash,
-     * ARGV[2]=value, ARGV[3]=expected generation.
+     * Reserved hash field: epoch-µs deadline until which saveWithLease() is
+     * refused after a purge, so a reader whose DB read lagged the write can't
+     * re-cache stale data under a still-valid generation token. Not a cache field.
+     */
+    private const TOMBSTONE_FIELD = '__utopia_tomb__';
+
+    /**
+     * Save $hash only if the generation token matches and the key is past its
+     * post-purge tombstone. Single-key. KEYS[1]=key; ARGV[1]=hash, ARGV[2]=value,
+     * ARGV[3]=expected generation, ARGV[4]=grace window ms (0 = tombstone off).
      */
     private const LUA_SAVE_WITH_LEASE = <<<'LUA'
         local current = redis.call('HGET', KEYS[1], '__utopia_gen__')
         if current == false then current = '0' end
         if current ~= ARGV[3] then return 0 end
+        local window = tonumber(ARGV[4]) or 0
+        if window > 0 then
+            local tomb = redis.call('HGET', KEYS[1], '__utopia_tomb__')
+            if tomb ~= false then
+                local deadline = tonumber(tomb)
+                if deadline ~= nil then
+                    local t = redis.call('TIME')
+                    local now = tonumber(t[1]) * 1000000 + tonumber(t[2])
+                    -- 2nd clause ignores a deadline left by a since-rewound clock
+                    if now < deadline and (deadline - now) <= window * 1000 then
+                        return 0
+                    end
+                end
+                redis.call('HDEL', KEYS[1], '__utopia_tomb__')
+            end
+        end
         redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
         return 1
         LUA;
 
     /**
-     * Drop $key's value fields and advance its generation in one step, so an
-     * in-flight reader holding the previous generation cannot re-cache stale
-     * data. The bump is unconditional: a reader may have read a row the writer is
-     * now deleting before anything was cached, so the generation must move even
-     * when nothing was cached. Returns the number of value fields removed (the
-     * generation field is excluded), preserving purge() semantics. The
-     * generation field is the only thing that survives a purge, so it outlives
-     * any reader holding an older generation. Single-key. KEYS[1]=key.
+     * Drop $key's value fields, advance its generation (so an in-flight reader
+     * can't re-cache stale data), and stamp the tombstone when ARGV[1] > 0.
+     * Returns value fields removed (reserved fields excluded), preserving purge()
+     * semantics. Single-key. KEYS[1]=key; ARGV[1]=grace window ms.
      */
     private const LUA_PURGE_BUMP = <<<'LUA'
-        local field = '__utopia_gen__'
-        local removed = redis.call('HLEN', KEYS[1]) - redis.call('HEXISTS', KEYS[1], field)
-        local current = redis.call('HGET', KEYS[1], field)
+        local gen = '__utopia_gen__'
+        local tomb = '__utopia_tomb__'
+        local removed = redis.call('HLEN', KEYS[1]) - redis.call('HEXISTS', KEYS[1], gen) - redis.call('HEXISTS', KEYS[1], tomb)
+        local current = redis.call('HGET', KEYS[1], gen)
         local next = (tonumber(current) or 0) + 1
         redis.call('DEL', KEYS[1])
-        redis.call('HSET', KEYS[1], field, next)
+        redis.call('HSET', KEYS[1], gen, next)
+        local window = tonumber(ARGV[1]) or 0
+        if window > 0 then
+            local t = redis.call('TIME')
+            local now = tonumber(t[1]) * 1000000 + tonumber(t[2])
+            redis.call('HSET', KEYS[1], tomb, now + window * 1000)
+        end
         return removed
         LUA;
 
     /**
-     * Delete a single $hash field and advance the key's generation in one step,
-     * so a field-level purge invalidates in-flight leases just like a full purge.
-     * Returns the number of fields removed, preserving purge()'s deletion-result
-     * semantics. Single-key. KEYS[1]=key; ARGV[1]=field.
+     * Delete one $hash field, advance the generation, and stamp the tombstone when
+     * ARGV[2] > 0 (key-level, so it also briefly blocks re-caching sibling fields).
+     * Single-key. KEYS[1]=key; ARGV[1]=field, ARGV[2]=grace window ms.
      */
     private const LUA_PURGE_FIELD = <<<'LUA'
         local removed = redis.call('HDEL', KEYS[1], ARGV[1])
         local current = redis.call('HGET', KEYS[1], '__utopia_gen__')
         local next = (tonumber(current) or 0) + 1
         redis.call('HSET', KEYS[1], '__utopia_gen__', next)
+        local window = tonumber(ARGV[2]) or 0
+        if window > 0 then
+            local t = redis.call('TIME')
+            local now = tonumber(t[1]) * 1000000 + tonumber(t[2])
+            redis.call('HSET', KEYS[1], '__utopia_tomb__', now + window * 1000)
+        end
         return removed
         LUA;
 
@@ -77,6 +108,12 @@ class Redis implements Adapter, Leasable, Retryable
     private int $maxRetries = 0;
 
     private int $retryDelay = 1000; // milliseconds
+
+    /**
+     * Milliseconds after a purge during which saveWithLease() is refused. Size to
+     * the worst-case read-after-write staleness; 0 disables the tombstone.
+     */
+    private int $leaseGraceWindow = 0;
 
     private string $host;
 
@@ -148,6 +185,28 @@ class Redis implements Adapter, Leasable, Retryable
     }
 
     /**
+     * @param  int  $milliseconds grace window after a purge (0 disables the tombstone)
+     * @return self
+     */
+    public function setLeaseGraceWindow(int $milliseconds): self
+    {
+        $this->leaseGraceWindow = max(0, $milliseconds);
+
+        return $this;
+    }
+
+    public function getLeaseGraceWindow(): int
+    {
+        return $this->leaseGraceWindow;
+    }
+
+    /** Reserved internal fields must never be reachable through the public field API. */
+    private function isReserved(string $hash): bool
+    {
+        return $hash === self::GENERATION_FIELD || $hash === self::TOMBSTONE_FIELD;
+    }
+
+    /**
      * @param  string  $key
      * @param  int  $ttl time in seconds
      * @param  string  $hash optional
@@ -159,10 +218,7 @@ class Redis implements Adapter, Leasable, Retryable
             $hash = $key;
         }
 
-        // The generation lives in this same hash; never let a caller read, write
-        // or delete it through the public field API, or they could reset the
-        // generation and revive stale lease tokens.
-        if ($hash === self::GENERATION_FIELD) {
+        if ($this->isReserved($hash)) {
             return false;
         }
 
@@ -191,10 +247,7 @@ class Redis implements Adapter, Leasable, Retryable
             $hash = $key;
         }
 
-        // The generation lives in this same hash; never let a caller read, write
-        // or delete it through the public field API, or they could reset the
-        // generation and revive stale lease tokens.
-        if ($hash === self::GENERATION_FIELD) {
+        if ($this->isReserved($hash)) {
             return false;
         }
 
@@ -225,10 +278,7 @@ class Redis implements Adapter, Leasable, Retryable
             $hash = $key;
         }
 
-        // The generation lives in this same hash; never let a caller read, write
-        // or delete it through the public field API, or they could reset the
-        // generation and revive stale lease tokens.
-        if ($hash === self::GENERATION_FIELD) {
+        if ($this->isReserved($hash)) {
             return false;
         }
 
@@ -236,7 +286,7 @@ class Redis implements Adapter, Leasable, Retryable
             $value = Envelope::encode($data, time());
             $stored = $this->execute(fn () => $this->redis->eval(
                 self::LUA_SAVE_WITH_LEASE,
-                [$key, $hash, $value, $generation],
+                [$key, $hash, $value, $generation, $this->leaseGraceWindow],
                 1
             ));
 
@@ -257,10 +307,7 @@ class Redis implements Adapter, Leasable, Retryable
             $hash = $key;
         }
 
-        // The generation lives in this same hash; never let a caller read, write
-        // or delete it through the public field API, or they could reset the
-        // generation and revive stale lease tokens.
-        if ($hash === self::GENERATION_FIELD) {
+        if ($this->isReserved($hash)) {
             return false;
         }
 
@@ -291,8 +338,8 @@ class Redis implements Adapter, Leasable, Retryable
             return [];
         }
 
-        // Don't expose the internal generation field as a listable cache field.
-        return \array_values(\array_filter($keys, fn (string $field): bool => $field !== self::GENERATION_FIELD));
+        // Don't expose reserved internal fields (generation, tombstone) as listable cache fields.
+        return \array_values(\array_filter($keys, fn (string $field): bool => ! $this->isReserved($field)));
     }
 
     /**
@@ -303,23 +350,20 @@ class Redis implements Adapter, Leasable, Retryable
     public function purge(string $key, string $hash = ''): bool
     {
         if (! empty($hash)) {
-            if ($hash === self::GENERATION_FIELD) {
+            if ($this->isReserved($hash)) {
                 return false;
             }
 
             return (bool) $this->execute(fn () => $this->redis->eval(
                 self::LUA_PURGE_FIELD,
-                [$key, $hash],
+                [$key, $hash, $this->leaseGraceWindow],
                 1
             ));
         }
 
-        // Drop the value fields and advance the in-hash generation in one atomic
-        // step (single-key Redis Lua) so an in-flight reader holding the previous
-        // generation cannot re-cache stale data after this purge.
         return (bool) $this->execute(fn () => $this->redis->eval(
             self::LUA_PURGE_BUMP,
-            [$key],
+            [$key, $this->leaseGraceWindow],
             1
         ));
     }
@@ -353,10 +397,7 @@ class Redis implements Adapter, Leasable, Retryable
      */
     public function getSize(): int
     {
-        // Trade-off of the in-hash generation: a purged key keeps a tiny hash
-        // holding only its generation field until it is re-cached, so it still
-        // counts here. Filtering those out would need an O(N) scan with a per-key
-        // HLEN check; for a diagnostic counter that isn't worth it, so DBSIZE may
+        // A purged key keeps its reserved field(s) until re-cached, so DBSIZE can
         // slightly over-count purged-but-not-yet-recached keys.
         /** @var int $size */
         $size = $this->execute(fn () => $this->redis->dbSize());

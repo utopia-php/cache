@@ -141,4 +141,124 @@ class LeasableTest extends TestCase
         $this->cache->purge('doc:1');
         $this->assertSame([], $this->cache->list('doc:1'));
     }
+
+    private function graceCache(int $milliseconds): Cache
+    {
+        $redis = new Redis();
+        $redis->connect('redis', 6379);
+        $adapter = new RedisAdapter($redis);
+        $adapter->setLeaseGraceWindow($milliseconds);
+
+        return new Cache($adapter);
+    }
+
+    public function testLeaseGraceWindowDefaultsToZero(): void
+    {
+        $redis = new Redis();
+        $redis->connect('redis', 6379);
+        $this->assertSame(0, (new RedisAdapter($redis))->getLeaseGraceWindow());
+    }
+
+    /**
+     * A token-valid save (generation captured post-purge) must still be refused
+     * within the grace window, then allowed once the deadline passes.
+     */
+    public function testTombstoneRejectsTokenValidSaveWithinGraceWindow(): void
+    {
+        $redis = new Redis();
+        $redis->connect('redis', 6379);
+        $adapter = new RedisAdapter($redis);
+        $adapter->setLeaseGraceWindow(500);
+        $cache = new Cache($adapter);
+        $cache->flush();
+
+        $cache->purge('doc:1');
+
+        $generation = $cache->getGeneration('doc:1');
+        $this->assertFalse(
+            $cache->saveWithLease('doc:1', ['stale' => true], 'doc:1', $generation),
+            'A token-valid save inside the grace window must be refused by the tombstone'
+        );
+        $this->assertFalse($cache->load('doc:1', 60, 'doc:1'), 'Cache must not hold the stale value');
+
+        // Expire the tombstone directly (no sleep) to resume saves.
+        $past = ((int) \time() - 60) * 1000000;
+        $redis->hSet('doc:1', '__utopia_tomb__', (string) $past);
+
+        $this->assertNotFalse(
+            $cache->saveWithLease('doc:1', ['fresh' => true], 'doc:1', $generation),
+            'After the grace window a token-valid save must succeed'
+        );
+        $this->assertSame(['fresh' => true], $cache->load('doc:1', 60, 'doc:1'));
+        $this->assertFalse(
+            (bool) $redis->hExists('doc:1', '__utopia_tomb__'),
+            'The spent tombstone must be dropped on the next save, not linger in the hash'
+        );
+    }
+
+    /** A field-level purge must open the tombstone too. */
+    public function testFieldPurgeAlsoOpensTombstone(): void
+    {
+        $cache = $this->graceCache(500);
+        $cache->flush();
+
+        $cache->saveWithLease('doc:1', ['v' => 1], 'field-a', $cache->getGeneration('doc:1'));
+        $cache->purge('doc:1', 'field-a');
+
+        $generation = $cache->getGeneration('doc:1');
+        $this->assertFalse(
+            $cache->saveWithLease('doc:1', ['stale' => true], 'field-a', $generation),
+            'A token-valid field save inside the grace window must be refused'
+        );
+        $this->assertFalse($cache->load('doc:1', 60, 'field-a'));
+    }
+
+    public function testListHidesTombstoneField(): void
+    {
+        $cache = $this->graceCache(500);
+        $cache->flush();
+
+        $cache->saveWithLease('doc:1', ['v' => 1], 'field-a', $cache->getGeneration('doc:1'));
+        $cache->purge('doc:1');
+
+        $this->assertSame([], $cache->list('doc:1'));
+    }
+
+    public function testReservedTombstoneFieldIsProtected(): void
+    {
+        $cache = $this->graceCache(500);
+        $cache->flush();
+
+        $this->assertFalse($cache->save('doc:1', 'attacker', '__utopia_tomb__'));
+        $this->assertFalse($cache->saveWithLease('doc:1', 'attacker', '__utopia_tomb__', '0'));
+        $this->assertFalse($cache->purge('doc:1', '__utopia_tomb__'));
+        $this->assertFalse($cache->load('doc:1', 60, '__utopia_tomb__'));
+    }
+
+    /**
+     * A deadline more than the window ahead of now (a since-rewound clock) must
+     * be ignored, not wedge saves.
+     */
+    public function testTombstoneIgnoresImplausibleFutureDeadline(): void
+    {
+        $redis = new Redis();
+        $redis->connect('redis', 6379);
+        $adapter = new RedisAdapter($redis);
+        $adapter->setLeaseGraceWindow(500);
+        $cache = new Cache($adapter);
+        $cache->flush();
+
+        $cache->purge('doc:1');
+        $generation = $cache->getGeneration('doc:1');
+
+        // 1h-ahead deadline (µs), far beyond the window: a since-rewound clock.
+        $farFutureMicros = ((int) \time() + 3600) * 1000000;
+        $redis->hSet('doc:1', '__utopia_tomb__', (string) $farFutureMicros);
+
+        $this->assertNotFalse(
+            $cache->saveWithLease('doc:1', ['v' => 1], 'doc:1', $generation),
+            'An implausibly far-future deadline (backward clock step) must be ignored, not wedge saves'
+        );
+        $this->assertSame(['v' => 1], $cache->load('doc:1', 60, 'doc:1'));
+    }
 }
