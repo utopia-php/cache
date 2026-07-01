@@ -85,6 +85,36 @@ class LeasableTest extends TestCase
         $this->assertSame(['v' => 2], $this->cache->load('doc:1', 60, 'doc:1'));
     }
 
+    /**
+     * The hot path sends EVALSHA (script digest) rather than the full body. After
+     * the server drops its script cache — a failover, restart, or SCRIPT FLUSH —
+     * that EVALSHA replies NOSCRIPT; leaseRun() must resend the body via EVAL so
+     * the lease and purge operations keep working instead of silently failing.
+     */
+    public function testLeaseSurvivesScriptCacheFlush(): void
+    {
+        $this->cache->flush();
+
+        $generation = $this->cache->getGeneration('doc:1');
+        $this->assertNotFalse($this->cache->saveWithLease('doc:1', ['v' => 1], 'doc:1', $generation));
+
+        // Evict every cached script server-side; the next EVALSHA now misses.
+        $raw = new Redis();
+        $raw->connect('redis', 6379);
+        $raw->script('flush');
+        $raw->close();
+
+        $this->assertTrue($this->cache->purge('doc:1'), 'purge must fall back to EVAL after NOSCRIPT');
+        $this->assertNotSame($generation, $this->cache->getGeneration('doc:1'));
+
+        $fresh = $this->cache->getGeneration('doc:1');
+        $this->assertNotFalse(
+            $this->cache->saveWithLease('doc:1', ['v' => 2], 'doc:1', $fresh),
+            'saveWithLease must fall back to EVAL after NOSCRIPT'
+        );
+        $this->assertSame(['v' => 2], $this->cache->load('doc:1', 60, 'doc:1'));
+    }
+
     public function testPurgePreservesDeletionResult(): void
     {
         $this->assertFalse($this->cache->purge('doc:absent'), 'Purging a missing key returns false');

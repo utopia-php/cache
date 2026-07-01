@@ -8,6 +8,7 @@ use Throwable;
 use Utopia\Cache\Adapter;
 use Utopia\Cache\Adapter\Redis\Envelope;
 use Utopia\Cache\Adapter\Redis\Leasable;
+use Utopia\Cache\Adapter\Redis\NoScript;
 use Utopia\Cache\Feature\Retryable;
 
 class Redis extends Leasable implements Adapter, Retryable
@@ -189,6 +190,36 @@ class Redis extends Leasable implements Adapter, Retryable
 
         // Don't expose reserved internal fields (generation, tombstone) as listable cache fields.
         return \array_values(\array_filter($keys, fn (string $field): bool => ! $this->isReserved($field)));
+    }
+
+    protected function leaseEvalSha(string $sha, string $key, array $args): mixed
+    {
+        return $this->execute(function () use ($sha, $key, $args) {
+            // Client-side reset (no round trip) so the getLastError() check below
+            // reflects only this evalSha, not an error left by a prior command.
+            $this->redis->clearLastError();
+
+            try {
+                $result = $this->redis->evalSha($sha, [$key, ...$args], 1);
+            } catch (\RedisException $e) {
+                // php-redis may throw NOSCRIPT rather than returning false.
+                if (NoScript::matches($e->getMessage())) {
+                    throw NoScript::from($e);
+                }
+
+                throw $e;
+            }
+
+            // ...or it reports the same error as false + getLastError(). A lease
+            // script always returns an int on success, so false is an error to
+            // inspect; NOSCRIPT means leaseRun() should resend the body.
+            $error = (string) $this->redis->getLastError();
+            if ($result === false && NoScript::matches($error)) {
+                throw NoScript::from($error);
+            }
+
+            return $result;
+        });
     }
 
     protected function leaseEval(string $script, string $key, array $args): mixed

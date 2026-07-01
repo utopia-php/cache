@@ -176,6 +176,22 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
         return \array_values(\array_filter($keys, fn (string $field): bool => ! $this->isReserved($field)));
     }
 
+    protected function leaseEvalSha(string $sha, string $key, array $args): mixed
+    {
+        try {
+            return $this->command(['EVALSHA', $sha, '1', $key, ...$args]);
+        } catch (\RedisException $e) {
+            // NOSCRIPT is a server reply, not a connection fault: signal leaseRun()
+            // to resend the body. ConnectionException (a RedisException subclass)
+            // never carries this code, so reconnect handling is unaffected.
+            if (NoScript::matches($e->getMessage())) {
+                throw NoScript::from($e);
+            }
+
+            throw $e;
+        }
+    }
+
     protected function leaseEval(string $script, string $key, array $args): mixed
     {
         return $this->command(['EVAL', $script, '1', $key, ...$args]);

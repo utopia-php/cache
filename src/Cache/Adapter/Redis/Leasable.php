@@ -7,10 +7,16 @@ use Throwable;
 /**
  * Shared generation-lease + purge-tombstone behaviour for the Redis-protocol
  * cache adapters (Redis and Redis\Multiplexing). Subclasses supply the transport
- * by implementing leaseEval()/leaseHget(); everything lease-related — the
- * reserved fields, the three atomic single-key Lua scripts, the grace window,
- * getGeneration(), saveWithLease() and purge() — lives here so it can't drift
- * between adapters.
+ * by implementing leaseEvalSha()/leaseEval()/leaseHget(); everything lease-related
+ * — the reserved fields, the three atomic single-key Lua scripts, the grace
+ * window, getGeneration(), saveWithLease() and purge() — lives here so it can't
+ * drift between adapters.
+ *
+ * Scripts are dispatched through leaseRun(): EVALSHA of the (locally computed)
+ * body digest, falling back to EVAL once on NoScript so the server re-caches it.
+ * This keeps the hot path a ~40-byte frame instead of the full script body every
+ * call, which matters most on the multiplexed connection where a fat frame
+ * head-of-line-blocks every other operation queued behind it.
  *
  * Implements the transport-agnostic \Utopia\Cache\Feature\Leasable capability,
  * referenced by FQN to avoid shadowing this class's own short name.
@@ -149,7 +155,7 @@ abstract class Leasable implements \Utopia\Cache\Feature\Leasable
 
         try {
             $value = Envelope::encode($data, time());
-            $stored = $this->leaseEval(self::LUA_SAVE_WITH_LEASE, $key, [
+            $stored = $this->leaseRun(self::LUA_SAVE_WITH_LEASE, $key, [
                 $hash, $value, $generation, (string) $this->leaseGraceWindow,
             ]);
 
@@ -166,10 +172,10 @@ abstract class Leasable implements \Utopia\Cache\Feature\Leasable
                 return false;
             }
 
-            return (bool) $this->leaseEval(self::LUA_PURGE_FIELD, $key, [$hash, (string) $this->leaseGraceWindow]);
+            return (bool) $this->leaseRun(self::LUA_PURGE_FIELD, $key, [$hash, (string) $this->leaseGraceWindow]);
         }
 
-        return (bool) $this->leaseEval(self::LUA_PURGE_BUMP, $key, [(string) $this->leaseGraceWindow]);
+        return (bool) $this->leaseRun(self::LUA_PURGE_BUMP, $key, [(string) $this->leaseGraceWindow]);
     }
 
     /** Reserved internal fields must never be reachable through the public field API. */
@@ -179,8 +185,50 @@ abstract class Leasable implements \Utopia\Cache\Feature\Leasable
     }
 
     /**
+     * Memoized SHA1 digests of the Lua scripts, keyed by body. Only ever holds
+     * the three constants above; a plain cache to avoid re-hashing per call.
+     *
+     * @var array<string, string>
+     */
+    private static array $scriptSha = [];
+
+    /**
+     * Dispatch a single-key script by digest — EVALSHA first, resending the body
+     * via EVAL only when the server hasn't cached it yet (NoScript). KEYS[1] =
+     * $key, ARGV = $args in order. Keeps the steady-state frame ~40 bytes.
+     *
+     * @param  array<int, int|string>  $args
+     */
+    private function leaseRun(string $script, string $key, array $args): mixed
+    {
+        try {
+            return $this->leaseEvalSha($this->shaFor($script), $key, $args);
+        } catch (NoScript) {
+            return $this->leaseEval($script, $key, $args);
+        }
+    }
+
+    /** SHA1 digest Redis identifies a cached script by — the digest of its body. */
+    private function shaFor(string $script): string
+    {
+        return self::$scriptSha[$script] ??= \sha1($script);
+    }
+
+    /**
+     * Run EVALSHA of $sha — KEYS[1] = $key, ARGV = $args in order — over the
+     * concrete adapter's transport, returning the script's reply.
+     *
+     * @param  array<int, int|string>  $args
+     *
+     * @throws NoScript when the server has no script cached for $sha, so
+     *                   leaseRun() can resend the body via leaseEval()
+     */
+    abstract protected function leaseEvalSha(string $sha, string $key, array $args): mixed;
+
+    /**
      * Run a single-key Redis EVAL — KEYS[1] = $key, ARGV = $args in order — over
-     * the concrete adapter's transport, returning the script's reply.
+     * the concrete adapter's transport, returning the script's reply. Used as the
+     * one-time fallback that re-caches the script after a NoScript.
      *
      * @param  array<int, int|string>  $args
      */
