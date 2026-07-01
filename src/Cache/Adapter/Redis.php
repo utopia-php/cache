@@ -200,20 +200,22 @@ class Redis extends Leasable implements Adapter, Retryable
             try {
                 $result = $this->redis->evalSha($sha, [$key, ...$args], 1);
             } catch (\RedisException $e) {
-                if (\str_contains($e->getMessage(), 'NOSCRIPT')) {
-                    throw new NoScript($e->getMessage(), 0, $e);
+                // php-redis may throw NOSCRIPT rather than returning false.
+                if (NoScript::matches($e->getMessage())) {
+                    throw NoScript::from($e);
                 }
 
                 throw $e;
             }
 
-            // php-redis reports a script error as false + getLastError() rather
-            // than a throw. A lease script always returns an int on success, so
-            // false is an error; NOSCRIPT means leaseRun() should resend the body.
-            if ($result === false && \str_contains((string) $this->redis->getLastError(), 'NOSCRIPT')) {
+            // ...or it reports the same error as false + getLastError(). A lease
+            // script always returns an int on success, so false is an error to
+            // inspect; NOSCRIPT means leaseRun() should resend the body.
+            $error = (string) $this->redis->getLastError();
+            if ($result === false && NoScript::matches($error)) {
                 $this->redis->clearLastError();
 
-                throw new NoScript('NOSCRIPT');
+                throw NoScript::from($error);
             }
 
             return $result;

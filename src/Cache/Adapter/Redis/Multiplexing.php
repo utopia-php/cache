@@ -183,9 +183,9 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
         } catch (\RedisException $e) {
             // NOSCRIPT is a server reply, not a connection fault: signal leaseRun()
             // to resend the body. ConnectionException (a RedisException subclass)
-            // never carries this message, so reconnect handling is unaffected.
-            if (\str_contains($e->getMessage(), 'NOSCRIPT')) {
-                throw new NoScript($e->getMessage(), 0, $e);
+            // never carries this code, so reconnect handling is unaffected.
+            if (NoScript::matches($e->getMessage())) {
+                throw NoScript::from($e);
             }
 
             throw $e;
