@@ -181,8 +181,10 @@ class LeasableTest extends TestCase
         );
         $this->assertFalse($cache->load('doc:1', 60, 'doc:1'), 'Cache must not hold the stale value');
 
-        // Expire the tombstone directly (no sleep) to resume saves.
-        $past = ((int) \time() - 60) * 1000000;
+        // Expire the tombstone directly (no sleep) to resume saves. Derive from the
+        // Redis server clock (what the tombstone Lua uses via TIME), not the PHP
+        // wall clock, so a client/server skew can't flake it.
+        $past = ((int) $redis->time()[0] - 60) * 1000000;
         $redis->hSet('doc:1', '__utopia_tomb__', (string) $past);
 
         $this->assertNotFalse(
@@ -252,7 +254,7 @@ class LeasableTest extends TestCase
         $generation = $cache->getGeneration('doc:1');
 
         // 1h-ahead deadline (µs), far beyond the window: a since-rewound clock.
-        $farFutureMicros = ((int) \time() + 3600) * 1000000;
+        $farFutureMicros = ((int) $redis->time()[0] + 3600) * 1000000;
         $redis->hSet('doc:1', '__utopia_tomb__', (string) $farFutureMicros);
 
         $this->assertNotFalse(
