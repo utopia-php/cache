@@ -168,7 +168,11 @@ class LeasableTest extends TestCase
      */
     public function testTombstoneRejectsTokenValidSaveWithinGraceWindow(): void
     {
-        $cache = $this->graceCache(500);
+        $redis = new Redis();
+        $redis->connect('redis', 6379);
+        $adapter = new RedisAdapter($redis);
+        $adapter->setLeaseGraceWindow(500);
+        $cache = new Cache($adapter);
         $cache->flush();
 
         // A writer commits and purges; the tombstone opens.
@@ -183,13 +187,21 @@ class LeasableTest extends TestCase
         );
         $this->assertFalse($cache->load('doc:1', 60, 'doc:1'), 'Cache must not hold the stale value');
 
-        // Once the grace window elapses, lease saves resume normally.
-        \usleep(600 * 1000);
+        // Simulate the window elapsing by moving the deadline into the past (a
+        // direct write, no sleep): lease saves resume, and the spent tombstone is
+        // dropped rather than lingering in the hash.
+        $past = ((int) \time() - 60) * 1000000;
+        $redis->hSet('doc:1', '__utopia_tomb__', (string) $past);
+
         $this->assertNotFalse(
             $cache->saveWithLease('doc:1', ['fresh' => true], 'doc:1', $generation),
             'After the grace window a token-valid save must succeed'
         );
         $this->assertSame(['fresh' => true], $cache->load('doc:1', 60, 'doc:1'));
+        $this->assertFalse(
+            (bool) $redis->hExists('doc:1', '__utopia_tomb__'),
+            'The spent tombstone must be dropped on the next save, not linger in the hash'
+        );
     }
 
     /**

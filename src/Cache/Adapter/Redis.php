@@ -44,15 +44,17 @@ class Redis implements Adapter, Leasable, Retryable
      * its post-purge tombstone. redis.call('TIME') is CLOCK_REALTIME, so a
      * deadline more than the window ahead of now means the wall clock stepped
      * backward since the stamp; it is ignored rather than wedging saves, which
-     * also bounds any block to graceWindow of real time. A non-numeric deadline
-     * is ignored (fail open). Single-key. KEYS[1]=key; ARGV[1]=hash, ARGV[2]=value,
-     * ARGV[3]=expected generation, ARGV[4]=grace window in ms (0 disables it).
+     * also bounds any block to graceWindow of real time. A non-numeric window or
+     * deadline is treated as absent (fail open), and a spent/invalid deadline is
+     * dropped so a field-purged hash doesn't keep the tombstone forever.
+     * Single-key. KEYS[1]=key; ARGV[1]=hash, ARGV[2]=value, ARGV[3]=expected
+     * generation, ARGV[4]=grace window in ms (0 disables it).
      */
     private const LUA_SAVE_WITH_LEASE = <<<'LUA'
         local current = redis.call('HGET', KEYS[1], '__utopia_gen__')
         if current == false then current = '0' end
         if current ~= ARGV[3] then return 0 end
-        local window = tonumber(ARGV[4])
+        local window = tonumber(ARGV[4]) or 0
         if window > 0 then
             local tomb = redis.call('HGET', KEYS[1], '__utopia_tomb__')
             if tomb ~= false then
@@ -64,6 +66,7 @@ class Redis implements Adapter, Leasable, Retryable
                         return 0
                     end
                 end
+                redis.call('HDEL', KEYS[1], '__utopia_tomb__')
             end
         end
         redis.call('HSET', KEYS[1], ARGV[1], ARGV[2])
@@ -90,7 +93,7 @@ class Redis implements Adapter, Leasable, Retryable
         local next = (tonumber(current) or 0) + 1
         redis.call('DEL', KEYS[1])
         redis.call('HSET', KEYS[1], gen, next)
-        local window = tonumber(ARGV[1])
+        local window = tonumber(ARGV[1]) or 0
         if window > 0 then
             local t = redis.call('TIME')
             local now = tonumber(t[1]) * 1000000 + tonumber(t[2])
@@ -114,7 +117,7 @@ class Redis implements Adapter, Leasable, Retryable
         local current = redis.call('HGET', KEYS[1], '__utopia_gen__')
         local next = (tonumber(current) or 0) + 1
         redis.call('HSET', KEYS[1], '__utopia_gen__', next)
-        local window = tonumber(ARGV[2])
+        local window = tonumber(ARGV[2]) or 0
         if window > 0 then
             local t = redis.call('TIME')
             local now = tonumber(t[1]) * 1000000 + tonumber(t[2])
