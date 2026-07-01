@@ -160,11 +160,8 @@ class LeasableTest extends TestCase
     }
 
     /**
-     * The tombstone closes the residual gap the generation lease cannot: a reader
-     * that captured the CURRENT (post-purge) generation but whose read lagged the
-     * write (a replica, or a stale MVCC snapshot on a pooled connection) would
-     * otherwise re-cache stale data, because its token matches. Within the
-     * post-purge grace window, saveWithLease must refuse even a token-valid save.
+     * A token-valid save (generation captured post-purge) must still be refused
+     * within the grace window, then allowed once the deadline passes.
      */
     public function testTombstoneRejectsTokenValidSaveWithinGraceWindow(): void
     {
@@ -175,11 +172,8 @@ class LeasableTest extends TestCase
         $cache = new Cache($adapter);
         $cache->flush();
 
-        // A writer commits and purges; the tombstone opens.
         $cache->purge('doc:1');
 
-        // The reader's token is valid (captured post-purge) but its read lagged
-        // the write, so the value it wants to cache is stale.
         $generation = $cache->getGeneration('doc:1');
         $this->assertFalse(
             $cache->saveWithLease('doc:1', ['stale' => true], 'doc:1', $generation),
@@ -187,9 +181,7 @@ class LeasableTest extends TestCase
         );
         $this->assertFalse($cache->load('doc:1', 60, 'doc:1'), 'Cache must not hold the stale value');
 
-        // Simulate the window elapsing by moving the deadline into the past (a
-        // direct write, no sleep): lease saves resume, and the spent tombstone is
-        // dropped rather than lingering in the hash.
+        // Expire the tombstone directly (no sleep) to resume saves.
         $past = ((int) \time() - 60) * 1000000;
         $redis->hSet('doc:1', '__utopia_tomb__', (string) $past);
 
@@ -204,10 +196,7 @@ class LeasableTest extends TestCase
         );
     }
 
-    /**
-     * A field-level purge must open the same tombstone as a full purge, so a
-     * lagging reader cannot repopulate a stale hash field either.
-     */
+    /** A field-level purge must open the tombstone too. */
     public function testFieldPurgeAlsoOpensTombstone(): void
     {
         $cache = $this->graceCache(500);
@@ -232,8 +221,6 @@ class LeasableTest extends TestCase
         $cache->saveWithLease('doc:1', ['v' => 1], 'field-a', $cache->getGeneration('doc:1'));
         $cache->purge('doc:1');
 
-        // The purged key holds only its reserved generation and tombstone
-        // fields; neither may surface as a listable cache field.
         $this->assertSame([], $cache->list('doc:1'));
     }
 
@@ -249,10 +236,8 @@ class LeasableTest extends TestCase
     }
 
     /**
-     * TIME is CLOCK_REALTIME, so a backward wall-clock step could leave a stamped
-     * deadline far in the future and wedge every lease save until real time
-     * caught up. A deadline more than the window ahead of now must be treated as
-     * a clock anomaly and ignored, not honoured.
+     * A deadline more than the window ahead of now (a since-rewound clock) must
+     * be ignored, not wedge saves.
      */
     public function testTombstoneIgnoresImplausibleFutureDeadline(): void
     {
@@ -266,8 +251,7 @@ class LeasableTest extends TestCase
         $cache->purge('doc:1');
         $generation = $cache->getGeneration('doc:1');
 
-        // A deadline 1h ahead (in microseconds) — far beyond the 500ms window —
-        // stands in for a backward clock step after the stamp.
+        // 1h-ahead deadline (µs), far beyond the window: a since-rewound clock.
         $farFutureMicros = ((int) \time() + 3600) * 1000000;
         $redis->hSet('doc:1', '__utopia_tomb__', (string) $farFutureMicros);
 
