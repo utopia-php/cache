@@ -195,6 +195,8 @@ class Redis extends Leasable implements Adapter, Retryable
     protected function leaseEvalSha(string $sha, string $key, array $args): mixed
     {
         return $this->execute(function () use ($sha, $key, $args) {
+            // Client-side reset (no round trip) so the getLastError() check below
+            // reflects only this evalSha, not an error left by a prior command.
             $this->redis->clearLastError();
 
             try {
@@ -213,8 +215,6 @@ class Redis extends Leasable implements Adapter, Retryable
             // inspect; NOSCRIPT means leaseRun() should resend the body.
             $error = (string) $this->redis->getLastError();
             if ($result === false && NoScript::matches($error)) {
-                $this->redis->clearLastError();
-
                 throw NoScript::from($error);
             }
 
