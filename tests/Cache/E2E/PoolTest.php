@@ -19,7 +19,7 @@ class PoolTest extends Base
 
         $pool = new UtopiaPool(new Stack(), 'test', 10, function () use ($path) {
             return new Filesystem($path);
-        });
+        }, timeout: 0.0);
 
         self::$cache = new Cache(new Pool($pool));
     }

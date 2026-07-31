@@ -22,7 +22,7 @@
         "ext-memcached": "*",
         "ext-redis": "*",
         "utopia-php/circuit-breaker": "0.3.*",
-        "utopia-php/pools": "1.*",
+        "utopia-php/pools": "2.*",
         "utopia-php/telemetry": "*"
     },
     "require-dev": {
