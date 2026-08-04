@@ -8,23 +8,14 @@ use Utopia\Cache\Feature\Retryable;
 
 class Hazelcast implements Adapter, Retryable
 {
-    /**
-     * @var Client
-     */
-    protected Client $memcached;
-
     private int $maxRetries = 0;
 
     private int $retryDelay = 1000; // milliseconds
 
-    public function __construct(Client $memcached)
-    {
-        $this->memcached = $memcached;
-    }
+    public function __construct(protected Client $memcached) {}
 
     /**
      * @param  int  $maxRetries (0-10)
-     * @return self
      */
     public function setMaxRetries(int $maxRetries): self
     {
@@ -35,7 +26,6 @@ class Hazelcast implements Adapter, Retryable
 
     /**
      * @param  int  $retryDelay time in milliseconds
-     * @return self
      */
     public function setRetryDelay(int $retryDelay): self
     {
@@ -45,19 +35,17 @@ class Hazelcast implements Adapter, Retryable
     }
 
     /**
-     * @param  string  $key
      * @param  int  $ttl time in seconds
      * @param  string  $hash optional
-     * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        $cache = $this->execute(fn () => $this->memcached->get($key));
-        if (is_string($cache)) {
+        $cache = $this->execute(fn(): mixed => $this->memcached->get($key));
+        if (\is_string($cache)) {
             $cache = json_decode($cache, true);
         }
 
-        if (! is_array($cache)) {
+        if (! \is_array($cache)) {
             return false;
         }
 
@@ -69,14 +57,13 @@ class Hazelcast implements Adapter, Retryable
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
-        if (empty($key) || empty($data)) {
+        if ($key === '' || $key === '0' || empty($data)) {
             return false;
         }
 
@@ -85,32 +72,29 @@ class Hazelcast implements Adapter, Retryable
             'data' => $data,
         ];
 
-        return ($this->execute(fn () => $this->memcached->set($key, json_encode($cache)))) ? $data : false;
+        return ($this->execute(fn(): bool => $this->memcached->set($key, json_encode($cache)))) ? $data : false;
     }
 
     /**
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function touch(string $key, string $hash = ''): bool
     {
-        $cache = $this->execute(fn () => $this->memcached->get($key));
-        if (is_string($cache)) {
+        $cache = $this->execute(fn(): mixed => $this->memcached->get($key));
+        if (\is_string($cache)) {
             $cache = json_decode($cache, true);
         }
 
-        if (! is_array($cache)) {
+        if (! \is_array($cache)) {
             return false;
         }
 
         $cache['time'] = time();
 
-        return (bool) $this->execute(fn () => $this->memcached->set($key, json_encode($cache)));
+        return (bool) $this->execute(fn(): bool => $this->memcached->set($key, json_encode($cache)));
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -119,13 +103,11 @@ class Hazelcast implements Adapter, Retryable
     }
 
     /**
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        return (bool) $this->execute(fn () => $this->memcached->delete($key));
+        return (bool) $this->execute(fn(): bool => $this->memcached->delete($key));
     }
 
     /**
@@ -137,24 +119,19 @@ class Hazelcast implements Adapter, Retryable
         return false;
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         try {
-            $statuses = $this->execute(fn () => $this->memcached->getServerList());
+            $statuses = $this->execute(fn(): array => $this->memcached->getServerList());
 
             return ! empty($statuses);
-        } catch (\MemcachedException $e) {
+        } catch (\MemcachedException) {
             return false;
         }
     }
 
     /**
      * Returning total number of keys
-     *
-     * @return int
      */
     public function getSize(): int
     {
@@ -162,7 +139,7 @@ class Hazelcast implements Adapter, Retryable
         $servers = $this->memcached->getServerList();
         if (! empty($servers)) {
             $stats = $this->memcached->getStats();
-            $key = $servers[0]['host'].':'.$servers[0]['port'];
+            $key = $servers[0]['host'] . ':' . $servers[0]['port'];
             if (isset($stats[$key])) {
                 $size = $stats[$key]['total_items'] ?? 0;
             }
@@ -171,25 +148,16 @@ class Hazelcast implements Adapter, Retryable
         return $size;
     }
 
-    /**
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'hazelcast';
     }
 
-    /**
-     * @return int
-     */
     public function getMaxRetries(): int
     {
         return $this->maxRetries;
     }
 
-    /**
-     * @return int
-     */
     public function getRetryDelay(): int
     {
         return $this->retryDelay;
@@ -211,7 +179,7 @@ class Hazelcast implements Adapter, Retryable
         while ($attempts < $maxAttempts) {
             $result = $callback();
 
-            if ($result === false && in_array($this->memcached->getResultCode(), [
+            if ($result === false && \in_array($this->memcached->getResultCode(), [
                 \Memcached::RES_HOST_LOOKUP_FAILURE,
                 \Memcached::RES_UNKNOWN_READ_FAILURE,
                 \Memcached::RES_WRITE_FAILURE,
@@ -226,7 +194,7 @@ class Hazelcast implements Adapter, Retryable
                 $attempts++;
 
                 if ($attempts >= $maxAttempts) {
-                    throw new \MemcachedException('Hazelcast connection failed after '.$attempts.' attempts. Error: '.$this->memcached->getResultMessage());
+                    throw new \MemcachedException('Hazelcast connection failed after ' . $attempts . ' attempts. Error: ' . $this->memcached->getResultMessage());
                 }
 
                 usleep($this->retryDelay * 1000);

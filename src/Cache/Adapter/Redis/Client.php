@@ -19,7 +19,7 @@ class Client
      */
     public const INCOMPLETE = "\0__INCOMPLETE__\0";
 
-    private SwooleClient $client;
+    private readonly SwooleClient $client;
 
     private string $buffer = '';
 
@@ -36,7 +36,7 @@ class Client
             $errMsg = $this->client->errMsg;
             $this->close();
 
-            throw new ConnectionException('Failed to connect to Redis: '.$errMsg);
+            throw new ConnectionException('Failed to connect to Redis: ' . $errMsg);
         }
     }
 
@@ -76,7 +76,7 @@ class Client
     public function send(string $payload): void
     {
         $written = $this->client->send($payload);
-        if ($written === strlen($payload)) {
+        if ($written === \strlen($payload)) {
             return;
         }
 
@@ -84,7 +84,7 @@ class Client
             ? ($this->client->errMsg ?: 'send failed')
             : 'partial send';
 
-        throw new ConnectionException('Redis send failed: '.$message);
+        throw new ConnectionException('Redis send failed: ' . $message);
     }
 
     public function recv(float $timeout): string|false
@@ -109,7 +109,7 @@ class Client
     {
         try {
             $this->client->close();
-        } catch (Throwable $th) {
+        } catch (Throwable) {
             // ignore
         }
     }
@@ -129,7 +129,7 @@ class Client
             throw $value->exception;
         }
 
-        if (! is_array($value)) {
+        if (! \is_array($value)) {
             return $value;
         }
 
@@ -147,10 +147,10 @@ class Client
      */
     public static function encode(array $args): string
     {
-        $out = '*'.count($args)."\r\n";
+        $out = '*' . \count($args) . "\r\n";
         foreach ($args as $arg) {
             $arg = (string) $arg;
-            $out .= '$'.strlen($arg)."\r\n".$arg."\r\n";
+            $out .= '$' . \strlen($arg) . "\r\n" . $arg . "\r\n";
         }
 
         return $out;
@@ -188,7 +188,7 @@ class Client
                 if ($len === -1) {
                     return null;
                 }
-                if (strlen($buffer) < $offset + $len + 2) {
+                if (\strlen($buffer) < $offset + $len + 2) {
                     return self::INCOMPLETE;
                 }
                 $value = substr($buffer, $offset, $len);
@@ -211,7 +211,7 @@ class Client
 
                 return $items;
             default:
-                throw new \RedisException('Unknown RESP type: '.$type);
+                throw new \RedisException('Unknown RESP type: ' . $type);
         }
     }
 }

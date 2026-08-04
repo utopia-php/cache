@@ -1,20 +1,23 @@
 <?php
 
-namespace Utopia\Tests\E2E\Redis;
+declare(strict_types=1);
+
+namespace Utopia\Tests\E2E;
 
 use PHPUnit\Framework\TestCase;
 use Redis as Redis;
 use Utopia\Cache\Adapter\Redis as RedisAdapter;
 use Utopia\Cache\Cache;
+use Utopia\Tests\Services;
 
-class LeasableTest extends TestCase
+final class RedisLeasableTest extends TestCase
 {
     protected Cache $cache;
 
     protected function setUp(): void
     {
         $redis = new Redis();
-        $redis->connect('redis', 6379);
+        $redis->connect(Services::HOST, Services::REDIS_PORT);
         $this->cache = new Cache(new RedisAdapter($redis));
         $this->cache->flush();
     }
@@ -100,7 +103,7 @@ class LeasableTest extends TestCase
 
         // Evict every cached script server-side; the next EVALSHA now misses.
         $raw = new Redis();
-        $raw->connect('redis', 6379);
+        $raw->connect(Services::HOST, Services::REDIS_PORT);
         $raw->script('flush');
         $raw->close();
 
@@ -110,7 +113,7 @@ class LeasableTest extends TestCase
         $fresh = $this->cache->getGeneration('doc:1');
         $this->assertNotFalse(
             $this->cache->saveWithLease('doc:1', ['v' => 2], 'doc:1', $fresh),
-            'saveWithLease must fall back to EVAL after NOSCRIPT'
+            'saveWithLease must fall back to EVAL after NOSCRIPT',
         );
         $this->assertSame(['v' => 2], $this->cache->load('doc:1', 60, 'doc:1'));
     }
@@ -175,7 +178,7 @@ class LeasableTest extends TestCase
     private function graceCache(int $milliseconds): Cache
     {
         $redis = new Redis();
-        $redis->connect('redis', 6379);
+        $redis->connect(Services::HOST, Services::REDIS_PORT);
         $adapter = new RedisAdapter($redis);
         $adapter->setLeaseGraceWindow($milliseconds);
 
@@ -185,8 +188,8 @@ class LeasableTest extends TestCase
     public function testLeaseGraceWindowDefaultsToZero(): void
     {
         $redis = new Redis();
-        $redis->connect('redis', 6379);
-        $this->assertSame(0, (new RedisAdapter($redis))->getLeaseGraceWindow());
+        $redis->connect(Services::HOST, Services::REDIS_PORT);
+        $this->assertSame(0, new RedisAdapter($redis)->getLeaseGraceWindow());
     }
 
     /**
@@ -196,7 +199,7 @@ class LeasableTest extends TestCase
     public function testTombstoneRejectsTokenValidSaveWithinGraceWindow(): void
     {
         $redis = new Redis();
-        $redis->connect('redis', 6379);
+        $redis->connect(Services::HOST, Services::REDIS_PORT);
         $adapter = new RedisAdapter($redis);
         $adapter->setLeaseGraceWindow(500);
         $cache = new Cache($adapter);
@@ -207,7 +210,7 @@ class LeasableTest extends TestCase
         $generation = $cache->getGeneration('doc:1');
         $this->assertFalse(
             $cache->saveWithLease('doc:1', ['stale' => true], 'doc:1', $generation),
-            'A token-valid save inside the grace window must be refused by the tombstone'
+            'A token-valid save inside the grace window must be refused by the tombstone',
         );
         $this->assertFalse($cache->load('doc:1', 60, 'doc:1'), 'Cache must not hold the stale value');
 
@@ -219,12 +222,12 @@ class LeasableTest extends TestCase
 
         $this->assertNotFalse(
             $cache->saveWithLease('doc:1', ['fresh' => true], 'doc:1', $generation),
-            'After the grace window a token-valid save must succeed'
+            'After the grace window a token-valid save must succeed',
         );
         $this->assertSame(['fresh' => true], $cache->load('doc:1', 60, 'doc:1'));
         $this->assertFalse(
             (bool) $redis->hExists('doc:1', '__utopia_tomb__'),
-            'The spent tombstone must be dropped on the next save, not linger in the hash'
+            'The spent tombstone must be dropped on the next save, not linger in the hash',
         );
     }
 
@@ -240,7 +243,7 @@ class LeasableTest extends TestCase
         $generation = $cache->getGeneration('doc:1');
         $this->assertFalse(
             $cache->saveWithLease('doc:1', ['stale' => true], 'field-a', $generation),
-            'A token-valid field save inside the grace window must be refused'
+            'A token-valid field save inside the grace window must be refused',
         );
         $this->assertFalse($cache->load('doc:1', 60, 'field-a'));
     }
@@ -274,7 +277,7 @@ class LeasableTest extends TestCase
     public function testTombstoneIgnoresImplausibleFutureDeadline(): void
     {
         $redis = new Redis();
-        $redis->connect('redis', 6379);
+        $redis->connect(Services::HOST, Services::REDIS_PORT);
         $adapter = new RedisAdapter($redis);
         $adapter->setLeaseGraceWindow(500);
         $cache = new Cache($adapter);
@@ -289,7 +292,7 @@ class LeasableTest extends TestCase
 
         $this->assertNotFalse(
             $cache->saveWithLease('doc:1', ['v' => 1], 'doc:1', $generation),
-            'An implausibly far-future deadline (backward clock step) must be ignored, not wedge saves'
+            'An implausibly far-future deadline (backward clock step) must be ignored, not wedge saves',
         );
         $this->assertSame(['v' => 1], $cache->load('doc:1', 60, 'doc:1'));
     }

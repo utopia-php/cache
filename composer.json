@@ -2,36 +2,51 @@
     "name": "utopia-php/cache",
     "description": "A simple cache library to manage application cache storing, loading and purging",
     "type": "library",
-    "keywords": ["php","framework", "upf", "utopia", "cache"],
+    "keywords": [
+        "php",
+        "framework",
+        "upf",
+        "utopia",
+        "cache"
+    ],
     "license": "MIT",
-    "minimum-stability": "stable",
-    "scripts": {
-        "check": "./vendor/bin/phpstan analyse --level max src tests",
-        "lint": "./vendor/bin/pint --test",
-        "format": "./vendor/bin/pint"
-    },
+    "authors": [
+        {
+            "name": "Team Appwrite",
+            "email": "team@appwrite.io"
+        }
+    ],
     "autoload": {
-        "psr-4": {"Utopia\\Cache\\": "src/Cache"}
+        "psr-4": {
+            "Utopia\\Cache\\": "src/Cache"
+        }
     },
     "autoload-dev": {
-        "psr-4": {"Utopia\\Tests\\": "tests/Cache"}
+        "psr-4": {
+            "Utopia\\Tests\\": "tests/Cache"
+        }
     },
     "require": {
         "php": ">=8.4",
         "ext-json": "*",
-        "ext-memcached": "*",
-        "ext-redis": "*",
-        "utopia-php/circuit-breaker": "0.3.*",
-        "utopia-php/pools": "2.*",
-        "utopia-php/telemetry": "*"
+        "utopia-php/circuit-breaker": "^0.3",
+        "utopia-php/pools": "^2.0",
+        "utopia-php/telemetry": "^0.4"
     },
     "require-dev": {
-        "laravel/pint": "1.2.*",
-        "phpstan/phpstan": "^1.12",
-        "phpunit/phpunit": "^9.3",
-        "swoole/ide-helper": "^6.0",
-        "vimeo/psalm": "4.13.1"
+        "swoole/ide-helper": "^6.0"
     },
+    "suggest": {
+        "ext-redis": "Required for the Redis, RedisCluster and Sharding adapters.",
+        "ext-memcached": "Required for the Memcached and Hazelcast adapters.",
+        "ext-swoole": "Required for the multiplexing Redis adapter (>=6.0)."
+    },
+    "scripts": {
+        "test": "phpunit --testsuite unit",
+        "test:e2e": "phpunit --testsuite e2e"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
     "config": {
         "allow-plugins": {
             "php-http/discovery": true,

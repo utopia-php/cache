@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Cache\Adapter\Redis;
 
 /**
@@ -7,6 +9,4 @@ namespace Utopia\Cache\Adapter\Redis;
  * unhealthy and the operation should be retried (or surfaced as a connection
  * error rather than a Redis-level error).
  */
-class ConnectionException extends \RedisException
-{
-}
+class ConnectionException extends \RedisException {}

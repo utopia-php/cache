@@ -1,7 +1,7 @@
+includes:
+    - ../../phpstan.neon
+
 parameters:
-    level: max
-    paths:
-        - src
-        - tests
+    treatPhpDocTypesAsCertain: false
     scanDirectories:
         - vendor/swoole/ide-helper

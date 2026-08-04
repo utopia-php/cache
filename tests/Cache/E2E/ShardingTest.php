@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Tests\E2E;
 
 use Redis as Redis;
@@ -7,32 +9,29 @@ use Throwable;
 use Utopia\Cache\Adapter\Redis as RedisAdapter;
 use Utopia\Cache\Adapter\Sharding;
 use Utopia\Cache\Cache;
+use Utopia\Tests\Base;
+use Utopia\Tests\Services;
 
-class ShardingTest extends Base
+final class ShardingTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
-        $shardA = new Redis();
-        $shardA->connect('shardA', 6379);
+        $shards = [];
 
-        $shardB = new Redis();
-        $shardB->connect('shardB', 6379);
+        foreach (Services::SHARD_PORTS as $port) {
+            $redis = new Redis();
+            $redis->connect(Services::HOST, $port);
+            $shards[] = new RedisAdapter($redis);
+        }
 
-        $shardC = new Redis();
-        $shardC->connect('shardC', 6379);
-
-        self::$cache = new Cache(new Sharding([
-            new RedisAdapter($shardA),
-            new RedisAdapter($shardB),
-            new RedisAdapter($shardC),
-        ]));
+        self::$cache = new Cache(new Sharding($shards));
     }
 
     public function testGetSize(): void
     {
         self::$cache->save('test:file33', 'file33', 'test:file33');
         self::$cache->save('test:file34', 'file34', 'test:file33');
-        $this->assertEquals(2, self::$cache->getSize());
+        $this->assertSame(2, self::$cache->getSize());
     }
 
     public function testEmptyAdapters(): void

@@ -1,53 +1,56 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Tests\E2E;
 
 use Memcached as Memcached;
+use MemcachedException;
 use Utopia\Cache\Adapter\Hazelcast as HazelcastAdapter;
 use Utopia\Cache\Cache;
+use Utopia\Tests\Base;
+use Utopia\Tests\Services;
 
-class HazelcastTest extends Base
+final class HazelcastTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
         $memcached = new Memcached();
-        $memcached->addServer('hazelcast', 5701);
+        $memcached->addServer(Services::HOST, Services::HAZELCAST_PORT);
         self::$cache = new Cache(new HazelcastAdapter($memcached));
     }
 
     public function testGetSize(): void
     {
-        $this->assertEquals(0, self::$cache->getSize());
+        $this->assertSame(0, self::$cache->getSize());
     }
 
     public function testCacheReconnect(): void
     {
         $memcached = new Memcached();
-        $memcached->addServer('hazelcast', 5701);
-        self::$cache = new Cache((new HazelcastAdapter($memcached))->setMaxRetries(3));
+        $memcached->addServer(Services::HOST, Services::HAZELCAST_PORT);
+        self::$cache = new Cache(new HazelcastAdapter($memcached)->setMaxRetries(3));
         self::$cache->save('test:reconnect', 'reconnect', 'test:reconnect');
 
-        $stopCmd = 'docker ps -a --filter "name=hazelcast" --format "{{.Names}}" | xargs -r docker stop';
-        exec($stopCmd.' 2>&1', $output, $exitCode);
-        $this->assertEquals(0, $exitCode, "Docker stop failed: $stopCmd\nOutput: ".implode("\n", $output));
+        Services::compose('stop', 'hazelcast');
         sleep(3);
 
         try {
             self::$cache->load('test:reconnect', 5);
             $this->fail('Hazelcast connection should have failed');
-        } catch (\MemcachedException $e) {
+        } catch (MemcachedException) {
         }
 
-        $output = [];
-        $startCmd = 'docker ps -a --filter "name=hazelcast" --format "{{.Names}}" | xargs -r docker start';
-        exec($startCmd.' 2>&1', $output, $exitCode);
-        $this->assertEquals(0, $exitCode, "Docker start failed: $startCmd\nOutput: ".implode("\n", $output));
-        sleep(6);
+        Services::compose('up', '-d', '--wait', 'hazelcast');
+        // Reconnecting is what the adapter is on the hook for; serving the
+        // first write afterwards is Hazelcast's own start-up.
+        Services::waitUntil(fn(): bool => self::$cache->save('test:ready', 'ready') !== false);
 
-        $this->assertEquals('reconnect', self::$cache->save('test:reconnect', 'reconnect', 'test:reconnect'));
+        $this->assertSame('reconnect', self::$cache->save('test:reconnect', 'reconnect', 'test:reconnect'));
         $this->assertEquals('reconnect', self::$cache->load('test:reconnect', 5));
     }
 
+    #[\Override]
     public function testFlush(): void
     {
         //not implemented as Hazelcast doesn't support flush functionality

@@ -1,14 +1,19 @@
 <?php
 
-namespace Utopia\Tests\E2E\Redis;
+declare(strict_types=1);
+
+namespace Utopia\Tests\E2E;
 
 use PHPUnit\Framework\TestCase;
 use Redis as Redis;
+
 use function Swoole\Coroutine\run;
+
 use Utopia\Cache\Adapter\Redis\Multiplexing as RedisMultiplexing;
 use Utopia\Cache\Cache;
+use Utopia\Tests\Services;
 
-class LeasableMultiplexingTest extends TestCase
+final class MultiplexingLeasableTest extends TestCase
 {
     private RedisMultiplexing $adapter;
 
@@ -20,7 +25,7 @@ class LeasableMultiplexingTest extends TestCase
     private function runCo(callable $fn): void
     {
         $error = null;
-        run(function () use ($fn, &$error) {
+        run(function () use ($fn, &$error): void {
             try {
                 $fn();
             } catch (\Throwable $th) {
@@ -29,21 +34,21 @@ class LeasableMultiplexingTest extends TestCase
                 $this->close();
             }
         });
-        if ($error !== null) {
+        if ($error instanceof \Throwable) {
             throw $error;
         }
     }
 
     private function makeCache(): Cache
     {
-        $this->adapter = new RedisMultiplexing('redis', 6379);
+        $this->adapter = new RedisMultiplexing(Services::HOST, Services::REDIS_PORT);
 
         return new Cache($this->adapter);
     }
 
     private function graceCache(int $milliseconds): Cache
     {
-        $this->adapter = new RedisMultiplexing('redis', 6379);
+        $this->adapter = new RedisMultiplexing(Services::HOST, Services::REDIS_PORT);
         $this->adapter->setLeaseGraceWindow($milliseconds);
 
         return new Cache($this->adapter);
@@ -58,7 +63,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testFreshKeyHasZeroGeneration(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -68,7 +73,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testSaveWithLeaseStoresWhenGenerationUnchanged(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -81,7 +86,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testPurgeAdvancesGeneration(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -95,7 +100,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testHashPurgeAdvancesGeneration(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -121,7 +126,7 @@ class LeasableMultiplexingTest extends TestCase
      */
     public function testStaleSaveAfterPurgeIsRejected(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -140,7 +145,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testFreshSaveAfterPurgeSucceeds(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -160,7 +165,7 @@ class LeasableMultiplexingTest extends TestCase
      */
     public function testLeaseSurvivesScriptCacheFlush(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -169,7 +174,7 @@ class LeasableMultiplexingTest extends TestCase
 
             // Evict every cached script server-side; the next EVALSHA now misses.
             $raw = new Redis();
-            $raw->connect('redis', 6379);
+            $raw->connect(Services::HOST, Services::REDIS_PORT);
             $raw->script('flush');
             $raw->close();
 
@@ -179,7 +184,7 @@ class LeasableMultiplexingTest extends TestCase
             $fresh = $cache->getGeneration('doc:1');
             $this->assertNotFalse(
                 $cache->saveWithLease('doc:1', ['v' => 2], 'doc:1', $fresh),
-                'saveWithLease must fall back to EVAL after NOSCRIPT'
+                'saveWithLease must fall back to EVAL after NOSCRIPT',
             );
             $this->assertSame(['v' => 2], $cache->load('doc:1', 60, 'doc:1'));
         });
@@ -187,7 +192,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testPurgePreservesDeletionResult(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -200,7 +205,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testPurgeDropsValueButKeepsGenerationField(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -221,7 +226,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testReservedGenerationFieldIsProtected(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -245,7 +250,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testListHidesGenerationField(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -261,8 +266,8 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testLeaseGraceWindowDefaultsToZero(): void
     {
-        $this->runCo(function () {
-            $this->adapter = new RedisMultiplexing('redis', 6379);
+        $this->runCo(function (): void {
+            $this->adapter = new RedisMultiplexing(Services::HOST, Services::REDIS_PORT);
             $this->assertSame(0, $this->adapter->getLeaseGraceWindow());
         });
     }
@@ -273,7 +278,7 @@ class LeasableMultiplexingTest extends TestCase
      */
     public function testTombstoneRejectsTokenValidSaveWithinGraceWindow(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->graceCache(500);
             $cache->flush();
 
@@ -282,7 +287,7 @@ class LeasableMultiplexingTest extends TestCase
             $generation = $cache->getGeneration('doc:1');
             $this->assertFalse(
                 $cache->saveWithLease('doc:1', ['stale' => true], 'doc:1', $generation),
-                'A token-valid save inside the grace window must be refused by the tombstone'
+                'A token-valid save inside the grace window must be refused by the tombstone',
             );
             $this->assertFalse($cache->load('doc:1', 60, 'doc:1'), 'Cache must not hold the stale value');
 
@@ -290,7 +295,7 @@ class LeasableMultiplexingTest extends TestCase
             // multiplexing adapter exposes no raw write, so use a temporary
             // synchronous php-redis client for this out-of-band poke.
             $raw = new Redis();
-            $raw->connect('redis', 6379);
+            $raw->connect(Services::HOST, Services::REDIS_PORT);
             // Derive from the Redis server clock (what the tombstone Lua uses via
             // TIME), not the PHP wall clock, so a client/server skew can't flake it.
             $past = ((int) $raw->time()[0] - 60) * 1000000;
@@ -299,17 +304,17 @@ class LeasableMultiplexingTest extends TestCase
 
             $this->assertNotFalse(
                 $cache->saveWithLease('doc:1', ['fresh' => true], 'doc:1', $generation),
-                'After the grace window a token-valid save must succeed'
+                'After the grace window a token-valid save must succeed',
             );
             $this->assertSame(['fresh' => true], $cache->load('doc:1', 60, 'doc:1'));
 
             $raw = new Redis();
-            $raw->connect('redis', 6379);
+            $raw->connect(Services::HOST, Services::REDIS_PORT);
             $lingering = (bool) $raw->hExists('doc:1', '__utopia_tomb__');
             $raw->close();
             $this->assertFalse(
                 $lingering,
-                'The spent tombstone must be dropped on the next save, not linger in the hash'
+                'The spent tombstone must be dropped on the next save, not linger in the hash',
             );
         });
     }
@@ -317,7 +322,7 @@ class LeasableMultiplexingTest extends TestCase
     /** A field-level purge must open the tombstone too. */
     public function testFieldPurgeAlsoOpensTombstone(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->graceCache(500);
             $cache->flush();
 
@@ -327,7 +332,7 @@ class LeasableMultiplexingTest extends TestCase
             $generation = $cache->getGeneration('doc:1');
             $this->assertFalse(
                 $cache->saveWithLease('doc:1', ['stale' => true], 'field-a', $generation),
-                'A token-valid field save inside the grace window must be refused'
+                'A token-valid field save inside the grace window must be refused',
             );
             $this->assertFalse($cache->load('doc:1', 60, 'field-a'));
         });
@@ -335,7 +340,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testListHidesTombstoneField(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->graceCache(500);
             $cache->flush();
 
@@ -348,7 +353,7 @@ class LeasableMultiplexingTest extends TestCase
 
     public function testReservedTombstoneFieldIsProtected(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->graceCache(500);
             $cache->flush();
 
@@ -365,7 +370,7 @@ class LeasableMultiplexingTest extends TestCase
      */
     public function testTombstoneIgnoresImplausibleFutureDeadline(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->graceCache(500);
             $cache->flush();
 
@@ -376,14 +381,14 @@ class LeasableMultiplexingTest extends TestCase
             // The multiplexing adapter exposes no raw write, so stamp it via a
             // temporary synchronous php-redis client.
             $raw = new Redis();
-            $raw->connect('redis', 6379);
+            $raw->connect(Services::HOST, Services::REDIS_PORT);
             $farFutureMicros = ((int) $raw->time()[0] + 3600) * 1000000;
             $raw->hSet('doc:1', '__utopia_tomb__', (string) $farFutureMicros);
             $raw->close();
 
             $this->assertNotFalse(
                 $cache->saveWithLease('doc:1', ['v' => 1], 'doc:1', $generation),
-                'An implausibly far-future deadline (backward clock step) must be ignored, not wedge saves'
+                'An implausibly far-future deadline (backward clock step) must be ignored, not wedge saves',
             );
             $this->assertSame(['v' => 1], $cache->load('doc:1', 60, 'doc:1'));
         });

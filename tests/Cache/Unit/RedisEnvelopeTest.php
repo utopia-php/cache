@@ -1,11 +1,13 @@
 <?php
 
-namespace Utopia\Tests\Unit\Redis;
+declare(strict_types=1);
+
+namespace Utopia\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Adapter\Redis\Envelope;
 
-class EnvelopeTest extends TestCase
+final class RedisEnvelopeTest extends TestCase
 {
     public function testEncodeWrapsDataAndTime(): void
     {

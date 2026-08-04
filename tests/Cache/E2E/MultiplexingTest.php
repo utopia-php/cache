@@ -1,15 +1,20 @@
 <?php
 
-namespace Utopia\Tests\E2E\Redis;
+declare(strict_types=1);
+
+namespace Utopia\Tests\E2E;
 
 use PHPUnit\Framework\TestCase;
 use Swoole\Coroutine;
+
 use function Swoole\Coroutine\run;
+
 use Swoole\Coroutine\WaitGroup;
 use Utopia\Cache\Adapter\Redis\Multiplexing as RedisMultiplexing;
 use Utopia\Cache\Cache;
+use Utopia\Tests\Services;
 
-class MultiplexingTest extends TestCase
+final class MultiplexingTest extends TestCase
 {
     protected string $key = 'test-key-for-cache';
 
@@ -24,7 +29,7 @@ class MultiplexingTest extends TestCase
     private function runCo(callable $fn): void
     {
         $error = null;
-        run(function () use ($fn, &$error) {
+        run(function () use ($fn, &$error): void {
             try {
                 $fn();
             } catch (\Throwable $th) {
@@ -33,7 +38,7 @@ class MultiplexingTest extends TestCase
                 $this->close();
             }
         });
-        if ($error !== null) {
+        if ($error instanceof \Throwable) {
             throw $error;
         }
     }
@@ -42,7 +47,7 @@ class MultiplexingTest extends TestCase
 
     private function makeCache(): Cache
     {
-        $this->adapter = new RedisMultiplexing('redis', 6379);
+        $this->adapter = new RedisMultiplexing(Services::HOST, Services::REDIS_PORT);
 
         return new Cache($this->adapter);
     }
@@ -56,7 +61,7 @@ class MultiplexingTest extends TestCase
 
     public function testCacheSave(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -64,7 +69,7 @@ class MultiplexingTest extends TestCase
             $this->assertEquals($this->dataArray, $result);
 
             $result = $cache->save($this->key, $this->data, $this->key);
-            $this->assertEquals($this->data, $result);
+            $this->assertSame($this->data, $result);
 
             $loaded = $cache->load($this->key, 60, $this->key);
             $this->assertEquals($this->data, $loaded);
@@ -73,7 +78,7 @@ class MultiplexingTest extends TestCase
 
     public function testCachePurge(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->save($this->key, $this->data, $this->key);
 
@@ -87,7 +92,7 @@ class MultiplexingTest extends TestCase
 
     public function testCacheTouch(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->save('touch-key', 'touch data', 'touch-key');
 
@@ -95,7 +100,7 @@ class MultiplexingTest extends TestCase
 
             $this->assertFalse($cache->load('touch-key', 2, 'touch-key'));
             $this->assertTrue($cache->touch('touch-key', 'touch-key'));
-            $this->assertEquals('touch data', $cache->load('touch-key', 2, 'touch-key'));
+            $this->assertSame('touch data', $cache->load('touch-key', 2, 'touch-key'));
             $this->assertFalse($cache->touch('missing-touch-key', 'missing-touch-key'));
 
             $cache->purge('touch-key');
@@ -104,7 +109,7 @@ class MultiplexingTest extends TestCase
 
     public function testPing(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $this->assertTrue($cache->ping());
         });
@@ -112,7 +117,7 @@ class MultiplexingTest extends TestCase
 
     public function testFlush(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->save('x', 'x', 'x');
             $cache->save('y', 'y', 'y');
@@ -128,7 +133,7 @@ class MultiplexingTest extends TestCase
 
     public function testGetSize(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -136,13 +141,13 @@ class MultiplexingTest extends TestCase
             $cache->save('test:file34', 'file34', 'test:file34');
             $cache->save('test:file35', 'file35', 'test:file35');
 
-            $this->assertEquals(3, $cache->getSize());
+            $this->assertSame(3, $cache->getSize());
         });
     }
 
     public function testJsonData(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -171,14 +176,14 @@ class MultiplexingTest extends TestCase
 
             $jsonString = json_encode($payload, JSON_THROW_ON_ERROR);
             $this->assertNotFalse($jsonString);
-            $this->assertEquals($jsonString, $cache->save('json:string', $jsonString, 'json:string'));
+            $this->assertSame($jsonString, $cache->save('json:string', $jsonString, 'json:string'));
             $this->assertEquals($jsonString, $cache->load('json:string', 60, 'json:string'));
         });
     }
 
     public function testLargeJsonPayload(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -186,7 +191,7 @@ class MultiplexingTest extends TestCase
             for ($i = 0; $i < 1000; $i++) {
                 $rows[] = [
                     'i' => $i,
-                    'name' => 'row-'.$i,
+                    'name' => 'row-' . $i,
                     'value' => str_repeat('x', 64),
                 ];
             }
@@ -202,7 +207,7 @@ class MultiplexingTest extends TestCase
 
     public function testConcurrentJsonMultiplexing(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -212,14 +217,14 @@ class MultiplexingTest extends TestCase
 
             for ($i = 0; $i < $count; $i++) {
                 $wg->add();
-                Coroutine::create(function () use ($cache, $i, $wg, &$errors) {
+                Coroutine::create(function () use ($cache, $i, $wg, &$errors): void {
                     try {
-                        $key = 'json-mux:'.$i;
+                        $key = 'json-mux:' . $i;
                         $value = [
                             'i' => $i,
-                            'tags' => ['a', 'b', 'c-'.$i],
+                            'tags' => ['a', 'b', 'c-' . $i],
                             'meta' => ['nested' => ['count' => $i * 2]],
-                            'text' => 'café 🚀 row '.$i,
+                            'text' => 'café 🚀 row ' . $i,
                         ];
                         $saved = $cache->save($key, $value, $key);
                         if ($saved !== $value) {
@@ -227,7 +232,7 @@ class MultiplexingTest extends TestCase
                         }
                         $loaded = $cache->load($key, 60, $key);
                         if ($loaded != $value) {
-                            $errors[] = "load mismatch for $i: ".var_export($loaded, true);
+                            $errors[] = "load mismatch for $i: " . var_export($loaded, true);
                         }
                     } catch (\Throwable $th) {
                         $errors[] = $th->getMessage();
@@ -239,8 +244,8 @@ class MultiplexingTest extends TestCase
 
             $wg->wait();
 
-            $this->assertEmpty($errors, 'Concurrent errors: '.implode('; ', $errors));
-            $this->assertEquals($count, $cache->getSize());
+            $this->assertEmpty($errors, 'Concurrent errors: ' . implode('; ', $errors));
+            $this->assertSame($count, $cache->getSize());
         });
     }
 
@@ -249,7 +254,7 @@ class MultiplexingTest extends TestCase
      */
     public function testConcurrentMultiplexing(): void
     {
-        $this->runCo(function () {
+        $this->runCo(function (): void {
             $cache = $this->makeCache();
             $cache->flush();
 
@@ -259,17 +264,17 @@ class MultiplexingTest extends TestCase
 
             for ($i = 0; $i < $count; $i++) {
                 $wg->add();
-                Coroutine::create(function () use ($cache, $i, $wg, &$errors) {
+                Coroutine::create(function () use ($cache, $i, $wg, &$errors): void {
                     try {
-                        $key = 'mux:'.$i;
-                        $value = 'value-'.$i;
+                        $key = 'mux:' . $i;
+                        $value = 'value-' . $i;
                         $saved = $cache->save($key, $value, $key);
                         if ($saved !== $value) {
-                            $errors[] = "save mismatch for $i: ".var_export($saved, true);
+                            $errors[] = "save mismatch for $i: " . var_export($saved, true);
                         }
                         $loaded = $cache->load($key, 60, $key);
                         if ($loaded !== $value) {
-                            $errors[] = "load mismatch for $i: ".var_export($loaded, true);
+                            $errors[] = "load mismatch for $i: " . var_export($loaded, true);
                         }
                     } catch (\Throwable $th) {
                         $errors[] = $th->getMessage();
@@ -281,8 +286,8 @@ class MultiplexingTest extends TestCase
 
             $wg->wait();
 
-            $this->assertEmpty($errors, 'Concurrent errors: '.implode('; ', $errors));
-            $this->assertEquals($count, $cache->getSize());
+            $this->assertEmpty($errors, 'Concurrent errors: ' . implode('; ', $errors));
+            $this->assertSame($count, $cache->getSize());
         });
     }
 }

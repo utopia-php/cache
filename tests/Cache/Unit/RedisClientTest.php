@@ -1,6 +1,8 @@
 <?php
 
-namespace Utopia\Tests\Unit\Redis;
+declare(strict_types=1);
+
+namespace Utopia\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Adapter\Redis\Client;
@@ -8,18 +10,18 @@ use Utopia\Cache\Adapter\Redis\ConnectionError;
 use Utopia\Cache\Adapter\Redis\ConnectionException;
 use Utopia\Cache\Adapter\Redis\RedisError;
 
-class ClientTest extends TestCase
+final class RedisClientTest extends TestCase
 {
     public function testEncodeBuildsRespArrayOfBulkStrings(): void
     {
         $this->assertSame(
             "*1\r\n\$4\r\nPING\r\n",
-            Client::encode(['PING'])
+            Client::encode(['PING']),
         );
 
         $this->assertSame(
             "*3\r\n\$3\r\nSET\r\n\$3\r\nfoo\r\n\$3\r\nbar\r\n",
-            Client::encode(['SET', 'foo', 'bar'])
+            Client::encode(['SET', 'foo', 'bar']),
         );
     }
 
@@ -27,7 +29,7 @@ class ClientTest extends TestCase
     {
         $this->assertSame(
             "*2\r\n\$6\r\nSELECT\r\n\$1\r\n3\r\n",
-            Client::encode(['SELECT', 3])
+            Client::encode(['SELECT', 3]),
         );
     }
 
@@ -37,8 +39,8 @@ class ClientTest extends TestCase
         $encoded = Client::encode(['SET', 'k', $payload]);
 
         $this->assertSame(
-            "*3\r\n\$3\r\nSET\r\n\$1\r\nk\r\n\$".strlen($payload)."\r\n".$payload."\r\n",
-            $encoded
+            "*3\r\n\$3\r\nSET\r\n\$1\r\nk\r\n\$" . \strlen($payload) . "\r\n" . $payload . "\r\n",
+            $encoded,
         );
     }
 
@@ -75,7 +77,7 @@ class ClientTest extends TestCase
         $payload = "line1\r\nline2";
         $this->assertSame(
             $payload,
-            Client::parse('$'.strlen($payload)."\r\n".$payload."\r\n", $offset)
+            Client::parse('$' . \strlen($payload) . "\r\n" . $payload . "\r\n", $offset),
         );
     }
 
@@ -98,7 +100,7 @@ class ClientTest extends TestCase
         $offset = 0;
         $buffer = "*3\r\n\$3\r\nfoo\r\n:42\r\n+OK\r\n";
         $this->assertSame(['foo', 42, 'OK'], Client::parse($buffer, $offset));
-        $this->assertSame(strlen($buffer), $offset);
+        $this->assertSame(\strlen($buffer), $offset);
     }
 
     public function testParseEmptyArray(): void
@@ -118,7 +120,7 @@ class ClientTest extends TestCase
         $offset = 0;
         $buffer = "*2\r\n*2\r\n:1\r\n:2\r\n*1\r\n\$1\r\nx\r\n";
         $this->assertSame([[1, 2], ['x']], Client::parse($buffer, $offset));
-        $this->assertSame(strlen($buffer), $offset);
+        $this->assertSame(\strlen($buffer), $offset);
     }
 
     public function testParseRedisErrorIsWrappedNotThrown(): void
@@ -168,7 +170,7 @@ class ClientTest extends TestCase
         $this->assertSame('OK', Client::parse($buffer, $offset));
         $this->assertSame(5, $offset);
         $this->assertSame('SECOND', Client::parse($buffer, $offset));
-        $this->assertSame(strlen($buffer), $offset);
+        $this->assertSame(\strlen($buffer), $offset);
     }
 
     public function testParseUnknownTypeThrows(): void
@@ -188,7 +190,7 @@ class ClientTest extends TestCase
         // And that encode produces what a real Redis would expect.
         $this->assertSame(
             "*4\r\n\$4\r\nHSET\r\n\$1\r\nk\r\n\$1\r\nf\r\n\$1\r\nv\r\n",
-            Client::encode(['HSET', 'k', 'f', 'v'])
+            Client::encode(['HSET', 'k', 'f', 'v']),
         );
     }
 

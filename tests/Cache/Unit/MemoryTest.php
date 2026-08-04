@@ -1,11 +1,14 @@
 <?php
 
-namespace Utopia\Tests\E2E;
+declare(strict_types=1);
+
+namespace Utopia\Tests\Unit;
 
 use Utopia\Cache\Adapter\Memory;
 use Utopia\Cache\Cache;
+use Utopia\Tests\Base;
 
-class MemoryTest extends Base
+final class MemoryTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
@@ -18,6 +21,6 @@ class MemoryTest extends Base
         self::$cache->save('test:file34', 'file34');
         self::$cache->save('test:file35', 'file35');
         self::$cache->save('test:file36', 'file36');
-        $this->assertEquals(4, self::$cache->getSize());
+        $this->assertSame(4, self::$cache->getSize());
     }
 }

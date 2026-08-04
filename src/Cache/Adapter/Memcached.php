@@ -8,28 +8,16 @@ use Utopia\Cache\Feature\Retryable;
 
 class Memcached implements Adapter, Retryable
 {
-    /**
-     * @var Client
-     */
-    protected Client $memcached;
-
     private int $maxRetries = 0;
 
     private int $retryDelay = 1000; // milliseconds
-
     /**
      * Memcached constructor.
-     *
-     * @param  Client  $memcached
      */
-    public function __construct(Client $memcached)
-    {
-        $this->memcached = $memcached;
-    }
+    public function __construct(protected Client $memcached) {}
 
     /**
      * @param  int  $maxRetries (0-10)
-     * @return self
      */
     public function setMaxRetries(int $maxRetries): self
     {
@@ -40,7 +28,6 @@ class Memcached implements Adapter, Retryable
 
     /**
      * @param  int  $retryDelay time in milliseconds
-     * @return self
      */
     public function setRetryDelay(int $retryDelay): self
     {
@@ -50,15 +37,12 @@ class Memcached implements Adapter, Retryable
     }
 
     /**
-     * @param  string  $key
-     * @param  int  $ttl
      * @param  string  $hash optional
-     * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
         /** @var array{time: int, data: string}|false */
-        $cache = $this->execute(fn () => $this->memcached->get($key));
+        $cache = $this->execute(fn(): mixed => $this->memcached->get($key));
         if ($cache === false) {
             return false;
         }
@@ -71,45 +55,41 @@ class Memcached implements Adapter, Retryable
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
-        if (empty($key) || empty($data)) {
+        if ($key === '' || $key === '0' || empty($data)) {
             return false;
         }
 
         $cache = [
-            'time' => \time(),
+            'time' => time(),
             'data' => $data,
         ];
 
-        return $this->execute(fn () => $this->memcached->set($key, $cache)) ? $data : false;
+        return $this->execute(fn(): bool => $this->memcached->set($key, $cache)) ? $data : false;
     }
 
     /**
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function touch(string $key, string $hash = ''): bool
     {
         /** @var array{time: int, data: string|array<int|string, mixed>}|false */
-        $cache = $this->execute(fn () => $this->memcached->get($key));
+        $cache = $this->execute(fn(): mixed => $this->memcached->get($key));
         if ($cache === false) {
             return false;
         }
 
         $cache['time'] = time();
 
-        return (bool) $this->execute(fn () => $this->memcached->set($key, $cache));
+        return (bool) $this->execute(fn(): bool => $this->memcached->set($key, $cache));
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -118,41 +98,31 @@ class Memcached implements Adapter, Retryable
     }
 
     /**
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        return (bool) $this->execute(fn () => $this->memcached->delete($key));
+        return (bool) $this->execute(fn(): bool => $this->memcached->delete($key));
     }
 
-    /**
-     * @return bool
-     */
     public function flush(): bool
     {
-        return (bool) $this->execute(fn () => $this->memcached->flush());
+        return (bool) $this->execute(fn(): bool => $this->memcached->flush());
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         try {
             $statuses = $this->memcached->getStats();
 
             return ! empty($statuses);
-        } catch (\MemcachedException $e) {
+        } catch (\MemcachedException) {
             return false;
         }
     }
 
     /**
      * Returning total number of keys
-     *
-     * @return int
      */
     public function getSize(): int
     {
@@ -160,7 +130,7 @@ class Memcached implements Adapter, Retryable
         $servers = $this->memcached->getServerList();
         if (! empty($servers)) {
             $stats = $this->memcached->getStats();
-            $key = $servers[0]['host'].':'.$servers[0]['port'];
+            $key = $servers[0]['host'] . ':' . $servers[0]['port'];
             if (isset($stats[$key])) {
                 $size = $stats[$key]['curr_items'] ?? 0;
             }
@@ -169,26 +139,16 @@ class Memcached implements Adapter, Retryable
         return $size;
     }
 
-    /**
-     * @param  string|null  $key
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'memcached';
     }
 
-    /**
-     * @return int
-     */
     public function getMaxRetries(): int
     {
         return $this->maxRetries;
     }
 
-    /**
-     * @return int
-     */
     public function getRetryDelay(): int
     {
         return $this->retryDelay;
@@ -210,7 +170,7 @@ class Memcached implements Adapter, Retryable
         while ($attempts < $maxAttempts) {
             $result = $callback();
 
-            if ($result === false && in_array($this->memcached->getResultCode(), [
+            if ($result === false && \in_array($this->memcached->getResultCode(), [
                 \Memcached::RES_HOST_LOOKUP_FAILURE,
                 \Memcached::RES_UNKNOWN_READ_FAILURE,
                 \Memcached::RES_WRITE_FAILURE,
@@ -225,7 +185,7 @@ class Memcached implements Adapter, Retryable
                 $attempts++;
 
                 if ($attempts >= $maxAttempts) {
-                    throw new \MemcachedException('Memcached connection failed after '.$attempts.' attempts. Error: '.$this->memcached->getResultMessage());
+                    throw new \MemcachedException('Memcached connection failed after ' . $attempts . ' attempts. Error: ' . $this->memcached->getResultMessage());
                 }
 
                 usleep($this->retryDelay * 1000);

@@ -1,11 +1,15 @@
 <?php
 
-namespace Utopia\Tests\E2E;
+declare(strict_types=1);
 
+namespace Utopia\Tests\Unit;
+
+use PHPUnit\Framework\Attributes\Depends;
 use Utopia\Cache\Adapter\None;
 use Utopia\Cache\Cache;
+use Utopia\Tests\Base;
 
-class NoneTest extends Base
+final class NoneTest extends Base
 {
     public static function setUpBeforeClass(): void
     {
@@ -14,7 +18,7 @@ class NoneTest extends Base
 
     public function testGetSize(): void
     {
-        $this->assertEquals(0, self::$cache->getSize());
+        $this->assertSame(0, self::$cache->getSize());
     }
 
     public function testEmptyCacheKey(): void
@@ -26,6 +30,7 @@ class NoneTest extends Base
         $this->assertEquals(false, $data);
     }
 
+    #[\Override]
     public function testCacheSave(): void
     {
         $result = self::$cache->save($this->key, $this->data);
@@ -33,9 +38,7 @@ class NoneTest extends Base
         $this->assertEquals(false, $result);
     }
 
-    /**
-     * @depends testCacheSave
-     */
+    #[Depends('testCacheSave')]
     public function testCacheLoad(): void
     {
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
@@ -43,9 +46,8 @@ class NoneTest extends Base
         $this->assertEquals(false, $data);
     }
 
-    /**
-     * @depends testCacheLoad
-     */
+    #[Depends('testCacheLoad')]
+    #[\Override]
     public function testNotEmptyCacheKey(): void
     {
         $data = self::$cache->load($this->key, 60 * 60 * 24 * 30 * 3 /* 3 months */);
@@ -53,6 +55,7 @@ class NoneTest extends Base
         $this->assertEquals(false, $data);
     }
 
+    #[\Override]
     public function testCachePurge(): void
     {
         $result = self::$cache->purge($this->key);
@@ -60,14 +63,21 @@ class NoneTest extends Base
         $this->assertEquals(true, $result);
     }
 
+    #[\Override]
     public function testCacheTouch(): void
     {
         $this->assertEquals(false, self::$cache->touch($this->key));
     }
 
+    #[\Override]
     public function testCaseInsensitivity(): void
     {
-        // None adapter does not expect case sensitivity/insensitivy
-        $this->assertEquals(true, true);
+        $this->markTestSkipped('The None adapter stores nothing, so key casing cannot matter.');
+    }
+
+    #[\Override]
+    public function testCaseSensitivity(): void
+    {
+        $this->markTestSkipped('The None adapter stores nothing, so key casing cannot matter.');
     }
 }

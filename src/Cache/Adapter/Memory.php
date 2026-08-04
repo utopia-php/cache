@@ -12,21 +12,11 @@ class Memory implements Adapter
     public $store = [];
 
     /**
-     * Memory constructor.
-     */
-    public function __construct()
-    {
-    }
-
-    /**
-     * @param  string  $key
-     * @param  int  $ttl
      * @param  string  $hash optional
-     * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        if (! empty($key) && isset($this->store[$key])) {
+        if ($key !== '' && $key !== '0' && isset($this->store[$key])) {
             /** @var array{time: int, data: string} */
             $saved = $this->store[$key];
 
@@ -37,19 +27,18 @@ class Memory implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
-        if (empty($key) || empty($data)) {
+        if ($key === '' || $key === '0' || empty($data)) {
             return false;
         }
 
         $saved = [
-            'time' => \time(),
+            'time' => time(),
             'data' => $data,
         ];
 
@@ -59,13 +48,11 @@ class Memory implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function touch(string $key, string $hash = ''): bool
     {
-        if (empty($key) || ! isset($this->store[$key])) {
+        if ($key === '' || $key === '0' || ! isset($this->store[$key])) {
             return false;
         }
 
@@ -78,7 +65,6 @@ class Memory implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -87,13 +73,11 @@ class Memory implements Adapter
     }
 
     /**
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        if (! empty($key) && isset($this->store[$key])) { // if a key is passed and it exists in cache
+        if ($key !== '' && $key !== '0' && isset($this->store[$key])) { // if a key is passed and it exists in cache
             unset($this->store[$key]);
 
             return true;
@@ -102,9 +86,6 @@ class Memory implements Adapter
         return false;
     }
 
-    /**
-     * @return bool
-     */
     public function flush(): bool
     {
         $this->store = [];
@@ -112,9 +93,6 @@ class Memory implements Adapter
         return true;
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         return true;
@@ -122,18 +100,12 @@ class Memory implements Adapter
 
     /**
      * Returning total number of keys
-     *
-     * @return int
      */
     public function getSize(): int
     {
-        return count($this->store);
+        return \count($this->store);
     }
 
-    /**
-     * @param  string|null  $key
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'memory';

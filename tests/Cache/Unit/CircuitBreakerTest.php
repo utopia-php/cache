@@ -1,6 +1,8 @@
 <?php
 
-namespace Utopia\Tests\E2E;
+declare(strict_types=1);
+
+namespace Utopia\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -14,7 +16,7 @@ use Utopia\CircuitBreaker\CircuitBreaker as UtopiaCircuitBreaker;
 use Utopia\Telemetry\Adapter as Telemetry;
 use Utopia\Telemetry\Adapter\Test as TestTelemetry;
 
-class CircuitBreakerTest extends TestCase
+final class CircuitBreakerTest extends TestCase
 {
     public function testPassesThroughHealthyCacheOperations(): void
     {
@@ -68,8 +70,7 @@ class CircuitBreakerTest extends TestCase
     public function testTelemetryPropagatesToInnerAdapter(): void
     {
         $telemetry = new TestTelemetry();
-        $adapter = new class extends Memory implements Feature\Telemetry
-        {
+        $adapter = new class extends Memory implements Feature\Telemetry {
             public ?Telemetry $telemetry = null;
 
             public function setTelemetry(Telemetry $telemetry): void

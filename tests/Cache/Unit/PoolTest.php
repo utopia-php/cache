@@ -1,25 +1,26 @@
 <?php
 
-namespace Utopia\Tests\E2E;
+declare(strict_types=1);
 
+namespace Utopia\Tests\Unit;
+
+use Override;
 use Utopia\Cache\Adapter\Filesystem;
 use Utopia\Cache\Adapter\Pool;
 use Utopia\Cache\Cache;
 use Utopia\Pools\Adapter\Stack;
 use Utopia\Pools\Pool as UtopiaPool;
+use Utopia\Tests\Base;
 
-class PoolTest extends Base
+final class PoolTest extends Base
 {
+    private static string $path;
+
     public static function setUpBeforeClass(): void
     {
-        $path = __DIR__.'/tests/pool';
-        if (! file_exists($path)) {
-            mkdir($path, 0777, true);
-        }
+        self::$path = self::scratch('pool');
 
-        $pool = new UtopiaPool(new Stack(), 'test', 10, function () use ($path) {
-            return new Filesystem($path);
-        }, timeout: 0.0);
+        $pool = new UtopiaPool(new Stack(), 'test', 10, fn(): Filesystem => new Filesystem(self::$path), timeout: 0.0);
 
         self::$cache = new Cache(new Pool($pool));
     }
@@ -27,7 +28,17 @@ class PoolTest extends Base
     public function testGetSize(): void
     {
         self::$cache->save('test', 'test');
-        $this->assertEquals(4, self::$cache->getSize());
+        $this->assertSame(4, self::$cache->getSize());
+    }
+
+    #[Override]
+    public function testCaseSensitivity(): void
+    {
+        if (self::foldsFilenameCase(self::$path)) {
+            $this->markTestSkipped('The host filesystem folds filename case.');
+        }
+
+        parent::testCaseSensitivity();
     }
 
     public function testLeaseFallbackForNonLeasableAdapter(): void

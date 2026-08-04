@@ -1,6 +1,8 @@
 <?php
 
-namespace Utopia\Tests\E2E;
+declare(strict_types=1);
+
+namespace Utopia\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Adapter\Memory;
@@ -9,12 +11,11 @@ use Utopia\Cache\Feature;
 use Utopia\Telemetry\Adapter as Telemetry;
 use Utopia\Telemetry\Adapter\None;
 
-class TelemetryTest extends TestCase
+final class TelemetryTest extends TestCase
 {
     public function testCachePropagatesTelemetryToAdapter(): void
     {
-        $adapter = new class extends Memory implements Feature\Telemetry
-        {
+        $adapter = new class extends Memory implements Feature\Telemetry {
             public ?Telemetry $telemetry = null;
 
             public int $calls = 0;
@@ -27,11 +28,11 @@ class TelemetryTest extends TestCase
         };
 
         $cache = new Cache($adapter);
-        $telemetry = new None;
+        $telemetry = new None();
 
         $cache->setTelemetry($telemetry);
 
         $this->assertSame($telemetry, $adapter->telemetry);
-        $this->assertEquals(1, $adapter->calls);
+        $this->assertSame(1, $adapter->calls);
     }
 }

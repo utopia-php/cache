@@ -31,28 +31,25 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
      * Serializes pending enqueue + send so the FIFO invariant holds even when
      * many coroutines issue commands concurrently.
      */
-    private Lock $sendLock;
+    private readonly Lock $sendLock;
 
     private Telemetry $telemetry;
 
     private ?UpDownCounter $pendingDepth = null;
 
     /**
-     * @param  string  $host
-     * @param  int  $port
      * @param  float  $timeout connect timeout in seconds
      * @param  float  $readTimeout read timeout in seconds — caches should
      *                             fail fast, default 0.25s
      * @param  string|array<string>|null  $auth password or [username, password]
-     * @param  int  $dbIndex
      */
     public function __construct(
-        private string $host,
-        private int $port = 6379,
-        private float $timeout = 1.0,
-        private float $readTimeout = 0.25,
-        private string|array|null $auth = null,
-        private int $dbIndex = 0,
+        private readonly string $host,
+        private readonly int $port = 6379,
+        private readonly float $timeout = 1.0,
+        private readonly float $readTimeout = 0.25,
+        private readonly string|array|null $auth = null,
+        private readonly int $dbIndex = 0,
     ) {
         if ($this->timeout <= 0) {
             throw new \InvalidArgumentException('timeout must be greater than 0');
@@ -102,7 +99,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
 
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        if (empty($hash)) {
+        if ($hash === '' || $hash === '0') {
             $hash = $key;
         }
 
@@ -112,7 +109,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
 
         $value = $this->command(['HGET', $key, $hash]);
 
-        if (! is_string($value)) {
+        if (! \is_string($value)) {
             return false;
         }
 
@@ -121,11 +118,11 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
 
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
-        if (empty($key) || empty($data)) {
+        if ($key === '' || $key === '0' || empty($data)) {
             return false;
         }
 
-        if (empty($hash)) {
+        if ($hash === '' || $hash === '0') {
             $hash = $key;
         }
 
@@ -141,7 +138,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
 
     public function touch(string $key, string $hash = ''): bool
     {
-        if (empty($hash)) {
+        if ($hash === '' || $hash === '0') {
             $hash = $key;
         }
 
@@ -150,7 +147,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
         }
 
         $value = $this->command(['HGET', $key, $hash]);
-        if (! is_string($value)) {
+        if (! \is_string($value)) {
             return false;
         }
 
@@ -168,12 +165,12 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
     public function list(string $key): array
     {
         $keys = $this->command(['HKEYS', $key]);
-        if (! is_array($keys)) {
+        if (! \is_array($keys)) {
             return [];
         }
 
         /** @var string[] $keys */
-        return \array_values(\array_filter($keys, fn (string $field): bool => ! $this->isReserved($field)));
+        return array_values(array_filter($keys, fn(string $field): bool => ! $this->isReserved($field)));
     }
 
     protected function leaseEvalSha(string $sha, string $key, array $args): mixed
@@ -211,7 +208,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
     {
         try {
             return $this->command(['PING']) === 'PONG';
-        } catch (Throwable $th) {
+        } catch (Throwable) {
             return false;
         }
     }
@@ -220,7 +217,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
     {
         $size = $this->command(['DBSIZE']);
 
-        return is_int($size) ? $size : 0;
+        return \is_int($size) ? $size : 0;
     }
 
     public function getName(?string $key = null): string
@@ -240,7 +237,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
     {
         try {
             return $this->dispatch($args);
-        } catch (ConnectionException $th) {
+        } catch (ConnectionException) {
             $this->ensureConnected();
 
             return $this->dispatch($args);
@@ -258,7 +255,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
         $locked = $this->lockSend();
         try {
             $context = $this->connection;
-            if ($context === null) {
+            if (!$context instanceof \Utopia\Cache\Adapter\Redis\ConnectionContext) {
                 throw new ConnectionException('Redis connection is not open');
             }
             $response = new Channel(1);
@@ -275,7 +272,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
             $this->unlockSend($locked);
         }
 
-        if ($error !== null) {
+        if ($error instanceof \Utopia\Cache\Adapter\Redis\ConnectionException) {
             $this->teardownIfCurrent($context, $error);
 
             throw $error;
@@ -288,7 +285,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
     {
         $locked = $this->lockSend();
         try {
-            if ($this->connection === null) {
+            if (!$this->connection instanceof \Utopia\Cache\Adapter\Redis\ConnectionContext) {
                 $this->connect();
             }
         } finally {
@@ -321,7 +318,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
 
         try {
             if ($this->auth !== null) {
-                $authArgs = is_array($this->auth)
+                $authArgs = \is_array($this->auth)
                     ? array_merge(['AUTH'], array_values($this->auth))
                     : ['AUTH', $this->auth];
 
@@ -330,10 +327,8 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
                 }
             }
 
-            if ($this->dbIndex !== 0) {
-                if ($client->command(['SELECT', (string) $this->dbIndex], $this->readTimeout) !== 'OK') {
-                    throw new \RedisException('Redis SELECT failed');
-                }
+            if ($this->dbIndex !== 0 && $client->command(['SELECT', (string) $this->dbIndex], $this->readTimeout) !== 'OK') {
+                throw new \RedisException('Redis SELECT failed');
             }
         } catch (Throwable $th) {
             $client->close();
@@ -346,7 +341,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
         $context = new ConnectionContext($client, $pending);
         $this->connection = $context;
 
-        Coroutine::create(function () use ($context) {
+        Coroutine::create(function () use ($context): void {
             $this->readerLoop($context);
         });
     }
@@ -356,7 +351,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
         $context = null;
         $locked = $this->lockSend();
         try {
-            if ($this->connection !== null) {
+            if ($this->connection instanceof \Utopia\Cache\Adapter\Redis\ConnectionContext) {
                 $context = $this->connection;
                 $this->connection = null;
             }
@@ -364,7 +359,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
             $this->unlockSend($locked);
         }
 
-        if ($context !== null) {
+        if ($context instanceof \Utopia\Cache\Adapter\Redis\ConnectionContext) {
             $this->finishTeardown($context, new ConnectionException('Connection closed'));
         }
     }
@@ -431,7 +426,7 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
                 try {
                     $value = Client::parse($readBuffer, $offset);
                 } catch (Throwable $th) {
-                    $this->teardownIfCurrent($context, new ConnectionException('Redis protocol parse failed: '.$th->getMessage()));
+                    $this->teardownIfCurrent($context, new ConnectionException('Redis protocol parse failed: ' . $th->getMessage()));
 
                     return;
                 }

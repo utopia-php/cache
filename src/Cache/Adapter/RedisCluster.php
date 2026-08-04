@@ -10,66 +10,18 @@ use Utopia\Cache\Feature\Retryable;
 
 class RedisCluster implements Adapter, Retryable
 {
-    /**
-     * @var Client
-     */
-    protected Client $redis;
-
-    /**
-     * @var array<string>
-     */
-    protected array $seeds;
-
-    /**
-     * @var ?string
-     */
-    protected ?string $name;
-
     private int $maxRetries = 0;
 
-    private int $retryDelay = 1000; // milliseconds
-
-    private float $timeout;
-
-    private float $readTimeout;
-
-    private bool $persistent;
+    private int $retryDelay = 1000;
 
     /**
-     * @var string|array<string>|null
-     */
-    private string|array|null $auth;
-
-    /**
-     * @param  Client  $redis
      * @param  array<string>  $seeds
-     * @param  string|null  $name
-     * @param  float  $timeout
-     * @param  float  $readTimeout
-     * @param  bool  $persistent
      * @param  string|array<string>|null  $auth  Password string or ['username', 'password'] array for ACL
      */
-    public function __construct(
-        Client $redis,
-        array $seeds,
-        ?string $name = null,
-        float $timeout = 1.5,
-        float $readTimeout = 1.5,
-        bool $persistent = false,
-        string|array|null $auth = null
-    ) {
-        $this->redis = $redis;
-        $this->seeds = $seeds;
-        $this->name = $name;
-        $this->timeout = $timeout;
-        $this->readTimeout = $readTimeout;
-        $this->persistent = $persistent;
-        $this->auth = $auth;
-    }
+    public function __construct(protected Client $redis, protected array $seeds, protected ?string $name = null, private readonly float $timeout = 1.5, private readonly float $readTimeout = 1.5, private readonly bool $persistent = false, private readonly string|array|null $auth = null) {}
 
     /**
      * @param  int  $maxRetries (0-10)
-     * @return self
      */
     public function setMaxRetries(int $maxRetries): self
     {
@@ -80,7 +32,6 @@ class RedisCluster implements Adapter, Retryable
 
     /**
      * @param  int  $retryDelay time in milliseconds
-     * @return self
      */
     public function setRetryDelay(int $retryDelay): self
     {
@@ -90,26 +41,29 @@ class RedisCluster implements Adapter, Retryable
     }
 
     /**
-     * @param  string  $key
      * @param  int  $ttl time in seconds
      * @param  string  $hash optional
-     * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        if (empty($hash)) {
+        if ($hash === '' || $hash === '0') {
             $hash = $key;
         }
 
         /** @var string|false */
-        $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
+        $redis_string = $this->execute(fn(): string => $this->redis->hGet($key, $hash));
 
-        if ($redis_string === false || ! is_string($redis_string)) {
+        if ($redis_string === false || ! \is_string($redis_string)) {
             return false;
         }
 
-        /** @var array{time: int, data: string} $cache */
         $cache = json_decode($redis_string, true);
+
+        // A purged key keeps its field until re-cached, holding a value that
+        // is not an envelope.
+        if (! \is_array($cache) || ! isset($cache['time'], $cache['data'])) {
+            return false;
+        }
 
         if ($cache['time'] + $ttl > time()) { // Cache is valid
             return $cache['data'];
@@ -119,54 +73,51 @@ class RedisCluster implements Adapter, Retryable
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
      */
     public function save(string $key, array|string $data, string $hash = ''): bool|string|array
     {
-        if (empty($key) || empty($data)) {
+        if ($key === '' || $key === '0' || empty($data)) {
             return false;
         }
 
-        if (empty($hash)) {
+        if ($hash === '' || $hash === '0') {
             $hash = $key;
         }
 
         try {
             $value = json_encode([
-                'time' => \time(),
+                'time' => time(),
                 'data' => $data,
             ], flags: JSON_THROW_ON_ERROR);
-        } catch (Throwable $th) {
+        } catch (Throwable) {
             return false;
         }
 
         try {
-            $this->execute(fn () => $this->redis->hSet($key, $hash, $value));
+            $this->execute(fn(): int => $this->redis->hSet($key, $hash, $value));
 
             return $data;
-        } catch (Throwable $th) {
+        } catch (Throwable) {
             return false;
         }
     }
 
     /**
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function touch(string $key, string $hash = ''): bool
     {
-        if (empty($hash)) {
+        if ($hash === '' || $hash === '0') {
             $hash = $key;
         }
 
         /** @var string|false */
-        $redis_string = $this->execute(fn () => $this->redis->hGet($key, $hash));
+        $redis_string = $this->execute(fn(): string => $this->redis->hGet($key, $hash));
 
-        if ($redis_string === false || ! is_string($redis_string)) {
+        if ($redis_string === false || ! \is_string($redis_string)) {
             return false;
         }
 
@@ -175,21 +126,20 @@ class RedisCluster implements Adapter, Retryable
             $cache = json_decode($redis_string, true, flags: JSON_THROW_ON_ERROR);
             $cache['time'] = time();
             $value = json_encode($cache, flags: JSON_THROW_ON_ERROR);
-        } catch (Throwable $th) {
+        } catch (Throwable) {
             return false;
         }
 
-        return $this->execute(fn () => $this->redis->hSet($key, $hash, $value)) !== false;
+        return $this->execute(fn(): int => $this->redis->hSet($key, $hash, $value)) !== false;
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
     {
         /** @var array<string> */
-        $keys = (array) $this->execute(fn () => $this->redis->hKeys($key));
+        $keys = (array) $this->execute(fn(): array => $this->redis->hKeys($key));
 
         if (empty($keys)) {
             return [];
@@ -199,25 +149,20 @@ class RedisCluster implements Adapter, Retryable
     }
 
     /**
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        if (! empty($hash)) {
-            return (bool) $this->execute(fn () => $this->redis->hdel($key, $hash));
+        if ($hash !== '' && $hash !== '0') {
+            return (bool) $this->execute(fn(): int => $this->redis->hdel($key, $hash));
         }
 
-        return (bool) $this->execute(fn () => $this->redis->del($key));
+        return (bool) $this->execute(fn(): int => $this->redis->del($key));
     }
 
-    /**
-     * @return bool
-     */
     public function flush(): bool
     {
-        return (bool) $this->execute(function () {
+        return (bool) $this->execute(function (): true {
             /** @var array<string> $masters */
             $masters = $this->redis->_masters();
             foreach ($masters as $master) {
@@ -228,28 +173,23 @@ class RedisCluster implements Adapter, Retryable
         });
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
         try {
-            return (bool) $this->execute(function () {
+            return (bool) $this->execute(function (): true {
                 foreach ($this->redis->_masters() as $master) {
                     $this->redis->ping($master);
                 }
 
                 return true;
             });
-        } catch (Exception $e) {
+        } catch (Exception) {
             return false;
         }
     }
 
     /**
      * Returning total number of keys
-     *
-     * @return int
      */
     public function getSize(): int
     {
@@ -269,25 +209,16 @@ class RedisCluster implements Adapter, Retryable
         return (int) $size;
     }
 
-    /**
-     * @return int
-     */
     public function getMaxRetries(): int
     {
         return $this->maxRetries;
     }
 
-    /**
-     * @return int
-     */
     public function getRetryDelay(): int
     {
         return $this->retryDelay;
     }
 
-    /**
-     * @return ?string
-     */
     public function getClusterName(): ?string
     {
         return $this->name;
@@ -304,8 +235,6 @@ class RedisCluster implements Adapter, Retryable
     /**
      * Execute a Redis command with retry logic
      *
-     * @param  callable  $callback
-     * @return mixed
      *
      * @throws \RedisClusterException
      */
@@ -332,7 +261,7 @@ class RedisCluster implements Adapter, Retryable
 
                 try {
                     $this->reconnect();
-                } catch (\RedisClusterException $e) {
+                } catch (\RedisClusterException) {
                     // Reconnect failed, will retry on next iteration
                 }
             }
@@ -347,9 +276,6 @@ class RedisCluster implements Adapter, Retryable
      *
      * RedisClusterException always returns error code 0 with no subclasses for different error types.
      * The only way to differentiate connection errors from command errors is by message matching.
-     *
-     * @param  Exception  $e
-     * @return bool
      */
     private function isConnectionError(Exception $e): bool
     {
@@ -371,13 +297,7 @@ class RedisCluster implements Adapter, Retryable
         ];
 
         $message = strtolower($e->getMessage());
-        foreach ($connectionErrors as $needle) {
-            if (str_contains($message, $needle)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($connectionErrors, fn(string $needle): bool => str_contains($message, $needle));
     }
 
     private function reconnect(): void
@@ -388,16 +308,12 @@ class RedisCluster implements Adapter, Retryable
             $this->timeout,
             $this->readTimeout,
             $this->persistent,
-            $this->auth
+            $this->auth,
         );
 
         $this->redis = $newRedis;
     }
 
-    /**
-     * @param  string|null  $key
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         return 'redis-cluster';

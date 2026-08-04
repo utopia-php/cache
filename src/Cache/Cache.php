@@ -10,8 +10,6 @@ use Utopia\Telemetry\Histogram;
 
 class Cache
 {
-    private Adapter $adapter;
-
     /**
      * @var bool If cache keys are case-sensitive
      */
@@ -19,21 +17,13 @@ class Cache
 
     protected Telemetry $telemetry;
 
-    /**
-     * @var Histogram|null
-     */
     protected ?Histogram $operationDuration = null;
 
-    /**
-     * @var Counter|null
-     */
     protected ?Counter $loadResults = null;
 
     /**
      * Set telemetry adapter. Instruments are created lazily on first use to
      * avoid emitting empty data point streams on every export interval.
-     *
-     * @param  Telemetry  $telemetry
      */
     public function setTelemetry(Telemetry $telemetry): void
     {
@@ -52,7 +42,7 @@ class Cache
             'cache.operation.duration',
             's',
             null,
-            ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]]
+            ['ExplicitBucketBoundaries' => [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1]],
         );
     }
 
@@ -67,12 +57,9 @@ class Cache
 
     /**
      * Initialize with a no-op telemetry adapter by default.
-     *
-     * @param  Adapter  $adapter
      */
-    public function __construct(Adapter $adapter)
+    public function __construct(private readonly Adapter $adapter)
     {
-        $this->adapter = $adapter;
         $this->telemetry = new NoTelemetry();
     }
 
@@ -80,7 +67,6 @@ class Cache
      * Toggle case sensitivity of keys inside cache
      *
      * @param  bool  $value if true, cache keys will be case-sensitive
-     * @return bool
      */
     public function setCaseSensitivity(bool $value): bool
     {
@@ -90,15 +76,13 @@ class Cache
     /**
      * Load cached data. return false in no valid cache.
      *
-     * @param  string  $key
      * @param  int  $ttl time in seconds
      * @param  string  $hash optional
-     * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
-        $key = $this->caseSensitive ? $key : \strtolower($key);
-        $hash = $this->caseSensitive ? $hash : \strtolower($hash);
+        $key = $this->caseSensitive ? $key : strtolower($key);
+        $hash = $this->caseSensitive ? $hash : strtolower($hash);
 
         $start = microtime(true);
         $result = $this->adapter->load($key, $ttl, $hash);
@@ -119,7 +103,6 @@ class Cache
     /**
      * Save data to cache. Returns data on success of false on failure.
      *
-     * @param  string  $key
      * @param  string|array<int|string, mixed>  $data
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
@@ -144,9 +127,6 @@ class Cache
     /**
      * Current generation token for $key (advances on each purge). Returns '0'
      * when the underlying adapter does not support leasing.
-     *
-     * @param  string  $key
-     * @return string
      */
     public function getGeneration(string $key): string
     {
@@ -154,7 +134,7 @@ class Cache
             return '0';
         }
 
-        $key = $this->caseSensitive ? $key : \strtolower($key);
+        $key = $this->caseSensitive ? $key : strtolower($key);
 
         return $this->adapter->getGeneration($key);
     }
@@ -165,16 +145,13 @@ class Cache
      * cache-aside read-after-write race. Falls back to an unconditional save when
      * the adapter does not support leasing.
      *
-     * @param  string  $key
      * @param  string|array<int|string, mixed>  $data
-     * @param  string  $hash
-     * @param  string  $generation
      * @return bool|string|array<int|string, mixed>
      */
     public function saveWithLease(string $key, mixed $data, string $hash, string $generation): bool|string|array
     {
-        $key = $this->caseSensitive ? $key : \strtolower($key);
-        $hash = $this->caseSensitive ? $hash : \strtolower($hash);
+        $key = $this->caseSensitive ? $key : strtolower($key);
+        $hash = $this->caseSensitive ? $hash : strtolower($hash);
         $start = microtime(true);
 
         try {
@@ -195,9 +172,7 @@ class Cache
     /**
      * Refresh a cache entry timestamp without replacing its data.
      *
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function touch(string $key, string $hash = ''): bool
     {
@@ -218,12 +193,11 @@ class Cache
     /**
      * Returns a list of keys.
      *
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
     {
-        $key = $this->caseSensitive ? $key : \strtolower($key);
+        $key = $this->caseSensitive ? $key : strtolower($key);
 
         $start = microtime(true);
         $result = $this->adapter->list($key);
@@ -239,14 +213,12 @@ class Cache
     /**
      * Removes data from cache. Returns true on success of false on failure.
      *
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function purge(string $key, string $hash = ''): bool
     {
-        $key = $this->caseSensitive ? $key : \strtolower($key);
-        $hash = $this->caseSensitive ? $hash : \strtolower($hash);
+        $key = $this->caseSensitive ? $key : strtolower($key);
+        $hash = $this->caseSensitive ? $hash : strtolower($hash);
 
         $start = microtime(true);
         $result = $this->adapter->purge($key, $hash);
@@ -261,8 +233,6 @@ class Cache
 
     /**
      * Removes all data from cache. Returns true on success of false on failure.
-     *
-     * @return bool
      */
     public function flush(): bool
     {
@@ -279,8 +249,6 @@ class Cache
 
     /**
      * Check Cache Connecitivity
-     *
-     * @return bool
      */
     public function ping(): bool
     {
@@ -289,8 +257,6 @@ class Cache
 
     /**
      * Get db size.
-     *
-     * @return int
      */
     public function getSize(): int
     {

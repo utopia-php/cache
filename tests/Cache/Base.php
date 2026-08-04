@@ -1,6 +1,8 @@
 <?php
 
-namespace Utopia\Tests\E2E;
+declare(strict_types=1);
+
+namespace Utopia\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Cache;
@@ -19,6 +21,51 @@ abstract class Base extends TestCase
     protected array $dataArray = ['test', 'data', 'string'];
 
     /**
+     * An empty scratch directory for the filesystem-backed adapters. It is
+     * cleared first, so a previous run cannot leak keys into this one.
+     */
+    protected static function scratch(string $name): string
+    {
+        $path = sys_get_temp_dir() . '/utopia-cache/' . $name;
+        self::deletePath($path);
+        mkdir($path, 0777, true);
+
+        return $path;
+    }
+
+    protected static function deletePath(string $path): void
+    {
+        if (! file_exists($path)) {
+            return;
+        }
+
+        if (is_file($path)) {
+            unlink($path);
+
+            return;
+        }
+
+        foreach (glob($path . '/*') ?: [] as $file) {
+            self::deletePath($file);
+        }
+
+        rmdir($path);
+    }
+
+    /**
+     * macOS and Windows fold filename case, so the filesystem-backed adapters
+     * cannot tell 'color' from 'COLOR' there however the cache is configured.
+     */
+    protected static function foldsFilenameCase(string $path): bool
+    {
+        touch($path . '/case-probe');
+        $folds = file_exists($path . '/CASE-PROBE');
+        unlink($path . '/case-probe');
+
+        return $folds;
+    }
+
+    /**
      * General tests
      * Can be overwritten in a specific adapter if required, such as None cache
      */
@@ -32,7 +79,7 @@ abstract class Base extends TestCase
         // test $data string
         $result = self::$cache->save($this->key, $this->data, $this->key);
 
-        $this->assertEquals($this->data, $result);
+        $this->assertSame($this->data, $result);
     }
 
     public function testNotEmptyCacheKey(): void
@@ -60,7 +107,7 @@ abstract class Base extends TestCase
     public function testCacheTouch(): void
     {
         $result = self::$cache->save('touch-key', 'touch data', 'touch-key');
-        $this->assertEquals('touch data', $result);
+        $this->assertSame('touch data', $result);
 
         sleep(3);
 
@@ -76,7 +123,7 @@ abstract class Base extends TestCase
     {
         // Ensure case in-sensitivity first (configured in adapter's setUp)
         $data = self::$cache->save('planet', 'Earth', 'planet');
-        $this->assertEquals('Earth', $data);
+        $this->assertSame('Earth', $data);
 
         $data = self::$cache->load('planet', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'planet');
         $this->assertEquals('Earth', $data);
@@ -92,12 +139,14 @@ abstract class Base extends TestCase
         $this->assertEquals(false, $data);
         $data = self::$cache->load('PLANET', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'PLANET');
         $this->assertEquals(false, $data);
+    }
 
-        // Test case sensitivity
+    public function testCaseSensitivity(): void
+    {
         self::$cache->setCaseSensitivity(true);
 
         $data = self::$cache->save('color', 'pink', 'color');
-        $this->assertEquals('pink', $data);
+        $this->assertSame('pink', $data);
         $data = self::$cache->load('color', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'color');
         $this->assertEquals('pink', $data);
         $data = self::$cache->load('COLOR', 60 * 60 * 24 * 30 * 3 /* 3 months */, 'COLOR');
@@ -105,6 +154,8 @@ abstract class Base extends TestCase
 
         $result = self::$cache->purge('color');
         $this->assertEquals(true, $result);
+
+        self::$cache->setCaseSensitivity(false);
     }
 
     public function testPing(): void

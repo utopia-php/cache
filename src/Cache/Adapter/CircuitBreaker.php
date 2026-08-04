@@ -12,23 +12,20 @@ class CircuitBreaker implements Adapter, Feature\Leasable, Feature\Telemetry
     public function __construct(
         private readonly Adapter $adapter,
         private readonly UtopiaCircuitBreaker $breaker,
-    ) {
-    }
+    ) {}
 
     /**
      * Forward method calls to the internal adapter through the circuit breaker.
      *
      * Required because __call() can't be used to implement abstract methods.
      *
-     * @param  string  $method
      * @param  array<mixed>  $args
-     * @return mixed
      */
     public function delegate(string $method, array $args, mixed $fallback): mixed
     {
         return $this->breaker->call(
-            open: fn (): mixed => $fallback,
-            close: fn (): mixed => $this->adapter->{$method}(...$args),
+            open: fn(): mixed => $fallback,
+            close: fn(): mixed => $this->adapter->{$method}(...$args),
         );
     }
 

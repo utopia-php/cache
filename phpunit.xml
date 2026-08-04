@@ -1,56 +1,20 @@
-<phpunit backupGlobals="false"
-         backupStaticAttributes="false"
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/12.0/phpunit.xsd"
          bootstrap="vendor/autoload.php"
          colors="true"
-         convertErrorsToExceptions="true"
-         convertNoticesToExceptions="true"
-         convertWarningsToExceptions="true"
-         processIsolation="false"
-         stopOnFailure="false"
-        >
+         cacheDirectory=".phpunit.cache">
     <testsuites>
         <testsuite name="unit">
-            <directory>./tests/Cache/Unit</directory>
+            <directory>tests/Cache/Unit</directory>
         </testsuite>
-        <testsuite name="memory">
-            <file>./tests/Cache/E2E/MemoryTest.php</file>
-        </testsuite>
-        <testsuite name="none">
-            <file>./tests/Cache/E2E/NoneTest.php</file>
-        </testsuite>
-        <testsuite name="filesystem">
-            <file>./tests/Cache/E2E/FilesystemTest.php</file>
-        </testsuite>
-        <testsuite name="pool">
-            <file>./tests/Cache/E2E/PoolTest.php</file>
-        </testsuite>
-        <testsuite name="circuitbreaker">
-            <file>./tests/Cache/E2E/CircuitBreakerTest.php</file>
-        </testsuite>
-        <testsuite name="telemetry">
-            <file>./tests/Cache/E2E/TelemetryTest.php</file>
-        </testsuite>
-        <testsuite name="memcached">
-            <file>./tests/Cache/E2E/MemcachedTest.php</file>
-        </testsuite>
-        <testsuite name="hazelcast">
-            <file>./tests/Cache/E2E/HazelcastTest.php</file>
-        </testsuite>
-        <testsuite name="sharding">
-            <file>./tests/Cache/E2E/ShardingTest.php</file>
-        </testsuite>
-        <testsuite name="redis">
-            <directory>./tests/Cache/E2E/Redis</directory>
-            <exclude>./tests/Cache/E2E/Redis/RedisClusterTest.php</exclude>
-            <exclude>./tests/Cache/E2E/Redis/MultiplexingTest.php</exclude>
-            <exclude>./tests/Cache/E2E/Redis/LeasableMultiplexingTest.php</exclude>
-        </testsuite>
-        <testsuite name="redis-cluster">
-            <file>./tests/Cache/E2E/Redis/RedisClusterTest.php</file>
-        </testsuite>
-        <testsuite name="redis-multiplexing">
-            <file>./tests/Cache/E2E/Redis/MultiplexingTest.php</file>
-            <file>./tests/Cache/E2E/Redis/LeasableMultiplexingTest.php</file>
+        <testsuite name="e2e">
+            <directory>tests/Cache/E2E</directory>
         </testsuite>
     </testsuites>
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
 </phpunit>

@@ -141,11 +141,11 @@ abstract class Leasable implements \Utopia\Cache\Feature\Leasable
 
     public function saveWithLease(string $key, array|string $data, string $hash, string $generation): bool|string|array
     {
-        if (empty($key) || empty($data)) {
+        if ($key === '' || $key === '0' || empty($data)) {
             return false;
         }
 
-        if (empty($hash)) {
+        if ($hash === '' || $hash === '0') {
             $hash = $key;
         }
 
@@ -160,14 +160,14 @@ abstract class Leasable implements \Utopia\Cache\Feature\Leasable
             ]);
 
             return $stored ? $data : false;
-        } catch (Throwable $th) {
+        } catch (Throwable) {
             return false;
         }
     }
 
     public function purge(string $key, string $hash = ''): bool
     {
-        if (! empty($hash)) {
+        if ($hash !== '' && $hash !== '0') {
             if ($this->isReserved($hash)) {
                 return false;
             }
@@ -211,7 +211,7 @@ abstract class Leasable implements \Utopia\Cache\Feature\Leasable
     /** SHA1 digest Redis identifies a cached script by — the digest of its body. */
     private function shaFor(string $script): string
     {
-        return self::$scriptSha[$script] ??= \sha1($script);
+        return self::$scriptSha[$script] ??= sha1($script);
     }
 
     /**

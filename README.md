@@ -1,6 +1,8 @@
 # Utopia Cache
 
-[![Build Status](https://travis-ci.org/utopia-php/cache.svg?branch=master)](https://travis-ci.com/utopia-php/cache)
+> [!IMPORTANT]
+> This repository is a read-only mirror of the [utopia-php monorepo](https://github.com/utopia-php/monorepo). Development happens in [`packages/cache`](https://github.com/utopia-php/monorepo/tree/main/packages/cache) — please open issues and pull requests there.
+
 ![Total Downloads](https://img.shields.io/packagist/dt/utopia-php/cache.svg)
 [![Discord](https://img.shields.io/discord/564160730845151244?label=discord)](https://appwrite.io/discord)
 
@@ -8,9 +10,10 @@ Utopia framework cache library is simple and lite library for managing applicati
 
 Although this library is part of the [Utopia Framework](https://github.com/utopia-php/framework) project it is dependency free and can be used as standalone with any other PHP project or framework.
 
-## Getting Started
+## Getting started
 
-Install using composer:
+Install using Composer:
+
 ```bash
 composer require utopia-php/cache
 ```
@@ -39,24 +42,41 @@ if(!$data) {
 echo $data;
 ```
 
-## Contribute
+## Adapters
 
-Currently we support only a Filesystem adapter for usage as a cache storage, send a pull request to add redis, memcached or any other storage adapter you might need to use with this library.
+| Adapter | Notes |
+| --- | --- |
+| `Filesystem` | Files on disk, with optional streaming reads. |
+| `Memory` | In-process array, useful in tests. |
+| `None` | Stores nothing, for turning caching off. |
+| `Redis` | phpredis, with reconnect and leases. |
+| `Redis\Multiplexing` | Many Swoole coroutines over one Redis connection — see [the multiplexing guide](docs/multiplexing.md). |
+| `RedisCluster` | phpredis against a Redis cluster. |
+| `Memcached` | Memcached over the binary protocol. |
+| `Hazelcast` | Hazelcast over its Memcached protocol. |
+| `Sharding` | Spreads keys across several adapters. |
+| `Pool` | Checks an adapter out of a `utopia-php/pools` pool per call. |
+| `CircuitBreaker` | Wraps an adapter so a failing cache stops being called. |
 
-## System Requirements
+## System requirements
 
-Utopia Framework requires PHP 8.0 or later. We recommend using the latest PHP version whenever possible.
+The library requires PHP 8.4 or later. The Redis, Memcached and Hazelcast adapters need the matching extension — see the `suggest` block in `composer.json`.
 
 ## Tests
 
-To run all unit tests, use the following Docker command:
+The unit tier needs nothing running:
 
-`docker compose exec tests vendor/bin/phpunit --configuration phpunit.xml tests`
+```bash
+composer test
+```
 
-To run static code analysis, use the following Psalm command:
+The end-to-end tier runs on the host against this package's services:
 
-`docker-compose exec php8 vendor/bin/psalm --show-info=true`
-
+```bash
+docker compose up -d --wait
+composer test:e2e
+docker compose down -v
+```
 
 ## Copyright and license
 

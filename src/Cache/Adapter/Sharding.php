@@ -12,9 +12,6 @@ class Sharding implements Adapter, Leasable
      */
     protected array $adapters;
 
-    /**
-     * @var int
-     */
     protected int $count = 0;
 
     /**
@@ -37,7 +34,7 @@ class Sharding implements Adapter, Leasable
      */
     public function __construct(array $adapters)
     {
-        if (empty($adapters)) {
+        if ($adapters === []) {
             throw new \Exception('No adapters provided');
         }
 
@@ -46,10 +43,8 @@ class Sharding implements Adapter, Leasable
     }
 
     /**
-     * @param  string  $key
      * @param  int  $ttl time in seconds
      * @param  string  $hash optional
-     * @return mixed
      */
     public function load(string $key, int $ttl, string $hash = ''): mixed
     {
@@ -57,7 +52,6 @@ class Sharding implements Adapter, Leasable
     }
 
     /**
-     * @param  string  $key
      * @param  array<int|string, mixed>|string  $data
      * @param  string  $hash optional
      * @return bool|string|array<int|string, mixed>
@@ -84,9 +78,7 @@ class Sharding implements Adapter, Leasable
     }
 
     /**
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function touch(string $key, string $hash = ''): bool
     {
@@ -94,7 +86,6 @@ class Sharding implements Adapter, Leasable
     }
 
     /**
-     * @param  string  $key
      * @return string[]
      */
     public function list(string $key): array
@@ -103,46 +94,30 @@ class Sharding implements Adapter, Leasable
     }
 
     /**
-     * @param  string  $key
      * @param  string  $hash optional
-     * @return bool
      */
     public function purge(string $key, string $hash = ''): bool
     {
         return $this->getAdapter($key)->purge($key, $hash);
     }
 
-    /**
-     * @return bool
-     */
     public function flush(): bool
     {
         $result = true;
         foreach ($this->adapters as $value) {
-            $result = ($value->flush()) ? $result : false;
+            $result = $value->flush() && $result;
         }
 
         return $result;
     }
 
-    /**
-     * @return bool
-     */
     public function ping(): bool
     {
-        foreach ($this->adapters as $value) {
-            if (! ($value->ping())) {
-                return false;
-            }
-        }
-
-        return true;
+        return array_all($this->adapters, fn(\Utopia\Cache\Adapter $value): bool => $value->ping());
     }
 
     /**
      * Returning total number of keys of all adapters
-     *
-     * @return int
      */
     public function getSize(): int
     {
@@ -154,9 +129,6 @@ class Sharding implements Adapter, Leasable
         return $size;
     }
 
-    /**
-     * @return string
-     */
     public function getName(?string $key = null): string
     {
         if ($key === null) {
@@ -166,13 +138,9 @@ class Sharding implements Adapter, Leasable
         return $this->getAdapter($key)->getName();
     }
 
-    /**
-     * @param  string  $key
-     * @return Adapter
-     */
     protected function getAdapter(string $key): Adapter
     {
-        $hash = \crc32($key);
+        $hash = crc32($key);
         $index = $hash % $this->count;
 
         return $this->adapters[$index];

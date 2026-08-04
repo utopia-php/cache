@@ -1,11 +1,13 @@
 <?php
 
-namespace Utopia\Tests\Unit\Redis;
+declare(strict_types=1);
+
+namespace Utopia\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use Utopia\Cache\Adapter\Redis\NoScript;
 
-class NoScriptTest extends TestCase
+final class RedisNoScriptTest extends TestCase
 {
     public function testMatchesWhenNoScriptIsTheLeadingCodeToken(): void
     {
@@ -36,6 +38,6 @@ class NoScriptTest extends TestCase
         $signal = NoScript::from('NOSCRIPT No matching script. Please use EVAL.');
 
         $this->assertSame('NOSCRIPT No matching script. Please use EVAL.', $signal->getMessage());
-        $this->assertNull($signal->getPrevious());
+        $this->assertNotInstanceOf(\Throwable::class, $signal->getPrevious());
     }
 }

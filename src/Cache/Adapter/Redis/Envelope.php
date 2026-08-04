@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Utopia\Cache\Adapter\Redis;
 
 use JsonException;
@@ -33,7 +35,7 @@ final class Envelope
     public static function decode(string $value, int $ttl, int $now): mixed
     {
         $cache = json_decode($value, true);
-        if (! is_array($cache) || ! isset($cache['time'], $cache['data']) || ! is_int($cache['time'])) {
+        if (! \is_array($cache) || ! isset($cache['time'], $cache['data']) || ! \is_int($cache['time'])) {
             return false;
         }
 
@@ -56,7 +58,7 @@ final class Envelope
             return false;
         }
 
-        if (! is_array($cache) || ! array_key_exists('data', $cache)) {
+        if (! \is_array($cache) || ! \array_key_exists('data', $cache)) {
             return false;
         }
 

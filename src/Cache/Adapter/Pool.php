@@ -9,22 +9,15 @@ use Utopia\Pools\Pool as UtopiaPool;
 class Pool implements Adapter, Leasable
 {
     /**
-     * @var UtopiaPool<covariant Adapter>
-     */
-    protected UtopiaPool $pool;
-
-    /**
      * @param  UtopiaPool<covariant Adapter>  $pool The pool to use for connections. Must contain instances of Adapter.
      *
      * @throws \Exception
      */
-    public function __construct(UtopiaPool $pool)
+    public function __construct(protected UtopiaPool $pool)
     {
-        $this->pool = $pool;
-
-        $this->pool->use(function (mixed $resource) {
+        $this->pool->use(function (mixed $resource): void {
             if (! ($resource instanceof Adapter)) {
-                throw new \Exception('Pool must contain instances of '.Adapter::class);
+                throw new \Exception('Pool must contain instances of ' . Adapter::class);
             }
         });
     }
@@ -34,15 +27,11 @@ class Pool implements Adapter, Leasable
      *
      * Required because __call() can't be used to implement abstract methods.
      *
-     * @param  string  $method
      * @param  array<mixed>  $args
-     * @return mixed
      */
     public function delegate(string $method, array $args): mixed
     {
-        return $this->pool->use(function (Adapter $adapter) use ($method, $args) {
-            return $adapter->{$method}(...$args);
-        });
+        return $this->pool->use(fn(Adapter $adapter) => $adapter->{$method}(...$args));
     }
 
     public function load(string $key, int $ttl, string $hash = ''): mixed
@@ -62,9 +51,7 @@ class Pool implements Adapter, Leasable
 
     public function getGeneration(string $key): string
     {
-        return $this->pool->use(function (Adapter $adapter) use ($key): string {
-            return $adapter instanceof Leasable ? $adapter->getGeneration($key) : '0';
-        });
+        return $this->pool->use(fn(Adapter $adapter): string => $adapter instanceof Leasable ? $adapter->getGeneration($key) : '0');
     }
 
     public function saveWithLease(string $key, array|string $data, string $hash, string $generation): bool|string|array
@@ -72,11 +59,9 @@ class Pool implements Adapter, Leasable
         /**
          * @var bool|string|array<mixed> $result
          */
-        $result = $this->pool->use(function (Adapter $adapter) use ($key, $data, $hash, $generation) {
-            return $adapter instanceof Leasable
-                ? $adapter->saveWithLease($key, $data, $hash, $generation)
-                : $adapter->save($key, $data, $hash);
-        });
+        $result = $this->pool->use(fn(Adapter $adapter): bool|string|array => $adapter instanceof Leasable
+            ? $adapter->saveWithLease($key, $data, $hash, $generation)
+            : $adapter->save($key, $data, $hash));
 
         return $result;
     }
