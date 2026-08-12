@@ -10,10 +10,13 @@ use RedisClusterException;
 use Utopia\Cache\Adapter\RedisCluster as RedisAdapter;
 use Utopia\Cache\Cache;
 use Utopia\Tests\Base;
+use Utopia\Tests\Scope\EmptyObjectFidelity;
 use Utopia\Tests\Services;
 
 final class RedisClusterTest extends Base
 {
+    use EmptyObjectFidelity;
+
     private const float TIMEOUT = 1.5;
 
     protected static RedisCluster $redis;

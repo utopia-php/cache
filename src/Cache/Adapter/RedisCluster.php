@@ -57,7 +57,7 @@ class RedisCluster implements Adapter, Retryable
             return false;
         }
 
-        $cache = json_decode($redis_string, true);
+        $cache = Json::decode($redis_string);
 
         // A purged key keeps its field until re-cached, holding a value that
         // is not an envelope.
@@ -123,7 +123,7 @@ class RedisCluster implements Adapter, Retryable
 
         try {
             /** @var array{time: int, data: mixed} $cache */
-            $cache = json_decode($redis_string, true, flags: JSON_THROW_ON_ERROR);
+            $cache = Json::decode($redis_string, JSON_THROW_ON_ERROR);
             $cache['time'] = time();
             $value = json_encode($cache, flags: JSON_THROW_ON_ERROR);
         } catch (Throwable) {

@@ -181,6 +181,32 @@ final class MultiplexingTest extends TestCase
         });
     }
 
+    public function testEmptyObjectFidelity(): void
+    {
+        $this->runCo(function (): void {
+            $cache = $this->makeCache();
+            $data = [
+                'empty' => new \stdClass(),
+                'nested' => ['empty' => new \stdClass()],
+                'list' => [new \stdClass(), ['x' => 1]],
+                'emptyArray' => [],
+            ];
+
+            $this->assertSame($data, $cache->save('empty-object-fidelity', $data, 'empty-object-fidelity'));
+            $this->assertSame(
+                '{"empty":{},"nested":{"empty":{}},"list":[{},{"x":1}],"emptyArray":[]}',
+                json_encode($cache->load('empty-object-fidelity', 60, 'empty-object-fidelity')),
+            );
+            $this->assertTrue($cache->touch('empty-object-fidelity', 'empty-object-fidelity'));
+            $this->assertSame(
+                '{"empty":{},"nested":{"empty":{}},"list":[{},{"x":1}],"emptyArray":[]}',
+                json_encode($cache->load('empty-object-fidelity', 60, 'empty-object-fidelity')),
+            );
+
+            $cache->purge('empty-object-fidelity');
+        });
+    }
+
     public function testLargeJsonPayload(): void
     {
         $this->runCo(function (): void {

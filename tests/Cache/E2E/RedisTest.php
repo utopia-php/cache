@@ -10,10 +10,13 @@ use RedisException;
 use Utopia\Cache\Adapter\Redis as RedisAdapter;
 use Utopia\Cache\Cache;
 use Utopia\Tests\Base;
+use Utopia\Tests\Scope\EmptyObjectFidelity;
 use Utopia\Tests\Services;
 
 final class RedisTest extends Base
 {
+    use EmptyObjectFidelity;
+
     public static function setUpBeforeClass(): void
     {
         $redis = new Redis();

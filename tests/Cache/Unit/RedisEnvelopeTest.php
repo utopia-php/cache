@@ -76,6 +76,29 @@ final class RedisEnvelopeTest extends TestCase
         $this->assertSame($data, Envelope::decode($encoded, 60, 130));
     }
 
+    public function testDecodePreservesEmptyObjects(): void
+    {
+        $data = [
+            'empty' => new \stdClass(),
+            'nested' => ['empty' => new \stdClass()],
+            'list' => [new \stdClass(), ['x' => 1]],
+            'emptyArray' => [],
+        ];
+        $encoded = Envelope::encode($data, 100);
+
+        $this->assertSame(
+            '{"empty":{},"nested":{"empty":{}},"list":[{},{"x":1}],"emptyArray":[]}',
+            json_encode(Envelope::decode($encoded, 60, 130)),
+        );
+
+        $touched = Envelope::touch($encoded, 120);
+        $this->assertIsString($touched);
+        $this->assertSame(
+            '{"empty":{},"nested":{"empty":{}},"list":[{},{"x":1}],"emptyArray":[]}',
+            json_encode(Envelope::decode($touched, 60, 130)),
+        );
+    }
+
     public function testTouchRewritesTime(): void
     {
         $encoded = Envelope::encode('value', 100);

@@ -9,10 +9,13 @@ use MemcachedException;
 use Utopia\Cache\Adapter\Hazelcast as HazelcastAdapter;
 use Utopia\Cache\Cache;
 use Utopia\Tests\Base;
+use Utopia\Tests\Scope\EmptyObjectFidelity;
 use Utopia\Tests\Services;
 
 final class HazelcastTest extends Base
 {
+    use EmptyObjectFidelity;
+
     public static function setUpBeforeClass(): void
     {
         $memcached = new Memcached();

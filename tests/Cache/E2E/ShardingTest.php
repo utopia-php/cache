@@ -10,10 +10,13 @@ use Utopia\Cache\Adapter\Redis as RedisAdapter;
 use Utopia\Cache\Adapter\Sharding;
 use Utopia\Cache\Cache;
 use Utopia\Tests\Base;
+use Utopia\Tests\Scope\EmptyObjectFidelity;
 use Utopia\Tests\Services;
 
 final class ShardingTest extends Base
 {
+    use EmptyObjectFidelity;
+
     public static function setUpBeforeClass(): void
     {
         $shards = [];

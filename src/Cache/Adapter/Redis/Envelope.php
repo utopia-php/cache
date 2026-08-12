@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Utopia\Cache\Adapter\Redis;
 
 use JsonException;
+use Utopia\Cache\Adapter\Json;
 
 /**
  * Cache envelope codec shared by the Redis-family adapters.
@@ -34,7 +35,7 @@ final class Envelope
      */
     public static function decode(string $value, int $ttl, int $now): mixed
     {
-        $cache = json_decode($value, true);
+        $cache = Json::decode($value);
         if (! \is_array($cache) || ! isset($cache['time'], $cache['data']) || ! \is_int($cache['time'])) {
             return false;
         }
@@ -53,7 +54,7 @@ final class Envelope
     public static function touch(string $value, int $newTime): string|false
     {
         try {
-            $cache = json_decode($value, true, flags: JSON_THROW_ON_ERROR);
+            $cache = Json::decode($value, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
             return false;
         }

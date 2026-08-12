@@ -42,7 +42,7 @@ class Hazelcast implements Adapter, Retryable
     {
         $cache = $this->execute(fn(): mixed => $this->memcached->get($key));
         if (\is_string($cache)) {
-            $cache = json_decode($cache, true);
+            $cache = Json::decode($cache);
         }
 
         if (! \is_array($cache)) {
@@ -82,7 +82,7 @@ class Hazelcast implements Adapter, Retryable
     {
         $cache = $this->execute(fn(): mixed => $this->memcached->get($key));
         if (\is_string($cache)) {
-            $cache = json_decode($cache, true);
+            $cache = Json::decode($cache);
         }
 
         if (! \is_array($cache)) {
