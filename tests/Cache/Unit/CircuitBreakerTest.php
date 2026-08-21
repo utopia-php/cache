@@ -47,7 +47,7 @@ final class CircuitBreakerTest extends TestCase
     public function testBreakerShortCircuitsAfterFailure(): void
     {
         $adapter = new CountingFailingAdapter();
-        $cache = new CircuitBreaker($adapter, new UtopiaCircuitBreaker(threshold: 1));
+        $cache = new CircuitBreaker($adapter, new UtopiaCircuitBreaker(minimumThroughput: 1));
 
         $this->assertFalse($cache->load('key', 60));
         $this->assertFalse($cache->load('key', 60));
@@ -103,7 +103,7 @@ final class CircuitBreakerTest extends TestCase
 
     private function failingCache(): CircuitBreaker
     {
-        return new CircuitBreaker(new FailingAdapter(), new UtopiaCircuitBreaker(threshold: 1));
+        return new CircuitBreaker(new FailingAdapter(), new UtopiaCircuitBreaker(minimumThroughput: 1));
     }
 }
 
