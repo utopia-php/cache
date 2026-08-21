@@ -44,28 +44,58 @@ Construct once at worker start, share across requests, `disconnect()` on
 
 ```php
 new Multiplexing(
-    host:        'redis',
-    port:        6379,
-    timeout:     1.0,    // connect timeout (s)
-    readTimeout: 0.25,   // per-command response timeout (s)
-    auth:        null,   // string password, [user, password], or null
-    dbIndex:     0,
+    host:            'redis',
+    port:            6379,
+    timeout:         1.0,    // connect timeout (s)
+    readTimeout:     0.25,   // per-call response deadline (s)
+    auth:            null,   // string password, [user, password], or null
+    dbIndex:         0,
+    livenessTimeout: 5.0,    // reader silence before the connection is dead (s)
 );
 ```
 
-`readTimeout` defaults to **250 ms**. A timeout fails the command *and tears
-down the connection* — every other in-flight command on it also fails with
-`ConnectionException`, and the next command reconnects. This is intentional:
-caches should fail fast and let callers fall through to the source of truth.
-Per-request resync would add significant complexity for little gain.
+The two timeouts answer different questions, and the difference matters on a
+shared connection.
+
+`readTimeout` defaults to **250 ms** and is a deadline for *one call*: how long
+this caller waits for its own reply before giving up with a `TimeoutException`.
+Caches should fail fast and let callers fall through to the source of truth. It
+expires that call only — the connection is left alone, because a caller running
+out of patience is not evidence that the socket is broken.
+
+The abandoned call keeps its slot on the pending queue. That queue's order is
+what pairs replies with callers, so dropping the slot would hand this call's
+reply to whoever asked next, and every reply after it to the wrong caller.
+Leaving it means the reader dequeues it in order and pushes the late reply into
+a channel nobody is reading. No resync is needed, and no reply is misrouted.
+
+`livenessTimeout` defaults to **5 s** and is a verdict on the *connection*: if
+the reader has made no progress at all while callers are still waiting, the
+socket is treated as dead. It is torn down, every pending caller fails with
+`IdleConnectionException`, and the next call rebuilds it. This is what catches a
+connection whose packets are dropped rather than refused, where no close ever
+arrives — the reader blocks in `recv()` with no deadline of its own, so without
+this check its callers would wait forever. Keep it well above `readTimeout`: a server that is merely busy looks
+exactly like one that is gone until enough time has passed.
 
 ## Errors
 
 - `\RedisException` — Redis-side error (`WRONGTYPE`, `NOAUTH`, …). Connection
   is fine; the command was wrong. Not retried.
 - `Utopia\Cache\Adapter\Redis\ConnectionException` — transport failure
-  (timeout, socket closed, send failed). Connection has been discarded.
-  Retried if `setMaxRetries(n)` was called.
+  (socket closed, send failed, frame failed to parse). Connection has been
+  discarded and the call is retried once on a rebuilt connection.
+- `Utopia\Cache\Adapter\Redis\TimeoutException` — this call's `readTimeout`
+  expired. The connection is still in use by everyone else. Not retried:
+  resending would put a second copy of the command on a server that is already
+  answering too slowly.
+- `Utopia\Cache\Adapter\Redis\IdleConnectionException` — the reader went
+  quiet for `livenessTimeout` with replies outstanding, so the connection was
+  declared dead and discarded. Not retried: a fresh socket to a server that has
+  answered nothing for seconds will not answer this attempt either.
+
+Both of the latter extend `ConnectionException`, so existing `catch` sites keep
+working. Match them ahead of the parent to tell "slow" apart from "broken".
 
 ## Telemetry
 

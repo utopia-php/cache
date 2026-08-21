@@ -39,8 +39,20 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
 
     /**
      * @param  float  $timeout connect timeout in seconds
-     * @param  float  $readTimeout read timeout in seconds — caches should
-     *                             fail fast, default 0.25s
+     * @param  float  $readTimeout per-call read deadline in seconds — how long
+     *                             one caller waits for its own reply before
+     *                             giving up. Caches should fail fast, default
+     *                             0.25s. Expiring fails that call only; it is
+     *                             not a verdict on the connection.
+     * @param  float  $livenessTimeout how long the reader may make no progress
+     *                                 at all, with callers still waiting, before
+     *                                 the connection is declared dead and torn
+     *                                 down. This is the verdict that fails every
+     *                                 pending caller, so it wants to be far
+     *                                 larger than $readTimeout: a socket that has
+     *                                 gone silent is indistinguishable from a
+     *                                 server that is merely busy until enough
+     *                                 time has passed. Default 5s.
      * @param  string|array<string>|null  $auth password or [username, password]
      */
     public function __construct(
@@ -50,12 +62,16 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
         private readonly float $readTimeout = 0.25,
         private readonly string|array|null $auth = null,
         private readonly int $dbIndex = 0,
+        private readonly float $livenessTimeout = 5.0,
     ) {
         if ($this->timeout <= 0) {
             throw new \InvalidArgumentException('timeout must be greater than 0');
         }
         if ($this->readTimeout <= 0) {
             throw new \InvalidArgumentException('readTimeout must be greater than 0');
+        }
+        if ($this->livenessTimeout < $this->readTimeout) {
+            throw new \InvalidArgumentException('livenessTimeout must be greater than or equal to readTimeout');
         }
         $this->sendLock = new Lock();
         $this->setTelemetry(new NoTelemetry());
@@ -227,9 +243,13 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
 
     /**
      * Send a Redis command and block the calling coroutine until the response arrives.
-     * On a connection error, transparently reconnects once and retries — multiplexed
-     * connections drop all in-flight callers when they fail, so the only sensible
-     * recovery is to rebuild the connection before failing the call.
+     * On a connection error, transparently reconnects once and retries — a failed
+     * connection drops every in-flight caller, so the only sensible recovery is to
+     * rebuild it before failing the call.
+     *
+     * An expired read deadline is not retried. It means the server was slow, and the
+     * connection is still good; reconnecting and resending would put a second copy of
+     * the same command on an already-struggling server, once per caller.
      *
      * @param  array<int|string>  $args
      */
@@ -237,6 +257,13 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
     {
         try {
             return $this->dispatch($args);
+        } catch (TimeoutException|IdleConnectionException $unretryable) {
+            // Caught ahead of their parent to opt out of the retry below. Neither
+            // is fixed by resending: the server is slow, or it has answered
+            // nothing for seconds and the connection has just been replaced.
+            // Resending would add a second copy of this command, per caller, to a
+            // server that is already failing to keep up.
+            throw $unretryable;
         } catch (ConnectionException) {
             $this->ensureConnected();
 
@@ -300,10 +327,38 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
     {
         $result = $response->pop($this->readTimeout);
         if ($result === false && $response->errCode !== 0) {
-            $error = new ConnectionException('Timed out waiting for Redis response');
-            $this->teardownIfCurrent($context, $error);
+            $idleFor = $context->idleFor();
 
-            throw $error;
+            // The reader has gone quiet for longer than a busy server explains,
+            // and callers are still queued: treat the connection as dead so the
+            // next caller rebuilds it. Without this a socket that never returns
+            // from recv() — blackholed rather than reset — would strand every
+            // caller forever, because the reader has no deadline of its own.
+            if ($idleFor >= $this->livenessTimeout) {
+                $error = new IdleConnectionException(\sprintf(
+                    'Redis connection idle for %.3fs with responses outstanding',
+                    $idleFor,
+                ));
+                $this->teardownIfCurrent($context, $error);
+
+                throw $error;
+            }
+
+            // Otherwise the server is just slower than this caller was willing to
+            // wait. Fail this call and leave the connection alone.
+            //
+            // The response Channel deliberately stays on $pending. The FIFO
+            // invariant is that the queue's order matches the order of frames on
+            // the wire, so removing this slot would make the reader hand this
+            // call's reply to the next caller — and every reply after it to the
+            // wrong caller. Leaving it means the reader dequeues it in order and
+            // pushes the late reply into a Channel nobody is reading; capacity is
+            // 1, so the push cannot block, and the Channel is then collected. The
+            // pending-depth counter is decremented by the reader as usual.
+            throw new TimeoutException(\sprintf(
+                'Timed out waiting for Redis response after %.3fs',
+                $this->readTimeout,
+            ));
         }
 
         return Client::unwrap($result);
@@ -445,6 +500,11 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
                 $waiting = $context->pending->isEmpty() ? null : $context->pending->dequeue();
                 if ($waiting instanceof Channel) {
                     $this->getPendingDepth()->add(-1);
+                    $context->recordProgress();
+                    // May be a reply whose caller already gave up on its own
+                    // deadline. The slot is still dequeued in order so the frames
+                    // behind it stay aligned, and the push cannot block on a
+                    // capacity-1 Channel, so an abandoned reply is simply dropped.
                     $waiting->push($value);
                 } else {
                     // Should never happen given the send-lock invariant. Log
@@ -458,6 +518,12 @@ class Multiplexing extends Leasable implements Adapter, TelemetryFeature
             }
 
             $chunk = $context->client->recv(-1);
+            if (\is_string($chunk) && $chunk !== '') {
+                // Bytes arriving is progress even before they complete a frame,
+                // so a large reply streaming in slowly is not mistaken for a dead
+                // connection.
+                $context->recordProgress();
+            }
             if ($chunk === false || $chunk === '') {
                 $this->teardownIfCurrent($context, new ConnectionException('Redis connection closed'));
 
