@@ -29,7 +29,7 @@
     "require": {
         "php": ">=8.4",
         "ext-json": "*",
-        "utopia-php/circuit-breaker": "^0.3",
+        "utopia-php/circuit-breaker": "^0.4",
         "utopia-php/pools": "^2.0",
         "utopia-php/telemetry": "^0.4"
     },
