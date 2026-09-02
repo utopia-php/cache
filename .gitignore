@@ -2,3 +2,4 @@
 /.idea/
 .phpunit.cache
 .DS_Store
+composer.lock
