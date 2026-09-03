@@ -60,8 +60,6 @@ final class MultiplexingDeadlineTest extends TestCase
         );
     }
 
-    private const string CONTAINER = 'cache-redis';
-
     private bool $paused = false;
 
     private ?\Redis $probe = null;
@@ -73,7 +71,7 @@ final class MultiplexingDeadlineTest extends TestCase
      */
     private function pauseServer(): void
     {
-        Services::docker('pause', self::CONTAINER);
+        Services::compose('pause', 'redis');
         $this->paused = true;
     }
 
@@ -83,7 +81,7 @@ final class MultiplexingDeadlineTest extends TestCase
             return;
         }
 
-        Services::docker('unpause', self::CONTAINER);
+        Services::compose('unpause', 'redis');
         $this->paused = false;
     }
 

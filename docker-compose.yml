@@ -10,25 +10,21 @@ x-redis: &redis
 services:
   redis:
     <<: *redis
-    container_name: cache-redis
     ports:
       - "16381:6379"
 
   shard-a:
     <<: *redis
-    container_name: cache-shard-a
     ports:
       - "16382:6379"
 
   shard-b:
     <<: *redis
-    container_name: cache-shard-b
     ports:
       - "16383:6379"
 
   shard-c:
     <<: *redis
-    container_name: cache-shard-c
     ports:
       - "16384:6379"
 
@@ -36,7 +32,6 @@ services:
   # ports have to match the ones inside the container.
   redis-cluster:
     image: grokzen/redis-cluster:7.0.10
-    container_name: cache-redis-cluster
     environment:
       IP: 127.0.0.1
       INITIAL_PORT: 17000
@@ -50,7 +45,6 @@ services:
 
   memcached:
     image: memcached:1.6.17-alpine
-    container_name: cache-memcached
     ports:
       - "11212:11211"
     healthcheck:
@@ -61,7 +55,6 @@ services:
 
   hazelcast:
     image: hazelcast/hazelcast:5.3.7
-    container_name: cache-hazelcast
     environment:
       HZ_NETWORK_MEMCACHEPROTOCOL_ENABLED: "true"
     ports:
