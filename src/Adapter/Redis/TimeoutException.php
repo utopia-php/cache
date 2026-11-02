@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Utopia\Cache\Adapter\Redis;
 
 /**
- * Thrown by Multiplexing when a caller's own read deadline expires before its
- * response arrived.
+ * Thrown when a read deadline expires before the response arrived: a caller's
+ * own deadline in Multiplexing, or the connect budget during a Client handshake.
  *
  * Distinct from its parent on purpose. A {@see ConnectionException} is a verdict
  * about the *connection* — the socket is gone, a frame failed to parse, a send

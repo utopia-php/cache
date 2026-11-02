@@ -53,7 +53,9 @@ class Multiplexing extends Versioned implements Adapter, Batchable, TelemetryFea
     private ?Counter $writeFailures = null;
 
     /**
-     * @param  float  $timeout connect timeout in seconds
+     * @param  float  $timeout budget for establishing a connection, in seconds:
+     *                         the TCP connect, and each handshake round-trip
+     *                         (AUTH, SELECT) that follows it. Default 1.0s.
      * @param  float  $readTimeout per-call read deadline in seconds — how long
      *                             one caller waits for its own reply before
      *                             giving up. Caches should fail fast, default
@@ -523,6 +525,12 @@ class Multiplexing extends Versioned implements Adapter, Batchable, TelemetryFea
 
     /**
      * Caller must hold $sendLock when running inside a coroutine.
+     *
+     * The handshake round-trips are read on $timeout, not $readTimeout. Waiting
+     * out $readTimeout fails one call and says nothing about the connection,
+     * whereas giving up here fails connection *establishment* — so it belongs to
+     * the connect budget, alongside the TCP handshake, rather than to the
+     * fail-fast per-call deadline that is four times tighter by default.
      */
     private function connect(): void
     {
@@ -534,12 +542,12 @@ class Multiplexing extends Versioned implements Adapter, Batchable, TelemetryFea
                     ? array_merge(['AUTH'], array_values($this->auth))
                     : ['AUTH', $this->auth];
 
-                if ($client->command($authArgs, $this->readTimeout) !== 'OK') {
+                if ($client->command($authArgs, $this->timeout) !== 'OK') {
                     throw new \RedisException('Redis AUTH failed');
                 }
             }
 
-            if ($this->dbIndex !== 0 && $client->command(['SELECT', (string) $this->dbIndex], $this->readTimeout) !== 'OK') {
+            if ($this->dbIndex !== 0 && $client->command(['SELECT', (string) $this->dbIndex], $this->timeout) !== 'OK') {
                 throw new \RedisException('Redis SELECT failed');
             }
         } catch (Throwable $th) {

@@ -46,11 +46,20 @@ class Client
      * Any extra bytes the kernel hands us after the frame stay in the
      * internal buffer and can be drained later via takeBuffer().
      *
+     * $timeout is a budget for the whole reply, not for one recv(). Re-arming it
+     * per syscall bounds nothing: a peer that dribbles bytes which never complete
+     * a frame would keep this loop here forever.
+     *
      * @param  array<int|string>  $args
+     *
+     * @throws TimeoutException when the budget elapses with no complete frame
+     * @throws ConnectionException when the socket closes or fails first
      */
-    public function command(array $args, float $readTimeout): mixed
+    public function command(array $args, float $timeout): mixed
     {
         $this->send(self::encode($args));
+
+        $deadline = microtime(true) + $timeout;
 
         while (true) {
             $offset = 0;
@@ -65,12 +74,44 @@ class Client
                 return $value;
             }
 
-            $chunk = $this->client->recv($readTimeout);
+            $remaining = $deadline - microtime(true);
+            if ($remaining <= 0) {
+                throw $this->deadlineExceeded($timeout);
+            }
+
+            $chunk = $this->client->recv($remaining);
             if ($chunk === false || $chunk === '') {
-                throw new ConnectionException('Timed out waiting for Redis response');
+                throw $this->readFailed($timeout, $chunk);
             }
             $this->buffer .= $chunk;
         }
+    }
+
+    /**
+     * Why a recv() during the handshake produced no bytes. An elapsed deadline
+     * is a verdict about how slow the server was; anything else is a verdict
+     * about the socket, and reporting the two as the same thing makes a peer
+     * that closed mid-handshake unreadable from the outside.
+     */
+    private function readFailed(float $budget, string|false $chunk): ConnectionException
+    {
+        if ($chunk === false && $this->timedOut()) {
+            return $this->deadlineExceeded($budget);
+        }
+
+        $reason = $chunk === ''
+            ? 'closed by peer'
+            : ($this->client->errMsg ?: 'recv failed');
+
+        return new ConnectionException('Redis connection lost during handshake: ' . $reason);
+    }
+
+    private function deadlineExceeded(float $budget): TimeoutException
+    {
+        return new TimeoutException(\sprintf(
+            'Timed out waiting for Redis response after %.3fs',
+            $budget,
+        ));
     }
 
     public function send(string $payload): void
